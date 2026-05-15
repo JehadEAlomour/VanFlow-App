@@ -32,6 +32,7 @@ kotlin {
             implementation(libs.koin.android)
             implementation(libs.maps.compose)
             implementation(libs.play.services.maps)
+            implementation(libs.play.services.location)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)

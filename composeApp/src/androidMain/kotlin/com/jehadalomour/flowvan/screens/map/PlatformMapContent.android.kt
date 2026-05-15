@@ -4,16 +4,24 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Looper
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
@@ -24,12 +32,16 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 
+@SuppressLint("MissingPermission")
 @Composable
 actual fun PlatformMapContent(
     userLat: Double?,
@@ -38,7 +50,10 @@ actual fun PlatformMapContent(
     customerLng: Double,
     customerName: String,
     modifier: Modifier,
+    isNavigating: Boolean,
     onRouteInfo: (duration: String, distance: String) -> Unit,
+    onStepsLoaded: (List<NavStep>) -> Unit,
+    onLocationUpdate: (lat: Double, lng: Double) -> Unit,
 ) {
     val context = LocalContext.current
     val hasLocationPermission = remember {
@@ -68,17 +83,56 @@ actual fun PlatformMapContent(
 
     var routePoints by remember { mutableStateOf<List<LatLng>>(emptyList()) }
 
+    // Fetch route on first load
     LaunchedEffect(userLat, userLng, customerLat, customerLng) {
         if (userLatLng != null && apiKey.isNotEmpty()) {
-            val (points, duration, distance) = fetchRoute(
+            val result = fetchRoute(
                 origin = userLatLng,
                 destination = customerLatLng,
                 apiKey = apiKey,
                 packageName = packageName,
                 certSha1 = certSha1,
             )
-            routePoints = points
-            if (duration.isNotEmpty()) onRouteInfo(duration, distance)
+            routePoints = result.points
+            if (result.duration.isNotEmpty()) onRouteInfo(result.duration, result.distance)
+            if (result.steps.isNotEmpty()) onStepsLoaded(result.steps)
+        }
+    }
+
+    // Navigation camera: follow user with tilt when navigating
+    LaunchedEffect(userLat, userLng, isNavigating) {
+        if (isNavigating && userLat != null && userLng != null) {
+            cameraPositionState.animate(
+                update = CameraUpdateFactory.newCameraPosition(
+                    CameraPosition.Builder()
+                        .target(LatLng(userLat, userLng))
+                        .zoom(18f)
+                        .tilt(45f)
+                        .build(),
+                ),
+                durationMs = 800,
+            )
+        }
+    }
+
+    // Live location updates during navigation
+    val currentOnLocationUpdate by rememberUpdatedState(onLocationUpdate)
+    LaunchedEffect(isNavigating) {
+        if (!isNavigating || !hasLocationPermission) return@LaunchedEffect
+        val fusedClient = LocationServices.getFusedLocationProviderClient(context)
+        callbackFlow {
+            val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3_000L)
+                .setMinUpdateDistanceMeters(5f)
+                .build()
+            val cb = object : LocationCallback() {
+                override fun onLocationResult(result: LocationResult) {
+                    result.lastLocation?.let { trySend(it) }
+                }
+            }
+            fusedClient.requestLocationUpdates(request, cb, Looper.getMainLooper())
+            awaitClose { fusedClient.removeLocationUpdates(cb) }
+        }.catch { }.collect { loc ->
+            currentOnLocationUpdate(loc.latitude, loc.longitude)
         }
     }
 
@@ -87,8 +141,8 @@ actual fun PlatformMapContent(
         cameraPositionState = cameraPositionState,
         properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
         uiSettings = MapUiSettings(
-            myLocationButtonEnabled = false,
-            zoomControlsEnabled = true,
+            myLocationButtonEnabled = isNavigating,
+            zoomControlsEnabled = !isNavigating,
             compassEnabled = true,
         ),
     ) {
@@ -113,44 +167,44 @@ actual fun PlatformMapContent(
     }
 }
 
+private data class RouteData(
+    val points: List<LatLng>,
+    val duration: String,
+    val distance: String,
+    val steps: List<NavStep>,
+)
+
 private suspend fun fetchRoute(
     origin: LatLng,
     destination: LatLng,
     apiKey: String,
     packageName: String,
     certSha1: String,
-): Triple<List<LatLng>, String, String> = withContext(Dispatchers.IO) {
+): RouteData = withContext(Dispatchers.IO) {
     try {
         val url = "https://maps.googleapis.com/maps/api/directions/json" +
             "?origin=${origin.latitude},${origin.longitude}" +
             "&destination=${destination.latitude},${destination.longitude}" +
             "&mode=driving" +
+            "&language=ar" +
             "&key=$apiKey"
 
         val connection = URL(url).openConnection() as HttpURLConnection
         connection.connectTimeout = 15_000
         connection.readTimeout = 15_000
-        // X-Android-Cert must be lowercase hex without colons
         connection.setRequestProperty("X-Android-Package", packageName)
         connection.setRequestProperty("X-Android-Cert", certSha1)
 
-        val responseCode = connection.responseCode
-        if (responseCode != HttpURLConnection.HTTP_OK) {
-            val err = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
-            android.util.Log.e("MapRoute", "HTTP $responseCode: $err")
+        if (connection.responseCode != HttpURLConnection.HTTP_OK) {
             connection.disconnect()
-            return@withContext Triple(emptyList(), "", "")
+            return@withContext RouteData(emptyList(), "", "", emptyList())
         }
 
         val json = connection.inputStream.bufferedReader().use { it.readText() }
         connection.disconnect()
 
         val jsonObj = JSONObject(json)
-        val status = jsonObj.getString("status")
-        if (status != "OK") {
-            android.util.Log.e("MapRoute", "Directions API status=$status json=$json")
-            return@withContext Triple(emptyList(), "", "")
-        }
+        if (jsonObj.getString("status") != "OK") return@withContext RouteData(emptyList(), "", "", emptyList())
 
         val route = jsonObj.getJSONArray("routes").getJSONObject(0)
         val leg = route.getJSONArray("legs").getJSONObject(0)
@@ -158,12 +212,27 @@ private suspend fun fetchRoute(
         val distance = leg.getJSONObject("distance").getString("text")
         val encoded = route.getJSONObject("overview_polyline").getString("points")
 
-        Triple(decodePolyline(encoded), duration, distance)
+        val stepsArray = leg.getJSONArray("steps")
+        val steps = (0 until stepsArray.length()).map { i ->
+            val step = stepsArray.getJSONObject(i)
+            val endLoc = step.getJSONObject("end_location")
+            NavStep(
+                instruction = step.getString("html_instructions").stripHtml(),
+                distanceText = step.getJSONObject("distance").getString("text"),
+                endLat = endLoc.getDouble("lat"),
+                endLng = endLoc.getDouble("lng"),
+            )
+        }
+
+        RouteData(decodePolyline(encoded), duration, distance, steps)
     } catch (e: Exception) {
         android.util.Log.e("MapRoute", "fetchRoute exception", e)
-        Triple(emptyList(), "", "")
+        RouteData(emptyList(), "", "", emptyList())
     }
 }
+
+private fun String.stripHtml(): String =
+    replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").trim()
 
 private fun decodePolyline(encoded: String): List<LatLng> {
     val result = mutableListOf<LatLng>()

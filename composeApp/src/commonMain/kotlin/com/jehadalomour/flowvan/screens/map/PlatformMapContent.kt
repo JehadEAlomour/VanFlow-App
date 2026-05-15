@@ -11,5 +11,8 @@ expect fun PlatformMapContent(
     customerLng: Double,
     customerName: String,
     modifier: Modifier = Modifier,
+    isNavigating: Boolean = false,
     onRouteInfo: (duration: String, distance: String) -> Unit = { _, _ -> },
+    onStepsLoaded: (List<NavStep>) -> Unit = {},
+    onLocationUpdate: (lat: Double, lng: Double) -> Unit = { _, _ -> },
 )
