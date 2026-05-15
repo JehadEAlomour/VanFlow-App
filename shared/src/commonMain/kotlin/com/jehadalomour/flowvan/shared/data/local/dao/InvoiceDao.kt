@@ -21,6 +21,9 @@ interface InvoiceDao {
     @Query("SELECT * FROM invoices WHERE createdAt >= :sinceMillis AND status != 'CANCELLED'")
     suspend fun listSince(sinceMillis: Long): List<InvoiceEntity>
 
+    @Query("SELECT COUNT(*) FROM invoices WHERE createdAt >= :sinceMillis AND syncedAt IS NULL")
+    suspend fun countUnsyncedSince(sinceMillis: Long): Int
+
     @Query("SELECT COUNT(*) FROM invoices")
     suspend fun count(): Int
 }

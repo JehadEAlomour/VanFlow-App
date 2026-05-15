@@ -1,0 +1,7 @@
+package com.jehadalomour.flowvan.shared.presentation.feature.ai
+
+sealed class AiAssistantEvent {
+    data class InputChanged(val text: String) : AiAssistantEvent()
+    data object Send : AiAssistantEvent()
+    data class ChipTapped(val text: String) : AiAssistantEvent()
+}

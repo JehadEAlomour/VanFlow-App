@@ -21,6 +21,12 @@ interface PaymentDao {
     @Query("SELECT * FROM payments WHERE createdAt >= :sinceMillis AND status = 'CONFIRMED'")
     suspend fun listConfirmedSince(sinceMillis: Long): List<PaymentEntity>
 
+    @Query("SELECT * FROM payments WHERE method = :method AND createdAt >= :sinceMillis AND status = 'CONFIRMED'")
+    suspend fun listByMethodSince(method: String, sinceMillis: Long): List<PaymentEntity>
+
+    @Query("SELECT COUNT(*) FROM payments WHERE createdAt >= :sinceMillis AND syncedAt IS NULL")
+    suspend fun countUnsyncedSince(sinceMillis: Long): Int
+
     @Query("SELECT COUNT(*) FROM payments")
     suspend fun count(): Int
 }

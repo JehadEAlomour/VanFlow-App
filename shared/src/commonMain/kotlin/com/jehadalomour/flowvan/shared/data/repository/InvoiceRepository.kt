@@ -20,5 +20,8 @@ class InvoiceRepository(private val dao: InvoiceDao) {
     fun observeByCustomerAndType(customerId: String, type: String): Flow<List<InvoiceEntity>> =
         dao.observeByCustomerAndType(customerId, type)
 
+    suspend fun countUnsyncedSince(sinceMillis: Long): Int =
+        dao.countUnsyncedSince(sinceMillis)
+
     suspend fun save(entity: InvoiceEntity) = dao.upsert(entity)
 }

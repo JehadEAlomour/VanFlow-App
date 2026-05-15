@@ -1,0 +1,107 @@
+# FlowVan — Build Progress
+
+Tracks every completed phase. Updated at phase sign-off (BUILD SUCCESSFUL verified).
+
+---
+
+## ✅ P1 — Foundation (Complete)
+
+**Modules:** M01 Project Foundation · M02 Demo Data Seeder · M03 Authentication & Login
+
+**Deliverables**
+- `:shared` + `:composeApp` KMP module structure
+- `gradle/libs.versions.toml` — full version catalog (Room 2.7.0, Koin 4.0.0, KSP 2.3.7, kotlinx-datetime 0.6.2, Compose MP 1.10.3)
+- `shared/build.gradle.kts` — Room plugin + KSP for Android/iosArm64/iosSimulatorArm64
+- `FlowVanDatabase` — 9 entities: User, Customer, Product, Invoice, Payment, LocationPoint, Shift, AiMessage, RouteStop
+- `DatabaseFactory` (expect/actual) + `BundledSQLiteDriver` (no `Dispatchers.IO` on iOS)
+- `DemoSeeder` — 4 users, 15 customers (10 on-route), 30 products (3 low-stock), 8 invoices, 4 payments
+- `LoginUseCase` / `LogoutUseCase` / `GetCurrentUserUseCase`
+- `SessionStore` (multiplatform-settings)
+- `SharedModule` (Koin) + `platformModule` (Android/iOS expect/actual)
+- `FlowVanNavHost` skeleton
+- Dark theme tokens (`Fv` object): BgDeepest `#080B12`, 6 accents, surface layers
+- `formatJod()` — JOD 3-decimal formatter
+- `formatLevantine()` — Levantine Arabic month names
+
+**Key fixes applied**
+- `Dispatchers.IO` removed from `DatabaseProvider` (not available on K/N)
+- `kotlin.time.Clock` used instead of `kotlinx.datetime.Clock.System` (iOS compat)
+- `navigation-compose` kept only in `:composeApp` (iOS klib cache failure with alpha13)
+
+**Build sign-off:** `:shared:linkDebugFrameworkIosSimulatorArm64` + `:composeApp:compileDebugKotlinAndroid` → `BUILD SUCCESSFUL`
+
+---
+
+## ✅ P2 — Navigation Surface (Complete)
+
+**Modules:** M04 Home Dashboard · M05 Route Management · M06 Customer Directory
+
+**Deliverables**
+- `HomeScreen` + `HomeViewModel` — daily KPI strip, top route customers list, quick-action cards (Route/Stock/AI/EndOfDay), logout
+- `RouteScreen` + `RouteViewModel` — ordered route customer list with overdue/churn warnings, visited toggle
+- `CustomerListScreen` + `CustomerListViewModel` — full customer list with search, tier badges, overdue indicators
+- `GetDailyKpiUseCase` — live aggregation from Room (sales/returns/collections/visited ratio)
+- All routes wired: `home`, `route`, `customers`
+- `ComingSoonScreen` placeholder for P4+ screens (VAN_STOCK, AI, END_OF_DAY)
+
+**Build sign-off:** `BUILD SUCCESSFUL`
+
+---
+
+## ✅ P3 — Transactions (Complete)
+
+**Modules:** M07 Customer Dashboard · M08 Sale Voucher · M09 Return Voucher · M10 Request Voucher · M11 Collection · M12 Customer Report Tabs
+
+**Deliverables**
+- `CustomerDashboardScreen` + `CustomerDashboardViewModel` — 5-tab layout (ملخص / مبيعات / مرتجعات / طلبات / تحصيلات), bottom action bar (بيع / مرتجع / طلب / تحصيل), header with balance/churn/tier
+- `SaleVoucherScreen` + `SaleVoucherViewModel` — product picker → cart toggle, discount field, 16% VAT, payment method dialog (CASH/CREDIT/CHEQUE/TRANSFER), stock validation
+- `ReturnVoucherScreen` + `ReturnVoucherViewModel` — reason chip selector (DAMAGED/EXPIRED/WRONG_ITEM/CUSTOMER_REFUSAL), confirmation dialog, stock restored on save
+- `RequestVoucherScreen` + `RequestVoucherViewModel` — pre-order flow, no stock check
+- `CollectionScreen` + `CollectionViewModel` — method picker (CASH/CHEQUE/TRANSFER), conditional cheque fields + Jordan banks LazyRow, advance-payment warning
+- Shared UI components: `ProductPickerColumn`, `CartLineRow`, `TotalsStrip`, `QtyStepper`
+- Use cases: `CreateSaleVoucherUseCase`, `CreateReturnVoucherUseCase`, `CreateRequestVoucherUseCase`, `RecordCollectionUseCase`, `VoucherNumber`
+- All parameterized ViewModels via `koinViewModel { parametersOf(customerId) }`
+- Routes: `customer/{id}`, `sale/{id}`, `return/{id}`, `request/{id}`, `collection/{id}`
+
+**Build sign-off:** `BUILD SUCCESSFUL` (17s)
+
+---
+
+## ✅ P4 — Smart Features (Complete)
+
+**Modules:** M13 AI Assistant · M14 Van Stock · M15 End of Day
+
+**Deliverables**
+- `AiAssistantViewModel` — demo keyword engine (ملخص/مبيعات/مخزون/عميل/مسار), 1.2s simulated latency, Room persistence per conversationId, customer-context vs home-context conversations
+- `AiAssistantScreen` — chat UI with 6 quick-action chips, ✨ assistant badge, thinking indicator, RTL bubbles
+- `VanStockViewModel` — live product Flow, `StockStatus` (GOOD/LOW/OUT/EXPIRING), total inventory value
+- `VanStockScreen` — header stats, search, category filter chips, product cards with status pills
+- `EndOfDayViewModel` — day KPI, cash/cheque/transfer breakdown, unsynced counts, `EndShiftUseCase`
+- `EndOfDayScreen` — 3 summary cards, confirmation dialog, logout on confirm
+- DAO additions: `PaymentDao.listByMethodSince`, `PaymentDao.countUnsyncedSince`, `ShiftDao.endShift`, `InvoiceDao.countUnsyncedSince`
+- AI route updated to optional `?customerId=` param; `ComingSoonScreen` placeholders replaced
+
+**Build sign-off:** ✅ `BUILD SUCCESSFUL` (2m 25s)
+
+---
+
+## ⏳ P5 — Tracking (Pending)
+
+**Modules:** M16 Location Tracking & Shift Lifecycle
+
+**Planned**
+- `LocationTracker` (expect/actual) — FusedLocationProviderClient (Android) / CLLocationManager (iOS)
+- Android foreground service with persistent notification
+- `StopDetector` — Haversine, fires `StopEvent` if within 50m for ≥3 min
+- `RouteValidator` — 300m geofence check against route waypoints
+- `LocationRepository.savePoint()` — Room-first, optional WebSocket push
+
+---
+
+## ⏳ P6 — Backend Integration (Deferred)
+
+**Modules:** M17 Sync Engine · M18 Real AI Gateway
+
+**Planned**
+- M17: Ktor-based sync engine, conflict resolution, retry queue
+- M18: SSE streaming AI, real LLM gateway, conversation history upload

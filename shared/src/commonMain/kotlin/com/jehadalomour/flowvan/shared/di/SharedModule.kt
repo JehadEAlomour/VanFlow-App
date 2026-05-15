@@ -9,14 +9,27 @@ import com.jehadalomour.flowvan.shared.data.repository.ProductRepository
 import com.jehadalomour.flowvan.shared.data.repository.UserRepository
 import com.jehadalomour.flowvan.shared.data.seeder.DemoSeeder
 import com.jehadalomour.flowvan.shared.data.settings.SessionStore
+import com.jehadalomour.flowvan.shared.domain.usecase.CreateRequestVoucherUseCase
+import com.jehadalomour.flowvan.shared.domain.usecase.CreateReturnVoucherUseCase
+import com.jehadalomour.flowvan.shared.domain.usecase.CreateSaleVoucherUseCase
+import com.jehadalomour.flowvan.shared.domain.usecase.EndShiftUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.GetCurrentUserUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.GetDailyKpiUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.LoginUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.LogoutUseCase
+import com.jehadalomour.flowvan.shared.domain.usecase.RecordCollectionUseCase
+import com.jehadalomour.flowvan.shared.presentation.feature.ai.AiAssistantViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.collection.CollectionViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.customerdashboard.CustomerDashboardViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.customers.CustomerListViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.endofday.EndOfDayViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.home.HomeViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.login.LoginViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.request.RequestVoucherViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.returns.ReturnVoucherViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.route.RouteViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.sale.SaleVoucherViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.vanstock.VanStockViewModel
 import com.russhwolf.settings.Settings
 import kotlinx.serialization.json.Json
 import org.koin.core.context.startKoin
@@ -57,11 +70,36 @@ fun sharedModule(): Module = module {
     factory { GetCurrentUserUseCase(get(), get()) }
     factory { LogoutUseCase(get()) }
     factory { GetDailyKpiUseCase(get(), get(), get()) }
+    factory { CreateSaleVoucherUseCase(get(), get(), get(), get()) }
+    factory { CreateReturnVoucherUseCase(get(), get(), get(), get()) }
+    factory { CreateRequestVoucherUseCase(get(), get()) }
+    factory { RecordCollectionUseCase(get(), get()) }
+    factory { EndShiftUseCase(get()) }
 
     viewModel { LoginViewModel(get(), get()) }
     viewModel { HomeViewModel(get(), get(), get()) }
     viewModel { RouteViewModel(get(), get()) }
     viewModel { CustomerListViewModel(get()) }
+    viewModel { (customerId: String) ->
+        CustomerDashboardViewModel(customerId, get(), get(), get())
+    }
+    viewModel { (customerId: String) ->
+        SaleVoucherViewModel(customerId, get(), get(), get(), get())
+    }
+    viewModel { (customerId: String) ->
+        ReturnVoucherViewModel(customerId, get(), get(), get(), get())
+    }
+    viewModel { (customerId: String) ->
+        RequestVoucherViewModel(customerId, get(), get(), get(), get())
+    }
+    viewModel { (customerId: String) ->
+        CollectionViewModel(customerId, get(), get(), get())
+    }
+    viewModel { (customerId: String?) ->
+        AiAssistantViewModel(customerId, get(), get(), get(), get(), get())
+    }
+    viewModel { VanStockViewModel(get()) }
+    viewModel { EndOfDayViewModel(get(), get(), get(), get(), get(), get(), get()) }
 }
 
 expect fun platformModule(): Module

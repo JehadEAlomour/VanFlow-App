@@ -12,5 +12,11 @@ class PaymentRepository(private val dao: PaymentDao) {
     fun observeByCustomer(customerId: String): Flow<List<PaymentEntity>> =
         dao.observeByCustomer(customerId)
 
+    suspend fun totalByMethodSince(method: String, sinceMillis: Long): Double =
+        dao.listByMethodSince(method, sinceMillis).sumOf { it.amount }
+
+    suspend fun countUnsyncedSince(sinceMillis: Long): Int =
+        dao.countUnsyncedSince(sinceMillis)
+
     suspend fun save(entity: PaymentEntity) = dao.upsert(entity)
 }
