@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.jehadalomour.flowvan.shared.data.local.entity.ShiftEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ShiftDao {
@@ -19,6 +20,9 @@ interface ShiftDao {
 
     @Query("UPDATE shifts SET endedAt = :endedAt, status = 'ENDED' WHERE id = :id")
     suspend fun endShift(id: String, endedAt: Long)
+
+    @Query("SELECT * FROM shifts WHERE userId = :userId AND status = 'ACTIVE' LIMIT 1")
+    fun observeActive(userId: String): Flow<ShiftEntity?>
 
     @Query("SELECT COUNT(*) FROM shifts")
     suspend fun count(): Int

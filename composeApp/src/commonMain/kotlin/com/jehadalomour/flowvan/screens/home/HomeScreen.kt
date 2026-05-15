@@ -35,6 +35,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import com.jehadalomour.flowvan.screens.components.OverdueChip
 import com.jehadalomour.flowvan.screens.components.TierBadge
 import com.jehadalomour.flowvan.shared.domain.model.Customer
+import com.jehadalomour.flowvan.shared.presentation.feature.home.HomeEvent
 import com.jehadalomour.flowvan.shared.presentation.feature.home.HomeViewModel
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
 import com.jehadalomour.flowvan.shared.presentation.format.formatLevantine
@@ -83,6 +84,12 @@ fun HomeScreen(
                 )
             }
             item {
+                ShiftStatusCard(
+                    isActive = state.activeShift != null,
+                    onStartShift = { viewModel.onEvent(HomeEvent.StartShift) },
+                )
+            }
+            item {
                 KpiRow(
                     sales = state.kpi?.salesTotal ?: 0.0,
                     collections = state.kpi?.collectionsTotal ?: 0.0,
@@ -105,6 +112,59 @@ fun HomeScreen(
             }
             items(state.routeTopFive, key = { it.id }) { customer ->
                 CustomerRow(customer, onClick = { onOpenCustomer(customer.id) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShiftStatusCard(isActive: Boolean, onStartShift: () -> Unit) {
+    if (isActive) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Fv.Surface),
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(Fv.Green, CircleShape),
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    "الوردية نشطة — يتم تتبع الموقع",
+                    color = Fv.Green,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    } else {
+        Card(
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onStartShift),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Fv.Surface),
+        ) {
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(Fv.Green.copy(alpha = 0.18f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) { Text("▶", fontSize = 16.sp, color = Fv.Green) }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text("بدء اليوم", color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Text("ابدأ الوردية لتفعيل تتبع الموقع", color = Fv.TextMid, fontSize = 11.sp)
+                }
             }
         }
     }

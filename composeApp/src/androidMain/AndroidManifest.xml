@@ -4,6 +4,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
     <application
         android:name=".FlowVanApp"
@@ -16,6 +19,11 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyDOwMjpgT_7d_W2g6j7J_fLRRH1EPZMYpQ" />
+        <service
+            android:name=".service.TrackingForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
         <activity
             android:exported="true"
             android:name=".MainActivity">

@@ -93,16 +93,75 @@ Tracks every completed phase. Updated at phase sign-off (BUILD SUCCESSFUL verifi
 
 ---
 
-## ⏳ P5 — Tracking (Pending)
+## ✅ P4-ext2 — M12-ext Customer Reports (Complete)
+
+**Modules:** M12 extension — full customer reporting suite + dashboard simplification
+
+**Deliverables**
+
+### DAO layer
+- `InvoiceDao`: added `observeById(id)`, `observeByCustomerRange(from, to)`, `observeByCustomerTypeRange(type, from, to)`
+- `PaymentDao`: added `observeById(id)`, `observeByCustomerRange(from, to)`, `observeByCustomerMethodRange(method, from, to)`
+
+### ViewModels (all in `:shared`, registered in `SharedModule`)
+- `TransactionReportViewModel(customerId)` — `flatMapLatest` on (typeFilter, from, to); `TxnTypeFilter` enum (ALL/SALE/RETURN/REQUEST)
+- `PaymentReportViewModel(customerId)` — `flatMapLatest` on (methodFilter, from, to); `PaymentMethodFilter` enum (ALL/CASH/CHEQUE/TRANSFER)
+- `AccountStatementViewModel(customerId)` — `combine(invoiceFlow, paymentFlow)` → merged `List<StatementEntry>` sorted DESC
+- `VoucherDetailViewModel(invoiceId)` — `observeById` + `json.decodeFromString<List<InvoiceLine>>(linesJson)`
+- `ReceiptDetailViewModel(paymentId)` — `observeById`
+- `VoucherReportViewModel(customerId)` — `flatMapLatest` on (typeFilter, kindFilter, from, to); kind applied in-memory via `.applyKind()`
+
+### Screens (all in `:composeApp`)
+- `ReportComponents.kt` — shared composables: `DateRangeBar` (Material3 DatePickerDialog), `FilterChipRow<T>`, `SummaryPill`, `Long.toDateString()`, `Long.toDateTimeString()`
+- `TransactionReportScreen` — date range + type filter + sales/returns summary pills + invoice list
+- `PaymentReportScreen` — date range + method filter + total/confirmed pills + payment list (rows clickable → ReceiptDetail)
+- `AccountStatementScreen` — date range + debits/credits/net summary + chronological entries (invoices + payments), rows clickable → VoucherDetail or ReceiptDetail
+- `VoucherDetailScreen` — type/status badges, line items table, totals block (subtotal → discount → tax → total)
+- `ReceiptDetailScreen` — large amount display, method/status badges, conditional cheque card, conditional transfer card, notes card
+- `VoucherReportScreen` — two filter rows (type + kind), count/total summary card, clickable VoucherRow → VoucherDetail
+
+### CustomerDashboardScreen rewrite
+- **Removed**: TabRow, 5-tab layout, inline InvoiceRow/PaymentRow composables
+- **Added**: `SummaryCard` (always visible above report buttons), `ReportButtons` (3 cards: VoucherReport / PaymentReport / AccountStatement)
+- Net parameter change: removed `onOpenTransactionReport`, kept `onOpenVoucherReport` + `onOpenPaymentReport` + `onOpenAccountStatement`
+
+### Routes added to NavHost
+`voucherreport/{customerId}`, `payreport/{customerId}`, `statement/{customerId}`, `txnreport/{customerId}`, `voucher/{invoiceId}`, `receipt/{paymentId}`
+
+### Key fixes
+- `kotlin.time.Instant` ≠ `kotlinx.datetime.Instant`: used `Clock.System.now().toEpochMilliseconds()` then `Instant.fromEpochMilliseconds(nowMs).toLocalDateTime(tz)` in all 3 date-range ViewModels
+- Cross-module smart cast: extracted `val transferRef = entity.transferRef` / `val notes = entity.notes` before null checks in `ReceiptDetailScreen`
+- Directions API `X-Android-Cert` fix: changed from uppercase-colon format to lowercase-no-colon format in `PlatformMapContent.android.kt`
+
+**Build sign-off:** ✅ `BUILD SUCCESSFUL`
+
+---
+
+## ✅ P5 — Tracking (Complete)
 
 **Modules:** M16 Location Tracking & Shift Lifecycle
 
-**Planned**
-- `LocationTracker` (expect/actual) — FusedLocationProviderClient (Android) / CLLocationManager (iOS)
-- Android foreground service with persistent notification
-- `StopDetector` — Haversine, fires `StopEvent` if within 50m for ≥3 min
-- `RouteValidator` — 300m geofence check against route waypoints
-- `LocationRepository.savePoint()` — Room-first, optional WebSocket push
+**Deliverables**
+- `LocationTracker` interface (commonMain) — `isTracking`, `locationUpdates: SharedFlow<LatLng>`, `startTracking()`, `stopTracking()`
+- `AndroidLocationTracker` (androidMain/shared) — FusedLocationProviderClient with 5s interval, 10m displacement, `tryEmit` to SharedFlow. Starts/stops `TrackingForegroundService` via string class name (avoids cross-module compile dep).
+- `IosLocationTracker` (iosMain/shared) — polls `IosLocationProvider.lastLocation()` every 5s in a coroutine loop
+- `TrackingForegroundService` (composeApp/androidMain) — `startForeground` with `FOREGROUND_SERVICE_TYPE_LOCATION`, persistent Arabic notification "كاش فلو يتابع الموقع — الوردية نشطة", `START_STICKY`
+- `StopDetector` (commonMain) — Haversine engine, fires stop event when within 50m for ≥3 min (once per stop)
+- `LocationRepository` (commonMain) — `savePoint()` inserts `LocationPointEntity(synced=false)` to Room
+- `StartShiftUseCase` (commonMain) — finds existing active shift or creates a new one (`SHF-{millis}`)
+- `LocationTrackingCoordinator` (commonMain) — singleton with own `CoroutineScope`, collects `locationUpdates` → `LocationRepository.savePoint()` + `StopDetector.process()`
+- `ShiftDao.observeActive(userId): Flow<ShiftEntity?>` — new reactive query
+- `HomeViewModel` updated — observes active shift, auto-starts/stops coordinator, handles `HomeEvent.StartShift`
+- `HomeState` updated — `activeShift: ShiftEntity?`
+- `HomeScreen` — `ShiftStatusCard`: shows green "الوردية نشطة" chip when active, or clickable "بدء اليوم" card when inactive
+- `AndroidManifest.xml` — added `ACCESS_BACKGROUND_LOCATION`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION` permissions + service declaration with `foregroundServiceType="location"`
+- `PlatformModule.android.kt` — registers `LocationTracker` → `AndroidLocationTracker`
+- `PlatformModule.ios.kt` — registers `LocationTracker` → `IosLocationTracker`
+- `SharedModule` — registers `LocationRepository`, `StopDetector`, `LocationTrackingCoordinator`, `StartShiftUseCase`
+
+**Build sign-off:** ✅ `BUILD SUCCESSFUL` (assembleDebug)
+
+---
 
 ---
 

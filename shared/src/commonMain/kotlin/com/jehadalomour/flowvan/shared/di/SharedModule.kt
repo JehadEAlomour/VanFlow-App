@@ -9,6 +9,9 @@ import com.jehadalomour.flowvan.shared.data.repository.ProductRepository
 import com.jehadalomour.flowvan.shared.data.repository.UserRepository
 import com.jehadalomour.flowvan.shared.data.seeder.DemoSeeder
 import com.jehadalomour.flowvan.shared.data.settings.SessionStore
+import com.jehadalomour.flowvan.shared.data.repository.LocationRepository
+import com.jehadalomour.flowvan.shared.data.tracking.StopDetector
+import com.jehadalomour.flowvan.shared.domain.tracking.LocationTrackingCoordinator
 import com.jehadalomour.flowvan.shared.domain.usecase.CreateRequestVoucherUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.CreateReturnVoucherUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.CreateSaleVoucherUseCase
@@ -18,6 +21,7 @@ import com.jehadalomour.flowvan.shared.domain.usecase.GetDailyKpiUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.LoginUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.LogoutUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.RecordCollectionUseCase
+import com.jehadalomour.flowvan.shared.domain.usecase.StartShiftUseCase
 import com.jehadalomour.flowvan.shared.presentation.feature.accountstatement.AccountStatementViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.ai.AiAssistantViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.map.MapNavigationViewModel
@@ -71,6 +75,9 @@ fun sharedModule(): Module = module {
     single { ProductRepository(get()) }
     single { InvoiceRepository(get()) }
     single { PaymentRepository(get()) }
+    single { LocationRepository(get()) }
+    single { StopDetector() }
+    single { LocationTrackingCoordinator(get(), get(), get()) }
     single { DemoSeeder(get(), get(), get()) }
 
     factory { LoginUseCase(get(), get()) }
@@ -82,9 +89,10 @@ fun sharedModule(): Module = module {
     factory { CreateRequestVoucherUseCase(get(), get()) }
     factory { RecordCollectionUseCase(get(), get()) }
     factory { EndShiftUseCase(get()) }
+    factory { StartShiftUseCase(get(), get()) }
 
     viewModel { LoginViewModel(get(), get()) }
-    viewModel { HomeViewModel(get(), get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { RouteViewModel(get(), get()) }
     viewModel { CustomerListViewModel(get()) }
     viewModel { (customerId: String) ->
