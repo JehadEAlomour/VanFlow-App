@@ -20,4 +20,10 @@ interface ProductDao {
 
     @Query("SELECT COUNT(*) FROM products")
     suspend fun count(): Int
+
+    @Query("SELECT * FROM products WHERE id = :id LIMIT 1")
+    suspend fun findById(id: String): ProductEntity?
+
+    @Query("UPDATE products SET vanStock = vanStock + :delta WHERE id = :id")
+    suspend fun adjustStock(id: String, delta: Int)
 }

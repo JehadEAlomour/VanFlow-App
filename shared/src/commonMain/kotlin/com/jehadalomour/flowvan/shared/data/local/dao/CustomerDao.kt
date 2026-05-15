@@ -26,4 +26,10 @@ interface CustomerDao {
 
     @Query("SELECT COUNT(*) FROM customers")
     suspend fun count(): Int
+
+    @Query("SELECT COUNT(*) FROM customers WHERE isOnRoute = 1")
+    suspend fun countOnRoute(): Int
+
+    @Query("UPDATE customers SET balance = balance + :delta WHERE id = :id")
+    suspend fun adjustBalance(id: String, delta: Double)
 }

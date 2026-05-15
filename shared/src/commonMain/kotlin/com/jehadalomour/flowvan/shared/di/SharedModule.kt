@@ -2,13 +2,21 @@ package com.jehadalomour.flowvan.shared.di
 
 import com.jehadalomour.flowvan.shared.data.local.db.FlowVanDatabase
 import com.jehadalomour.flowvan.shared.data.local.db.buildFlowVanDatabase
+import com.jehadalomour.flowvan.shared.data.repository.CustomerRepository
+import com.jehadalomour.flowvan.shared.data.repository.InvoiceRepository
+import com.jehadalomour.flowvan.shared.data.repository.PaymentRepository
+import com.jehadalomour.flowvan.shared.data.repository.ProductRepository
 import com.jehadalomour.flowvan.shared.data.repository.UserRepository
 import com.jehadalomour.flowvan.shared.data.seeder.DemoSeeder
 import com.jehadalomour.flowvan.shared.data.settings.SessionStore
 import com.jehadalomour.flowvan.shared.domain.usecase.GetCurrentUserUseCase
+import com.jehadalomour.flowvan.shared.domain.usecase.GetDailyKpiUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.LoginUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.LogoutUseCase
+import com.jehadalomour.flowvan.shared.presentation.feature.customers.CustomerListViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.home.HomeViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.login.LoginViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.route.RouteViewModel
 import com.russhwolf.settings.Settings
 import kotlinx.serialization.json.Json
 import org.koin.core.context.startKoin
@@ -39,13 +47,21 @@ fun sharedModule(): Module = module {
     single { get<FlowVanDatabase>().aiMessageDao() }
 
     single { UserRepository(get()) }
+    single { CustomerRepository(get()) }
+    single { ProductRepository(get()) }
+    single { InvoiceRepository(get()) }
+    single { PaymentRepository(get()) }
     single { DemoSeeder(get(), get(), get()) }
 
     factory { LoginUseCase(get(), get()) }
     factory { GetCurrentUserUseCase(get(), get()) }
     factory { LogoutUseCase(get()) }
+    factory { GetDailyKpiUseCase(get(), get(), get()) }
 
     viewModel { LoginViewModel(get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get()) }
+    viewModel { RouteViewModel(get(), get()) }
+    viewModel { CustomerListViewModel(get()) }
 }
 
 expect fun platformModule(): Module

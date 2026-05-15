@@ -29,23 +29,15 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            // Compose runtime for ViewModel + state types used in shared presentation layer
+            // Compose runtime is required because composeCompiler plugin is applied;
+            // no Compose UI deps to keep iOS framework slim and avoid broken navigation klib.
             implementation(libs.compose.runtime)
-            implementation(libs.compose.foundation)
-            implementation(libs.compose.material3)
-            implementation(libs.compose.ui)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
 
-            // Navigation (CMP)
-            implementation(libs.navigation.compose)
-
-            // DI
+            // DI (no navigation bindings in :shared — those live in :composeApp)
             implementation(libs.koin.core)
-            implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
-            implementation(libs.koin.compose.viewmodel.navigation)
 
             // Persistence
             implementation(libs.androidx.room.runtime)
