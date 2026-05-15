@@ -90,4 +90,27 @@ internal object ColorTokens {
     val Warning    = Warning100
 
     val Transparent = Color.Transparent
+
+    // ==================== FlowVan Dark (CashFlow palette) ====================
+    // Backgrounds
+    val FvBgDeepest = Color(0xFF080B12)
+    val FvBgDeep    = Color(0xFF0D1117)
+    val FvBg        = Color(0xFF131920)
+    // Surfaces
+    val FvSurface     = Color(0xFF1A2232)
+    val FvSurfaceHigh = Color(0xFF1E2A3A)
+    val FvSurfaceTop  = Color(0xFF243044)
+    // Text
+    val FvTextHigh = Color(0xFFEDF0FA)
+    val FvTextMid  = Color(0xFF7B8BAA)
+    val FvTextLow  = Color(0xFF3A4460)
+    // Accents
+    val FvAccentBlue   = Color(0xFF4B8FF6)
+    val FvAccentGreen  = Color(0xFF1DC97A)
+    val FvAccentAmber  = Color(0xFFF5A41A)
+    val FvAccentRed    = Color(0xFFF04F4F)
+    val FvAccentPurple = Color(0xFF9B7FEA)
+    val FvAccentTeal   = Color(0xFF22D3C2)
+    // Border
+    val FvBorder = Color(0xFF1E2A3A)
 }
