@@ -11,4 +11,5 @@ expect fun PlatformMapContent(
     customerLng: Double,
     customerName: String,
     modifier: Modifier = Modifier,
+    onRouteInfo: (duration: String, distance: String) -> Unit = { _, _ -> },
 )

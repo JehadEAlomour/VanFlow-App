@@ -53,6 +53,9 @@ fun CustomerDashboardScreen(
     onOpenRequest: (String) -> Unit,
     onOpenCollection: (String) -> Unit,
     onOpenAi: (String) -> Unit,
+    onOpenTransactionReport: (String) -> Unit,
+    onOpenPaymentReport: (String) -> Unit,
+    onOpenAccountStatement: (String) -> Unit,
     viewModel: CustomerDashboardViewModel = koinViewModel { parametersOf(customerId) },
 ) {
     val state by viewModel.state.collectAsState()
@@ -80,7 +83,16 @@ fun CustomerDashboardScreen(
                     }
                 }
                 item { CustomerHeader(state) }
-                item { KpiChips(state.salesTotal, state.returnsTotal, state.collectionsTotal) }
+                item {
+                    ReportButtons(
+                        salesTotal = state.salesTotal,
+                        returnsTotal = state.returnsTotal,
+                        collectionsTotal = state.collectionsTotal,
+                        onOpenTransactionReport = { onOpenTransactionReport(customerId) },
+                        onOpenPaymentReport = { onOpenPaymentReport(customerId) },
+                        onOpenAccountStatement = { onOpenAccountStatement(customerId) },
+                    )
+                }
                 item { TabRow(state.selectedTab) { viewModel.onEvent(CustomerDashboardEvent.TabSelected(it)) } }
                 tabContent(state)
             }
@@ -148,18 +160,60 @@ private fun FinancialPill(label: String, value: String, valueColor: androidx.com
 }
 
 @Composable
-private fun KpiChips(sales: Double, returns: Double, collections: Double) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        KpiChip("مبيعات", sales.formatJod(AppLanguage.AR), Fv.Blue, Modifier.weight(1f))
-        KpiChip("مرتجعات", returns.formatJod(AppLanguage.AR), Fv.Red, Modifier.weight(1f))
-        KpiChip("تحصيلات", collections.formatJod(AppLanguage.AR), Fv.Green, Modifier.weight(1f))
+private fun ReportButtons(
+    salesTotal: Double,
+    returnsTotal: Double,
+    collectionsTotal: Double,
+    onOpenTransactionReport: () -> Unit,
+    onOpenPaymentReport: () -> Unit,
+    onOpenAccountStatement: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ReportButton(
+                label = "تقرير المعاملات",
+                value = salesTotal.formatJod(AppLanguage.AR),
+                accent = Fv.Blue,
+                modifier = Modifier.weight(1f),
+                onClick = onOpenTransactionReport,
+            )
+            ReportButton(
+                label = "تقرير المدفوعات",
+                value = collectionsTotal.formatJod(AppLanguage.AR),
+                accent = Fv.Green,
+                modifier = Modifier.weight(1f),
+                onClick = onOpenPaymentReport,
+            )
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenAccountStatement),
+            shape = RoundedCornerShape(10.dp),
+            colors = CardDefaults.cardColors(containerColor = Fv.Surface),
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("كشف الحساب", color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text("جميع الحركات والمديونية", color = Fv.TextMid, fontSize = 10.sp)
+                }
+                Text("←", color = Fv.Purple, fontSize = 18.sp)
+            }
+        }
     }
 }
 
 @Composable
-private fun KpiChip(label: String, value: String, accent: androidx.compose.ui.graphics.Color, modifier: Modifier) {
+private fun ReportButton(
+    label: String,
+    value: String,
+    accent: androidx.compose.ui.graphics.Color,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
     Card(
-        modifier = modifier,
+        modifier = modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = Fv.Surface),
     ) {
@@ -167,6 +221,8 @@ private fun KpiChip(label: String, value: String, accent: androidx.compose.ui.gr
             Text(label, color = Fv.TextMid, fontSize = 10.sp)
             Spacer(Modifier.height(4.dp))
             Text(value, color = accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(2.dp))
+            Text("عرض التقرير ←", color = accent.copy(alpha = 0.7f), fontSize = 9.sp)
         }
     }
 }

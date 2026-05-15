@@ -18,6 +18,15 @@ interface InvoiceDao {
     @Query("SELECT * FROM invoices WHERE customerId = :customerId AND type = :type ORDER BY createdAt DESC")
     fun observeByCustomerAndType(customerId: String, type: String): Flow<List<InvoiceEntity>>
 
+    @Query("SELECT * FROM invoices WHERE id = :id")
+    fun observeById(id: String): Flow<InvoiceEntity?>
+
+    @Query("SELECT * FROM invoices WHERE customerId = :customerId AND createdAt >= :fromMillis AND createdAt <= :toMillis ORDER BY createdAt DESC")
+    fun observeByCustomerRange(customerId: String, fromMillis: Long, toMillis: Long): Flow<List<InvoiceEntity>>
+
+    @Query("SELECT * FROM invoices WHERE customerId = :customerId AND type = :type AND createdAt >= :fromMillis AND createdAt <= :toMillis ORDER BY createdAt DESC")
+    fun observeByCustomerTypeRange(customerId: String, type: String, fromMillis: Long, toMillis: Long): Flow<List<InvoiceEntity>>
+
     @Query("SELECT * FROM invoices WHERE createdAt >= :sinceMillis AND status != 'CANCELLED'")
     suspend fun listSince(sinceMillis: Long): List<InvoiceEntity>
 

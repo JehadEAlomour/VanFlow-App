@@ -15,6 +15,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.jehadalomour.flowvan.screens.ai.AiAssistantScreen
 import com.jehadalomour.flowvan.screens.map.MapNavigationScreen
+import com.jehadalomour.flowvan.screens.reports.AccountStatementScreen
+import com.jehadalomour.flowvan.screens.reports.PaymentReportScreen
+import com.jehadalomour.flowvan.screens.reports.ReceiptDetailScreen
+import com.jehadalomour.flowvan.screens.reports.TransactionReportScreen
+import com.jehadalomour.flowvan.screens.reports.VoucherDetailScreen
 import com.jehadalomour.flowvan.screens.collection.CollectionScreen
 import com.jehadalomour.flowvan.screens.customer.CustomerDashboardScreen
 import com.jehadalomour.flowvan.screens.customers.CustomerListScreen
@@ -45,6 +50,11 @@ object Routes {
     const val REQUEST = "request/{customerId}"
     const val COLLECTION = "collection/{customerId}"
     const val MAP = "map/{customerId}"
+    const val TRANSACTION_REPORT = "txnreport/{customerId}"
+    const val PAYMENT_REPORT = "payreport/{customerId}"
+    const val ACCOUNT_STATEMENT = "statement/{customerId}"
+    const val VOUCHER_DETAIL = "voucher/{invoiceId}"
+    const val RECEIPT_DETAIL = "receipt/{paymentId}"
     fun customer(id: String) = "customer/$id"
     fun sale(id: String) = "sale/$id"
     fun returns(id: String) = "return/$id"
@@ -52,6 +62,11 @@ object Routes {
     fun collection(id: String) = "collection/$id"
     fun ai(customerId: String? = null) = if (customerId != null) "ai?customerId=$customerId" else "ai"
     fun map(customerId: String) = "map/$customerId"
+    fun txnReport(customerId: String) = "txnreport/$customerId"
+    fun payReport(customerId: String) = "payreport/$customerId"
+    fun statement(customerId: String) = "statement/$customerId"
+    fun voucher(invoiceId: String) = "voucher/$invoiceId"
+    fun receipt(paymentId: String) = "receipt/$paymentId"
 }
 
 @Composable
@@ -121,6 +136,9 @@ fun FlowVanNavHost(
                 onOpenRequest = { cid -> navController.navigate(Routes.request(cid)) },
                 onOpenCollection = { cid -> navController.navigate(Routes.collection(cid)) },
                 onOpenAi = { cid -> navController.navigate(Routes.ai(cid)) },
+                onOpenTransactionReport = { cid -> navController.navigate(Routes.txnReport(cid)) },
+                onOpenPaymentReport = { cid -> navController.navigate(Routes.payReport(cid)) },
+                onOpenAccountStatement = { cid -> navController.navigate(Routes.statement(cid)) },
             )
         }
         composable(
@@ -182,6 +200,46 @@ fun FlowVanNavHost(
         ) { entry ->
             val id = entry.arguments?.getString("customerId").orEmpty()
             MapNavigationScreen(customerId = id, onBack = { navController.popBackStack() })
+        }
+        composable(
+            Routes.TRANSACTION_REPORT,
+            arguments = listOf(navArgument("customerId") { type = NavType.StringType }),
+        ) { entry ->
+            val id = entry.arguments?.getString("customerId").orEmpty()
+            TransactionReportScreen(customerId = id, onBack = { navController.popBackStack() })
+        }
+        composable(
+            Routes.PAYMENT_REPORT,
+            arguments = listOf(navArgument("customerId") { type = NavType.StringType }),
+        ) { entry ->
+            val id = entry.arguments?.getString("customerId").orEmpty()
+            PaymentReportScreen(customerId = id, onBack = { navController.popBackStack() })
+        }
+        composable(
+            Routes.ACCOUNT_STATEMENT,
+            arguments = listOf(navArgument("customerId") { type = NavType.StringType }),
+        ) { entry ->
+            val id = entry.arguments?.getString("customerId").orEmpty()
+            AccountStatementScreen(
+                customerId = id,
+                onBack = { navController.popBackStack() },
+                onOpenInvoice = { iid -> navController.navigate(Routes.voucher(iid)) },
+                onOpenReceipt = { pid -> navController.navigate(Routes.receipt(pid)) },
+            )
+        }
+        composable(
+            Routes.VOUCHER_DETAIL,
+            arguments = listOf(navArgument("invoiceId") { type = NavType.StringType }),
+        ) { entry ->
+            val id = entry.arguments?.getString("invoiceId").orEmpty()
+            VoucherDetailScreen(invoiceId = id, onBack = { navController.popBackStack() })
+        }
+        composable(
+            Routes.RECEIPT_DETAIL,
+            arguments = listOf(navArgument("paymentId") { type = NavType.StringType }),
+        ) { entry ->
+            val id = entry.arguments?.getString("paymentId").orEmpty()
+            ReceiptDetailScreen(paymentId = id, onBack = { navController.popBackStack() })
         }
     }
 }

@@ -21,6 +21,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
@@ -41,6 +44,8 @@ fun MapNavigationScreen(
     val state by viewModel.state.collectAsState()
     val uriHandler = LocalUriHandler.current
     val customer = state.customer
+    var driveDuration by remember { mutableStateOf("") }
+    var driveDistance by remember { mutableStateOf("") }
 
     Surface(modifier = Modifier.fillMaxSize(), color = Fv.BgDeepest) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -85,6 +90,7 @@ fun MapNavigationScreen(
                         customerLng = customer.lng!!,
                         customerName = customer.nameAr,
                         modifier = Modifier.weight(1f),
+                        onRouteInfo = { dur, dist -> driveDuration = dur; driveDistance = dist },
                     )
                 }
 
@@ -110,6 +116,13 @@ fun MapNavigationScreen(
                             }
                             customer.phone?.let {
                                 Text("📞 $it", color = Fv.TextMid, fontSize = 12.sp)
+                            }
+                            if (driveDuration.isNotEmpty()) {
+                                Spacer(Modifier.height(8.dp))
+                                Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)) {
+                                    Text("🕐 $driveDuration", color = Fv.Green, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("📍 $driveDistance", color = Fv.TextMid, fontSize = 13.sp)
+                                }
                             }
                             Spacer(Modifier.height(12.dp))
 

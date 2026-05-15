@@ -18,8 +18,13 @@ import com.jehadalomour.flowvan.shared.domain.usecase.GetDailyKpiUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.LoginUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.LogoutUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.RecordCollectionUseCase
+import com.jehadalomour.flowvan.shared.presentation.feature.accountstatement.AccountStatementViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.ai.AiAssistantViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.map.MapNavigationViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.paymentreport.PaymentReportViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.receiptdetail.ReceiptDetailViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.transactionreport.TransactionReportViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.voucherdetail.VoucherDetailViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.collection.CollectionViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.customerdashboard.CustomerDashboardViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.customers.CustomerListViewModel
@@ -103,6 +108,21 @@ fun sharedModule(): Module = module {
     viewModel { EndOfDayViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModel { (customerId: String) ->
         MapNavigationViewModel(customerId, get(), get())
+    }
+    viewModel { (customerId: String) ->
+        TransactionReportViewModel(customerId, get())
+    }
+    viewModel { (customerId: String) ->
+        PaymentReportViewModel(customerId, get())
+    }
+    viewModel { (customerId: String) ->
+        AccountStatementViewModel(customerId, get(), get(), get())
+    }
+    viewModel { (invoiceId: String) ->
+        VoucherDetailViewModel(invoiceId, get(), get())
+    }
+    viewModel { (paymentId: String) ->
+        ReceiptDetailViewModel(paymentId, get())
     }
 }
 

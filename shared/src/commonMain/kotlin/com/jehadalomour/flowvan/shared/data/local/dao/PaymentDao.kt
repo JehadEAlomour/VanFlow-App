@@ -15,8 +15,17 @@ interface PaymentDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(payment: PaymentEntity)
 
+    @Query("SELECT * FROM payments WHERE id = :id")
+    fun observeById(id: String): Flow<PaymentEntity?>
+
     @Query("SELECT * FROM payments WHERE customerId = :customerId ORDER BY createdAt DESC")
     fun observeByCustomer(customerId: String): Flow<List<PaymentEntity>>
+
+    @Query("SELECT * FROM payments WHERE customerId = :customerId AND createdAt >= :fromMillis AND createdAt <= :toMillis ORDER BY createdAt DESC")
+    fun observeByCustomerRange(customerId: String, fromMillis: Long, toMillis: Long): Flow<List<PaymentEntity>>
+
+    @Query("SELECT * FROM payments WHERE customerId = :customerId AND method = :method AND createdAt >= :fromMillis AND createdAt <= :toMillis ORDER BY createdAt DESC")
+    fun observeByCustomerMethodRange(customerId: String, method: String, fromMillis: Long, toMillis: Long): Flow<List<PaymentEntity>>
 
     @Query("SELECT * FROM payments WHERE createdAt >= :sinceMillis AND status = 'CONFIRMED'")
     suspend fun listConfirmedSince(sinceMillis: Long): List<PaymentEntity>

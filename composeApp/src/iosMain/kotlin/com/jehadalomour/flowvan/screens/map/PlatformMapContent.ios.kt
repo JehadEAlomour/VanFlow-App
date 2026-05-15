@@ -1,21 +1,58 @@
 package com.jehadalomour.flowvan.screens.map
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.UIKitView
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.useContents
 import platform.CoreLocation.CLLocationCoordinate2DMake
-import platform.MapKit.MKAnnotationView
+import platform.Foundation.timeIntervalSinceReferenceDate
 import platform.MapKit.MKCoordinateRegionMakeWithDistance
+import platform.MapKit.MKDirections
+import platform.MapKit.MKDirectionsRequest
+import platform.MapKit.MKDirectionsTransportTypeAutomobile
+import platform.MapKit.MKMapItem
 import platform.MapKit.MKMapView
 import platform.MapKit.MKMapViewDelegateProtocol
-import platform.MapKit.MKPinAnnotationView
+import platform.MapKit.MKOverlayLevel
+import platform.MapKit.MKOverlayRenderer
+import platform.MapKit.MKPlacemark
 import platform.MapKit.MKPointAnnotation
 import platform.MapKit.MKPolyline
 import platform.MapKit.MKPolylineRenderer
 import platform.MapKit.MKUserTrackingModeNone
+import platform.UIKit.UIColor
 import platform.darwin.NSObject
+import kotlin.math.roundToInt
+
+// Holds map + delegate together; MKMapView.delegate is a weak reference
+// so we keep both alive here and let `remember` retain the holder.
+private class MapViewHolder {
+    val delegate = RouteDelegate()
+    val mapView = MKMapView().also {
+        it.showsUserLocation = true
+        it.userTrackingMode = MKUserTrackingModeNone
+        it.delegate = delegate
+    }
+    var routeRequested = false
+}
+
+private class RouteDelegate : NSObject(), MKMapViewDelegateProtocol {
+    var onRouteInfo: (String, String) -> Unit = { _, _ -> }
+
+    override fun mapView(
+        mapView: MKMapView,
+        rendererForOverlay: platform.MapKit.MKOverlayProtocol,
+    ): MKOverlayRenderer {
+        if (rendererForOverlay is MKPolyline) {
+            return MKPolylineRenderer(polyline = rendererForOverlay).also { r ->
+                r.strokeColor = UIColor(red = 0.294, green = 0.561, blue = 0.965, alpha = 1.0)
+                r.lineWidth = 5.0
+            }
+        }
+        return MKOverlayRenderer(overlay = rendererForOverlay)
+    }
+}
 
 @OptIn(ExperimentalForeignApi::class)
 @Composable
@@ -26,41 +63,56 @@ actual fun PlatformMapContent(
     customerLng: Double,
     customerName: String,
     modifier: Modifier,
+    onRouteInfo: (duration: String, distance: String) -> Unit,
 ) {
+    val holder = remember { MapViewHolder() }
+    holder.delegate.onRouteInfo = onRouteInfo
+
     UIKitView(
         modifier = modifier,
         factory = {
-            val mapView = MKMapView()
-            mapView.showsUserLocation = true
-            mapView.userTrackingMode = MKUserTrackingModeNone
+            val mapView = holder.mapView
 
-            val customerAnnotation = MKPointAnnotation()
-            customerAnnotation.setCoordinate(CLLocationCoordinate2DMake(customerLat, customerLng))
-            customerAnnotation.setTitle(customerName)
-            customerAnnotation.setSubtitle("الوجهة")
-            mapView.addAnnotation(customerAnnotation)
+            val annotation = MKPointAnnotation()
+            annotation.setCoordinate(CLLocationCoordinate2DMake(customerLat, customerLng))
+            annotation.setTitle(customerName)
+            annotation.setSubtitle("الوجهة")
+            mapView.addAnnotation(annotation)
 
             val centerLat = if (userLat != null) (customerLat + userLat) / 2.0 else customerLat
             val centerLng = if (userLng != null) (customerLng + userLng) / 2.0 else customerLng
-            val region = MKCoordinateRegionMakeWithDistance(
-                CLLocationCoordinate2DMake(centerLat, centerLng),
-                if (userLat != null) 8000.0 else 2000.0,
-                if (userLat != null) 8000.0 else 2000.0,
+            mapView.setRegion(
+                MKCoordinateRegionMakeWithDistance(
+                    CLLocationCoordinate2DMake(centerLat, centerLng),
+                    if (userLat != null) 8000.0 else 2000.0,
+                    if (userLat != null) 8000.0 else 2000.0,
+                ),
+                animated = false,
             )
-            mapView.setRegion(region, animated = false)
 
-            if (userLat != null && userLng != null) {
-                val coords = arrayOf(
-                    CLLocationCoordinate2DMake(userLat, userLng),
-                    CLLocationCoordinate2DMake(customerLat, customerLng),
+            if (userLat != null && userLng != null && !holder.routeRequested) {
+                holder.routeRequested = true
+                val request = MKDirectionsRequest()
+                request.source = MKMapItem(
+                    placemark = MKPlacemark(coordinate = CLLocationCoordinate2DMake(userLat, userLng)),
                 )
-                // Polyline drawing via delegate is complex; just show markers for iOS
+                request.destination = MKMapItem(
+                    placemark = MKPlacemark(coordinate = CLLocationCoordinate2DMake(customerLat, customerLng)),
+                )
+                request.transportType = MKDirectionsTransportTypeAutomobile
+                MKDirections(request = request).calculateDirectionsWithCompletionHandler { response, _ ->
+                    val route = response?.routes?.firstOrNull() as? platform.MapKit.MKRoute
+                        ?: return@calculateDirectionsWithCompletionHandler
+                    mapView.addOverlay(route.polyline, MKOverlayLevel.MKOverlayLevelAboveRoads)
+                    val minutes = (route.expectedTravelTime / 60).roundToInt()
+                    val km = "%.1f km".format(route.distance / 1000.0)
+                    val dur = if (minutes < 60) "$minutes دقيقة" else "${minutes / 60} ساعة ${minutes % 60} د"
+                    holder.delegate.onRouteInfo(dur, km)
+                }
             }
 
             mapView
         },
-        update = { mapView ->
-            mapView.showsUserLocation = true
-        },
+        update = { mapView -> mapView.showsUserLocation = true },
     )
 }
