@@ -14,6 +14,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.jehadalomour.flowvan.screens.ai.AiAssistantScreen
+import com.jehadalomour.flowvan.screens.map.MapNavigationScreen
 import com.jehadalomour.flowvan.screens.collection.CollectionScreen
 import com.jehadalomour.flowvan.screens.customer.CustomerDashboardScreen
 import com.jehadalomour.flowvan.screens.customers.CustomerListScreen
@@ -43,12 +44,14 @@ object Routes {
     const val RETURN = "return/{customerId}"
     const val REQUEST = "request/{customerId}"
     const val COLLECTION = "collection/{customerId}"
+    const val MAP = "map/{customerId}"
     fun customer(id: String) = "customer/$id"
     fun sale(id: String) = "sale/$id"
     fun returns(id: String) = "return/$id"
     fun request(id: String) = "request/$id"
     fun collection(id: String) = "collection/$id"
     fun ai(customerId: String? = null) = if (customerId != null) "ai?customerId=$customerId" else "ai"
+    fun map(customerId: String) = "map/$customerId"
 }
 
 @Composable
@@ -95,12 +98,14 @@ fun FlowVanNavHost(
             RouteScreen(
                 onBack = { navController.popBackStack() },
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
+                onNavigateTo = { id -> navController.navigate(Routes.map(id)) },
             )
         }
         composable(Routes.CUSTOMERS) {
             CustomerListScreen(
                 onBack = { navController.popBackStack() },
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
+                onNavigateTo = { id -> navController.navigate(Routes.map(id)) },
             )
         }
         composable(
@@ -170,6 +175,13 @@ fun FlowVanNavHost(
                     }
                 },
             )
+        }
+        composable(
+            Routes.MAP,
+            arguments = listOf(navArgument("customerId") { type = NavType.StringType }),
+        ) { entry ->
+            val id = entry.arguments?.getString("customerId").orEmpty()
+            MapNavigationScreen(customerId = id, onBack = { navController.popBackStack() })
         }
     }
 }

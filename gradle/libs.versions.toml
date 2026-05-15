@@ -26,6 +26,8 @@ kermit = "2.0.5"
 ktor = "3.0.3"
 navigationCompose = "2.8.0-alpha13"
 playServicesLocation = "21.3.0"
+playServicesMaps = "19.0.0"
+mapsCompose = "6.4.1"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -82,6 +84,8 @@ navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-co
 
 # Android-only
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
+play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
+maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

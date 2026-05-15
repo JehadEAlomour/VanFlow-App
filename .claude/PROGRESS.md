@@ -71,17 +71,25 @@ Tracks every completed phase. Updated at phase sign-off (BUILD SUCCESSFUL verifi
 
 **Modules:** M13 AI Assistant · M14 Van Stock · M15 End of Day
 
-**Deliverables**
-- `AiAssistantViewModel` — demo keyword engine (ملخص/مبيعات/مخزون/عميل/مسار), 1.2s simulated latency, Room persistence per conversationId, customer-context vs home-context conversations
-- `AiAssistantScreen` — chat UI with 6 quick-action chips, ✨ assistant badge, thinking indicator, RTL bubbles
-- `VanStockViewModel` — live product Flow, `StockStatus` (GOOD/LOW/OUT/EXPIRING), total inventory value
-- `VanStockScreen` — header stats, search, category filter chips, product cards with status pills
-- `EndOfDayViewModel` — day KPI, cash/cheque/transfer breakdown, unsynced counts, `EndShiftUseCase`
-- `EndOfDayScreen` — 3 summary cards, confirmation dialog, logout on confirm
-- DAO additions: `PaymentDao.listByMethodSince`, `PaymentDao.countUnsyncedSince`, `ShiftDao.endShift`, `InvoiceDao.countUnsyncedSince`
-- AI route updated to optional `?customerId=` param; `ComingSoonScreen` placeholders replaced
-
 **Build sign-off:** ✅ `BUILD SUCCESSFUL` (2m 25s)
+
+---
+
+## ✅ P4-ext — M19 Map Navigation (Complete)
+
+**Modules:** M19 In-App Map Navigation
+
+**Deliverables**
+- `MapNavigationViewModel` — fetches customer lat/lng + device last known location via existing `LocationProvider`
+- `PlatformMapContent` (expect/actual) — Android: `maps-compose 6.4.1` GoogleMap with customer marker + blue geodesic polyline; iOS: UIKitView + MKMapView with annotation + `showsUserLocation`
+- `MapNavigationScreen` — header, full-screen map, bottom info card with "🚗 ابدأ الملاحة" button opening Google Maps via `LocalUriHandler`
+- 🚗 button added to `CustomerListScreen` and `RouteScreen` cards (only when `customer.lat != null`)
+- Route: `map/{customerId}` added to NavHost
+- Google Maps API key added to AndroidManifest `<meta-data>`
+- `maps-compose 6.4.1` + `play-services-maps 19.0.0` added to `libs.versions.toml` + `composeApp/build.gradle.kts`
+- M19 module spec added to CASHFLOW_MODULES.md
+
+**Build sign-off:** ✅ `BUILD SUCCESSFUL` (30s)
 
 ---
 

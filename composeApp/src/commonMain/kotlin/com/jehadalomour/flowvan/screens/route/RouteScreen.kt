@@ -50,6 +50,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun RouteScreen(
     onBack: () -> Unit,
     onOpenCustomer: (String) -> Unit,
+    onNavigateTo: (String) -> Unit = {},
     viewModel: RouteViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -93,7 +94,13 @@ fun RouteScreen(
                 )
             }
             items(visible, key = { it.id }) { customer ->
-                RouteCustomerCard(customer, onClick = { onOpenCustomer(customer.id) })
+                RouteCustomerCard(
+                    customer,
+                    onClick = { onOpenCustomer(customer.id) },
+                    onNavigate = if (customer.lat != null && customer.lng != null) {
+                        { onNavigateTo(customer.id) }
+                    } else null,
+                )
             }
             if (visible.isEmpty() && !state.isLoading) {
                 item {
@@ -129,7 +136,7 @@ private fun ProgressBlock(visited: Int, planned: Int) {
 }
 
 @Composable
-private fun RouteCustomerCard(customer: Customer, onClick: () -> Unit) {
+private fun RouteCustomerCard(customer: Customer, onClick: () -> Unit, onNavigate: (() -> Unit)?) {
     val cardBg = if (customer.churnRisk >= 0.80) Color(0x1AF04F4F) else Fv.Surface
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
@@ -152,6 +159,17 @@ private fun RouteCustomerCard(customer: Customer, onClick: () -> Unit) {
                     Text("${customer.code} · ${customer.area}", color = Fv.TextMid, fontSize = 11.sp)
                 }
                 TierBadge(customer.tier)
+                if (onNavigate != null) {
+                    Spacer(Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .clickable { onNavigate() }
+                            .background(Fv.Blue.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                    ) {
+                        Text("🚗", fontSize = 16.sp)
+                    }
+                }
             }
             if (customer.overdueAmount > 0 || customer.churnRisk >= 0.60) {
                 Spacer(Modifier.height(8.dp))

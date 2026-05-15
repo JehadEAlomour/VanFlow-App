@@ -50,6 +50,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun CustomerListScreen(
     onBack: () -> Unit,
     onOpenCustomer: (String) -> Unit,
+    onNavigateTo: (String) -> Unit = {},
     viewModel: CustomerListViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -91,7 +92,13 @@ fun CustomerListScreen(
                 )
             }
             items(state.visible, key = { it.id }) { customer ->
-                CustomerListCard(customer, onClick = { onOpenCustomer(customer.id) })
+                CustomerListCard(
+                    customer,
+                    onClick = { onOpenCustomer(customer.id) },
+                    onNavigate = if (customer.lat != null && customer.lng != null) {
+                        { onNavigateTo(customer.id) }
+                    } else null,
+                )
             }
             if (state.visible.isEmpty() && !state.isLoading) {
                 item {
@@ -135,7 +142,7 @@ private fun FilterPill(label: String, active: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun CustomerListCard(customer: Customer, onClick: () -> Unit) {
+private fun CustomerListCard(customer: Customer, onClick: () -> Unit, onNavigate: (() -> Unit)?) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
@@ -169,13 +176,24 @@ private fun CustomerListCard(customer: Customer, onClick: () -> Unit) {
             Column(horizontalAlignment = Alignment.End) {
                 TierBadge(customer.tier)
                 if (customer.balance > 0) {
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         customer.balance.formatJod(AppLanguage.AR),
                         color = if (customer.overdueAmount > 0) Fv.Red else Fv.TextHigh,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
+                }
+                if (onNavigate != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .clickable { onNavigate() }
+                            .background(Fv.Blue.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text("🚗", fontSize = 16.sp)
+                    }
                 }
             }
         }

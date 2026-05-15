@@ -10,6 +10,7 @@ actual class DatabaseFactory(private val context: Context) {
         return Room.databaseBuilder<FlowVanDatabase>(
             context = context.applicationContext,
             name = dbFile.absolutePath,
+            factory = { FlowVanDatabaseConstructor.initialize() },
         )
     }
 }

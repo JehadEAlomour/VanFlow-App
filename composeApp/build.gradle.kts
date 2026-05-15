@@ -30,6 +30,8 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.koin.android)
+            implementation(libs.maps.compose)
+            implementation(libs.play.services.maps)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)

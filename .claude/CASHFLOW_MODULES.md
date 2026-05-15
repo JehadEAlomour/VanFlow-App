@@ -73,6 +73,7 @@ cashflow/
 | M14 | Van Stock | P4 | required |
 | M15 | End of Day | P4 | required |
 | M16 | Location Tracking (Shift) | P5 | required |
+| M19 | In-App Map Navigation | P4-ext | required |
 | M17 | Sync Engine (when backend ready) | P6 | deferred |
 | M18 | Real AI Gateway integration | P6 | deferred |
 
@@ -102,6 +103,7 @@ cashflow/
 - M13 AI Assistant
 - M14 Van Stock
 - M15 End of Day
+- M19 In-App Map Navigation (added)
 
 **P5 — Tracking (Days 9–10)**
 - M16 Location Tracking
@@ -881,6 +883,47 @@ Daily wrap-up screen the salesman opens before going home. Shows the day's total
 
 **Out of scope**
 Generating a printable end-of-day report (v1.1, needs M17 + a PDF skill).
+
+---
+
+### M19 — In-App Map Navigation
+
+**Purpose**
+Show the salesman a live map from their current GPS position to a selected customer's location. Supports both in-app preview (Google Maps / MapKit) and one-tap handoff to the device navigation app.
+
+**Phase:** P4-ext
+**Dependencies:** M01, M02, M05, M06
+
+**Entry Points**
+- 🚗 button on each customer card in Route Screen (M05) — only shown when customer has GPS coordinates.
+- 🚗 button on each customer card in Customer Directory (M06) — same condition.
+
+**User Flow**
+1. Tap 🚗 on a customer card → `MapNavigationScreen` opens with that customer's `customerId`.
+2. Screen fetches the customer's lat/lng from Room and requests the device's last known location via `LocationProvider`.
+3. Map shows:
+   - Customer pin (red marker, customer name label).
+   - Dashed polyline from user to customer (Android only; iOS shows both markers).
+   - Blue dot = user position (via `isMyLocationEnabled = true` on Android / `showsUserLocation = true` on iOS).
+4. Bottom sheet shows customer name, address, phone.
+5. **"🚗 ابدأ الملاحة"** button opens Google Maps / Apple Maps in the device for turn-by-turn navigation.
+   - URL: `https://www.google.com/maps/dir/?api=1&destination={lat},{lng}&travelmode=driving`
+6. If customer has no coordinates → "لا تتوفر إحداثيات لهذا العميل" message; navigate button hidden.
+
+**Technical Notes**
+- Google Maps API key: stored in AndroidManifest `<meta-data>` under `com.google.android.geo.API_KEY`.
+- Android: `maps-compose 6.4.1` + `play-services-maps 19.0.0`.
+- iOS: `UIKitView` wrapping `MKMapView` (native MapKit).
+- `MapNavigationViewModel` reuses the existing `LocationProvider` (expect/actual, already registered in `platformModule`).
+- Map only shows when `customer.lat != null && customer.lng != null`.
+
+**Acceptance Criteria**
+- [ ] 🚗 button visible on customer cards that have coordinates; hidden otherwise.
+- [ ] Map opens centred between user and customer.
+- [ ] Customer marker shows customer name.
+- [ ] Android: blue polyline drawn from user to customer.
+- [ ] "ابدأ الملاحة" opens Google Maps / Apple Maps with the correct destination.
+- [ ] No crash when location permission is denied (map still shows customer pin).
 
 ---
 

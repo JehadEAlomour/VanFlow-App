@@ -19,6 +19,7 @@ import com.jehadalomour.flowvan.shared.domain.usecase.LoginUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.LogoutUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.RecordCollectionUseCase
 import com.jehadalomour.flowvan.shared.presentation.feature.ai.AiAssistantViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.map.MapNavigationViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.collection.CollectionViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.customerdashboard.CustomerDashboardViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.customers.CustomerListViewModel
@@ -100,6 +101,9 @@ fun sharedModule(): Module = module {
     }
     viewModel { VanStockViewModel(get()) }
     viewModel { EndOfDayViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { (customerId: String) ->
+        MapNavigationViewModel(customerId, get(), get())
+    }
 }
 
 expect fun platformModule(): Module
