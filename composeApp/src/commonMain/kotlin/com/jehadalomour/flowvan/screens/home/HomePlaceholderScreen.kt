@@ -79,7 +79,7 @@ fun HomePlaceholderScreen(onLogout: () -> Unit) {
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
-                                text = "P1 — Foundation ✓",
+                                text = "P1 — Foundation",
                                 color = Color(0xFF1DC97A),
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 16.sp,

@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,6 +32,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.screens.components.Fv
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.ItemSalesRow
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.ItemsSalesReportViewModel
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
@@ -53,7 +57,14 @@ fun ItemsSalesReportScreen(
         ) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) { Text("←", color = Fv.TextHigh, fontSize = 22.sp) }
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_back),
+                            contentDescription = null,
+                            tint = Fv.TextHigh,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                     Spacer(Modifier.width(4.dp))
                     Text("مبيعات الأصناف", color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }

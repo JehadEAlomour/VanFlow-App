@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -18,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -33,10 +35,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.screens.components.CartLineRow
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 import com.jehadalomour.flowvan.screens.components.Fv
 import com.jehadalomour.flowvan.screens.components.ProductPickerColumn
 import com.jehadalomour.flowvan.screens.components.TotalsStrip
-import com.jehadalomour.flowvan.screens.components.darkFieldColors
+import com.jehadalomour.flowvan.screens.components.fvFieldColors
 import com.jehadalomour.flowvan.shared.presentation.feature.returns.ReturnReason
 import com.jehadalomour.flowvan.shared.presentation.feature.returns.ReturnVoucherEvent
 import com.jehadalomour.flowvan.shared.presentation.feature.returns.ReturnVoucherViewModel
@@ -59,7 +64,14 @@ fun ReturnVoucherScreen(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onBack) { Text("←", color = Fv.TextHigh, fontSize = 22.sp) }
+                IconButton(onClick = onBack) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_back),
+                        contentDescription = null,
+                        tint = Fv.TextHigh,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
                 Column(modifier = Modifier.weight(1f)) {
                     Text("فاتورة مرتجع", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     state.customer?.let { Text(it.nameAr, color = Fv.TextMid, fontSize = 11.sp) }
@@ -71,7 +83,7 @@ fun ReturnVoucherScreen(
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                 ) {
                     Text(
-                        if (state.view == VoucherView.PICKER) "🛒 السلة (${state.cart.size})" else "← المنتجات",
+                        if (state.view == VoucherView.PICKER) "السلة (${state.cart.size})" else "المنتجات",
                         color = Fv.TextHigh, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
                     )
                 }
@@ -104,7 +116,7 @@ fun ReturnVoucherScreen(
                             label = { Text("ملاحظات (اختياري)", color = Fv.TextMid, fontSize = 11.sp) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp),
-                            colors = darkFieldColors(),
+                            colors = fvFieldColors(),
                         )
                     }
                 }

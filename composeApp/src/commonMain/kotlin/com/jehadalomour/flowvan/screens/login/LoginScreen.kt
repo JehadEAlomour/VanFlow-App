@@ -21,6 +21,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -46,6 +47,9 @@ import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.shared.presentation.feature.login.LoginEffect
 import com.jehadalomour.flowvan.shared.presentation.feature.login.LoginEvent
 import com.jehadalomour.flowvan.shared.presentation.feature.login.LoginViewModel
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -114,9 +118,13 @@ fun LoginScreen(
                         else PasswordVisualTransformation(),
                         trailingIcon = {
                             IconButton(onClick = { viewModel.onEvent(LoginEvent.TogglePasswordVisibility) }) {
-                                Text(
-                                    text = if (state.passwordVisible) "👁" else "•",
-                                    color = Color(0xFFEDF0FA),
+                                Icon(
+                                    painter = painterResource(
+                                        if (state.passwordVisible) Res.drawable.ic_visibility else Res.drawable.ic_key
+                                    ),
+                                    contentDescription = null,
+                                    tint = Color(0xFFEDF0FA),
+                                    modifier = androidx.compose.ui.Modifier.size(18.dp),
                                 )
                             }
                         },
@@ -251,7 +259,7 @@ private fun DemoCredsCard() {
     ) {
         Column(modifier = Modifier.padding(PaddingValues(16.dp)), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "🔑  بيانات تجريبية / Demo Credentials",
+                text = "بيانات تجريبية / Demo Credentials",
                 color = Color(0xFFEDF0FA),
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp,

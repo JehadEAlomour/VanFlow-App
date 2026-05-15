@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,9 +30,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.screens.components.Fv
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 import com.jehadalomour.flowvan.screens.components.OverdueChip
 import com.jehadalomour.flowvan.screens.components.TierBadge
 import com.jehadalomour.flowvan.shared.domain.model.Customer
@@ -161,7 +166,14 @@ private fun ShiftStatusCard(isActive: Boolean, onStartShift: () -> Unit) {
                         .size(36.dp)
                         .background(Fv.Green.copy(alpha = 0.18f), CircleShape),
                     contentAlignment = Alignment.Center,
-                ) { Text("▶", fontSize = 16.sp, color = Fv.Green) }
+                ) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_play_circle),
+                        contentDescription = null,
+                        tint = Fv.Green,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text("بدء اليوم", color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.Medium)
@@ -186,10 +198,20 @@ private fun TopBar(onOpenAi: () -> Unit, onLogout: () -> Unit) {
             modifier = Modifier.weight(1f),
         )
         IconButton(onClick = onOpenAi) {
-            Text("✨", color = Fv.Purple, fontSize = 22.sp)
+            Icon(
+                painter = painterResource(Res.drawable.ic_ai_sparkle),
+                contentDescription = null,
+                tint = Fv.Purple,
+                modifier = Modifier.size(22.dp),
+            )
         }
         IconButton(onClick = onLogout) {
-            Text("⏻", color = Fv.TextMid, fontSize = 20.sp)
+            Icon(
+                painter = painterResource(Res.drawable.ic_logout),
+                contentDescription = null,
+                tint = Fv.TextMid,
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
 }
@@ -197,7 +219,7 @@ private fun TopBar(onOpenAi: () -> Unit, onLogout: () -> Unit) {
 @Composable
 private fun GreetingBlock(name: String, dateText: String) {
     Column {
-        Text("أهلاً، $name 👋", color = Fv.TextHigh, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        Text("أهلاً، $name", color = Fv.TextHigh, fontSize = 22.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(4.dp))
         Text(dateText, color = Fv.TextMid, fontSize = 13.sp)
     }
@@ -247,22 +269,22 @@ private fun ActionTilesGrid(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionTile("🚚", "مسار اليوم", Fv.Blue, Modifier.weight(1f), onOpenRoute)
-            ActionTile("👥", "قائمة العملاء", Fv.Teal, Modifier.weight(1f), onOpenCustomers)
+            ActionTile(painterResource(Res.drawable.ic_truck), "مسار اليوم", Fv.Blue, Modifier.weight(1f), onOpenRoute)
+            ActionTile(painterResource(Res.drawable.ic_customers), "قائمة العملاء", Fv.Teal, Modifier.weight(1f), onOpenCustomers)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionTile("📦", "مخزون الفان", Fv.Amber, Modifier.weight(1f), onOpenVanStock)
-            ActionTile("🌙", "نهاية اليوم", Fv.Red, Modifier.weight(1f), onOpenEndOfDay)
+            ActionTile(painterResource(Res.drawable.ic_inventory), "مخزون الفان", Fv.Amber, Modifier.weight(1f), onOpenVanStock)
+            ActionTile(painterResource(Res.drawable.ic_moon), "نهاية اليوم", Fv.Red, Modifier.weight(1f), onOpenEndOfDay)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionTile("📊", "التقارير", Fv.Green, Modifier.weight(1f), onOpenReports)
-            ActionTile("✨", "المساعد الذكي", Fv.Purple, Modifier.weight(1f), onOpenAi)
+            ActionTile(painterResource(Res.drawable.ic_bar_chart), "التقارير", Fv.Green, Modifier.weight(1f), onOpenReports)
+            ActionTile(painterResource(Res.drawable.ic_ai_sparkle), "المساعد الذكي", Fv.Purple, Modifier.weight(1f), onOpenAi)
         }
     }
 }
 
 @Composable
-private fun ActionTile(emoji: String, label: String, accent: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun ActionTile(icon: Painter, label: String, accent: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Card(
         modifier = modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
@@ -277,7 +299,14 @@ private fun ActionTile(emoji: String, label: String, accent: androidx.compose.ui
                     .size(36.dp)
                     .background(accent.copy(alpha = 0.18f), CircleShape),
                 contentAlignment = Alignment.Center,
-            ) { Text(emoji, fontSize = 18.sp) }
+            ) {
+                Icon(
+                    painter = icon,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
             Spacer(Modifier.width(12.dp))
             Text(label, color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }

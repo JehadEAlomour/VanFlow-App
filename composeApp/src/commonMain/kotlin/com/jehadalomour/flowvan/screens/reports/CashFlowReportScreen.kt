@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -28,6 +30,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.screens.components.Fv
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.CashEntry
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.CashFlowReportViewModel
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
@@ -51,7 +56,14 @@ fun CashFlowReportScreen(
         ) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) { Text("←", color = Fv.TextHigh, fontSize = 22.sp) }
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_back),
+                            contentDescription = null,
+                            tint = Fv.TextHigh,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                     Spacer(Modifier.width(4.dp))
                     Text("الكشف اليومي", color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
@@ -108,15 +120,15 @@ fun CashFlowReportScreen(
 
 @Composable
 private fun CashEntryRow(entry: CashEntry, onClick: () -> Unit) {
-    val emoji: String
     val label: String
     val ref: String
     val amount: Double
     val color: androidx.compose.ui.graphics.Color
+    val iconRes: androidx.compose.ui.graphics.painter.Painter
     when (entry) {
-        is CashEntry.Sale -> { emoji = "🧾"; label = "بيع"; ref = entry.invoice.number; amount = entry.invoice.total; color = Fv.Blue }
-        is CashEntry.Return -> { emoji = "↩️"; label = "مرتجع"; ref = entry.invoice.number; amount = entry.invoice.total; color = Fv.Red }
-        is CashEntry.Collection -> { emoji = "💵"; label = "تحصيل"; ref = entry.payment.number; amount = entry.payment.amount; color = Fv.Green }
+        is CashEntry.Sale -> { iconRes = painterResource(Res.drawable.ic_receipt); label = "بيع"; ref = entry.invoice.number; amount = entry.invoice.total; color = Fv.Blue }
+        is CashEntry.Return -> { iconRes = painterResource(Res.drawable.ic_return_arrow); label = "مرتجع"; ref = entry.invoice.number; amount = entry.invoice.total; color = Fv.Red }
+        is CashEntry.Collection -> { iconRes = painterResource(Res.drawable.ic_payment); label = "تحصيل"; ref = entry.payment.number; amount = entry.payment.amount; color = Fv.Green }
     }
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
@@ -124,7 +136,12 @@ private fun CashEntryRow(entry: CashEntry, onClick: () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = Fv.Surface),
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(emoji, fontSize = 18.sp)
+            Icon(
+                painter = iconRes,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(18.dp),
+            )
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(ref, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.Medium)

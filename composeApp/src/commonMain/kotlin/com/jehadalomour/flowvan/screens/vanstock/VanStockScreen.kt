@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -19,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -33,7 +35,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.screens.components.Fv
-import com.jehadalomour.flowvan.screens.components.darkFieldColors
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
+import com.jehadalomour.flowvan.screens.components.fvFieldColors
 import com.jehadalomour.flowvan.shared.domain.model.Product
 import com.jehadalomour.flowvan.shared.presentation.feature.vanstock.StockStatus
 import com.jehadalomour.flowvan.shared.presentation.feature.vanstock.VanStockEvent
@@ -56,7 +61,14 @@ fun VanStockScreen(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onBack) { Text("←", color = Fv.TextHigh, fontSize = 22.sp) }
+                IconButton(onClick = onBack) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_back),
+                        contentDescription = null,
+                        tint = Fv.TextHigh,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
                 Text("مخزون الفان", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
 
@@ -81,7 +93,7 @@ fun VanStockScreen(
                 placeholder = { Text("بحث (اسم، SKU، فئة...)", color = Fv.TextMid, fontSize = 12.sp) },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(10.dp),
-                colors = darkFieldColors(),
+                colors = fvFieldColors(),
                 singleLine = true,
             )
 
@@ -147,10 +159,10 @@ private fun CategoryChip(label: String, selected: Boolean, onClick: () -> Unit) 
 private fun ProductCard(product: Product, nowMs: Long) {
     val status = product.stockStatus(nowMs)
     val (statusLabel, statusColor) = when (status) {
-        StockStatus.OUT -> "نفد ❌" to Fv.Red
-        StockStatus.LOW -> "⚠️ منخفض" to Fv.Amber
-        StockStatus.EXPIRING -> "⏰ ينتهي قريباً" to Fv.Amber
-        StockStatus.GOOD -> "متوفر ✓" to Fv.Green
+        StockStatus.OUT -> "نفد" to Fv.Red
+        StockStatus.LOW -> "منخفض" to Fv.Amber
+        StockStatus.EXPIRING -> "ينتهي قريباً" to Fv.Amber
+        StockStatus.GOOD -> "متوفر" to Fv.Green
     }
 
     Card(

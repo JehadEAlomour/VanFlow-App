@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -15,6 +16,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,6 +33,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.screens.components.Fv
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 import com.jehadalomour.flowvan.shared.presentation.feature.map.MapNavigationViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -53,8 +58,19 @@ fun MapNavigationScreen(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onBack) { Text("←", color = Fv.TextHigh, fontSize = 22.sp) }
-                Text("🗺️", fontSize = 18.sp)
+                IconButton(onClick = onBack) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_back),
+                        contentDescription = null,
+                        tint = Fv.TextHigh,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+                Icon(
+                    painter = painterResource(Res.drawable.ic_map),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
                 Spacer(Modifier.width(6.dp))
                 Column {
                     Text(
@@ -71,7 +87,12 @@ fun MapNavigationScreen(
                 !state.hasCoordinates && customer != null -> {
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("📍", fontSize = 48.sp)
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_map),
+                                contentDescription = null,
+                                tint = Fv.TextMid,
+                                modifier = Modifier.size(48.dp),
+                            )
                             Spacer(Modifier.height(12.dp))
                             Text(
                                 "لا تتوفر إحداثيات لهذا العميل",
@@ -115,13 +136,40 @@ fun MapNavigationScreen(
                                 Text(it, color = Fv.TextMid, fontSize = 12.sp)
                             }
                             customer.phone?.let {
-                                Text("📞 $it", color = Fv.TextMid, fontSize = 12.sp)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        painter = painterResource(Res.drawable.ic_call),
+                                        contentDescription = null,
+                                        tint = Fv.TextMid,
+                                        modifier = Modifier.size(14.dp),
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(it, color = Fv.TextMid, fontSize = 12.sp)
+                                }
                             }
                             if (driveDuration.isNotEmpty()) {
                                 Spacer(Modifier.height(8.dp))
                                 Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)) {
-                                    Text("🕐 $driveDuration", color = Fv.Green, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                    Text("📍 $driveDistance", color = Fv.TextMid, fontSize = 13.sp)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            painter = painterResource(Res.drawable.ic_alarm),
+                                            contentDescription = null,
+                                            tint = Fv.Green,
+                                            modifier = Modifier.size(14.dp),
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(driveDuration, color = Fv.Green, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            painter = painterResource(Res.drawable.ic_map),
+                                            contentDescription = null,
+                                            tint = Fv.TextMid,
+                                            modifier = Modifier.size(14.dp),
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(driveDistance, color = Fv.TextMid, fontSize = 13.sp)
+                                    }
                                 }
                             }
                             Spacer(Modifier.height(12.dp))
@@ -146,7 +194,13 @@ fun MapNavigationScreen(
                                         contentColor = Fv.TextHigh,
                                     ),
                                 ) {
-                                    Text("🚗  ابدأ الملاحة", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    Icon(
+                                        painter = painterResource(Res.drawable.ic_directions_car),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("ابدأ الملاحة", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                 }
                             }
                         }

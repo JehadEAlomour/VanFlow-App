@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -22,6 +23,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -38,13 +40,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.screens.components.Fv
-import com.jehadalomour.flowvan.screens.components.darkFieldColors
+import com.jehadalomour.flowvan.screens.components.fvFieldColors
 import com.jehadalomour.flowvan.shared.domain.model.PaymentMethod
 import com.jehadalomour.flowvan.shared.presentation.feature.collection.CollectionEvent
 import com.jehadalomour.flowvan.shared.presentation.feature.collection.CollectionViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.collection.JordanBanks
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
 import com.jehadalomour.flowvan.shared.presentation.i18n.AppLanguage
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -63,7 +68,14 @@ fun CollectionScreen(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onBack) { Text("←", color = Fv.TextHigh, fontSize = 22.sp) }
+                IconButton(onClick = onBack) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_back),
+                        contentDescription = null,
+                        tint = Fv.TextHigh,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
                 Text("سند تحصيل", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
             LazyColumn(
@@ -81,7 +93,7 @@ fun CollectionScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
-                        colors = darkFieldColors(),
+                        colors = fvFieldColors(),
                     )
                 }
                 if (state.advanceWarning) {
@@ -92,7 +104,7 @@ fun CollectionScreen(
                             colors = CardDefaults.cardColors(containerColor = Fv.Amber.copy(alpha = 0.18f)),
                         ) {
                             Text(
-                                "⚠️ المبلغ أكبر من الرصيد — سيتم تسجيله كدفعة مقدمة",
+                                "المبلغ أكبر من الرصيد — سيتم تسجيله كدفعة مقدمة",
                                 color = Fv.Amber,
                                 fontSize = 12.sp,
                                 modifier = Modifier.padding(12.dp),
@@ -110,7 +122,7 @@ fun CollectionScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp),
-                            colors = darkFieldColors(),
+                            colors = fvFieldColors(),
                         )
                     }
                     item { BankPicker(state.chequeBank) { viewModel.onEvent(CollectionEvent.ChequeBankChanged(it)) } }
@@ -124,7 +136,7 @@ fun CollectionScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp),
-                            colors = darkFieldColors(),
+                            colors = fvFieldColors(),
                         )
                     }
                 }
@@ -135,7 +147,7 @@ fun CollectionScreen(
                         label = { Text("ملاحظات (اختياري)", color = Fv.TextMid, fontSize = 11.sp) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
-                        colors = darkFieldColors(),
+                        colors = fvFieldColors(),
                     )
                 }
             }

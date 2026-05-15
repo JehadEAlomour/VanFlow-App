@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -38,7 +39,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.screens.components.Fv
-import com.jehadalomour.flowvan.screens.components.darkFieldColors
+import com.jehadalomour.flowvan.screens.components.fvFieldColors
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 import com.jehadalomour.flowvan.shared.domain.model.AiMessage
 import com.jehadalomour.flowvan.shared.presentation.feature.ai.AiAssistantEvent
 import com.jehadalomour.flowvan.shared.presentation.feature.ai.AiAssistantViewModel
@@ -75,8 +79,19 @@ fun AiAssistantScreen(
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onBack) { Text("←", color = Fv.TextHigh, fontSize = 22.sp) }
-                Text("✨", fontSize = 18.sp)
+                IconButton(onClick = onBack) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_back),
+                        contentDescription = null,
+                        tint = Fv.TextHigh,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+                Icon(
+                    painter = painterResource(Res.drawable.ic_ai_sparkle),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
                 Spacer(Modifier.width(6.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text("المساعد الذكي", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
@@ -87,7 +102,12 @@ fun AiAssistantScreen(
                     )
                 }
                 IconButton(onClick = { viewModel.onEvent(AiAssistantEvent.OpenApiKeyDialog) }) {
-                    Text("⚙", color = if (state.apiKeySet) Fv.Green else Fv.TextMid, fontSize = 18.sp)
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_settings),
+                        contentDescription = null,
+                        tint = if (state.apiKeySet) Fv.Green else Fv.TextMid,
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
             }
 
@@ -137,7 +157,7 @@ fun AiAssistantScreen(
                     placeholder = { Text("اكتب سؤالك...", color = Fv.TextMid, fontSize = 13.sp) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(20.dp),
-                    colors = darkFieldColors(),
+                    colors = fvFieldColors(),
                     singleLine = true,
                     enabled = !state.isThinking && !state.isStreaming,
                 )
@@ -179,7 +199,7 @@ private fun ApiKeyDialog(
                     value = value,
                     onValueChange = onValueChange,
                     placeholder = { Text("sk-ant-...", color = Fv.TextMid, fontSize = 12.sp) },
-                    colors = darkFieldColors(),
+                    colors = fvFieldColors(),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
@@ -214,7 +234,11 @@ private fun MessageBubble(msg: AiMessage) {
                     .background(Fv.Blue.copy(alpha = 0.2f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("✨", fontSize = 14.sp)
+                Icon(
+                    painter = painterResource(Res.drawable.ic_ai_sparkle),
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                )
             }
             Spacer(Modifier.width(6.dp))
         }
@@ -249,7 +273,12 @@ private fun StreamingBubble(content: String) {
                 .background(Fv.Purple.copy(alpha = 0.2f), CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Text("✨", fontSize = 14.sp)
+            Icon(
+                painter = painterResource(Res.drawable.ic_ai_sparkle),
+                contentDescription = null,
+                tint = Fv.Purple,
+                modifier = Modifier.size(14.dp),
+            )
         }
         Spacer(Modifier.width(6.dp))
         Box(
@@ -272,7 +301,12 @@ private fun ThinkingBubble() {
                 .background(Fv.Blue.copy(alpha = 0.2f), CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Text("✨", fontSize = 14.sp)
+            Icon(
+                painter = painterResource(Res.drawable.ic_ai_sparkle),
+                contentDescription = null,
+                tint = Fv.Blue,
+                modifier = Modifier.size(14.dp),
+            )
         }
         Spacer(Modifier.width(6.dp))
         Box(

@@ -18,9 +18,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,7 +58,7 @@ fun ProductPickerColumn(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                colors = darkFieldColors(),
+                colors = fvFieldColors(),
             )
         }
         items(products, key = { it.id }) { product ->
@@ -137,7 +141,14 @@ fun CartLineRow(
                 modifier = Modifier
                     .clickable(onClick = onRemove)
                     .padding(8.dp),
-            ) { Text("✕", color = Fv.Red, fontSize = 16.sp) }
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.ic_cancel),
+                    contentDescription = null,
+                    tint = Fv.Red,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
         }
     }
 }
@@ -211,7 +222,7 @@ private fun TotalsRow(
 }
 
 @Composable
-fun darkFieldColors() = TextFieldDefaults.colors(
+fun fvFieldColors() = TextFieldDefaults.colors(
     focusedTextColor = Fv.TextHigh,
     unfocusedTextColor = Fv.TextHigh,
     focusedContainerColor = Fv.Surface,

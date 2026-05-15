@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,6 +32,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.screens.components.Fv
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.VisitReportViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.VisitedCustomer
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
@@ -52,7 +56,14 @@ fun VisitReportScreen(
         ) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) { Text("←", color = Fv.TextHigh, fontSize = 22.sp) }
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_back),
+                            contentDescription = null,
+                            tint = Fv.TextHigh,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                     Spacer(Modifier.width(4.dp))
                     Text("تقرير الزيارات", color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
@@ -121,7 +132,12 @@ private fun VisitedCustomerRow(vc: VisitedCustomer) {
                     .background(if (vc.visited) Fv.Green.copy(alpha = 0.15f) else Fv.Red.copy(alpha = 0.1f), CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(if (vc.visited) "✓" else "○", color = if (vc.visited) Fv.Green else Fv.Red, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Icon(
+                    painter = painterResource(if (vc.visited) Res.drawable.ic_check else Res.drawable.ic_radio_button_off),
+                    contentDescription = null,
+                    tint = if (vc.visited) Fv.Green else Fv.Red,
+                    modifier = Modifier.size(18.dp),
+                )
             }
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {

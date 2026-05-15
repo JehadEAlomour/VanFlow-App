@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -27,6 +29,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.screens.components.Fv
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 import com.jehadalomour.flowvan.shared.domain.model.Customer
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.ReceivablesReportViewModel
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
@@ -48,7 +53,14 @@ fun ReceivablesReportScreen(
         ) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) { Text("←", color = Fv.TextHigh, fontSize = 22.sp) }
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_back),
+                            contentDescription = null,
+                            tint = Fv.TextHigh,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                     Spacer(Modifier.width(4.dp))
                     Text("تقرير ذمم العملاء", color = Fv.TextHigh, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
@@ -87,7 +99,7 @@ fun ReceivablesReportScreen(
             if (state.customers.isEmpty()) {
                 item {
                     Text(
-                        "✅ لا توجد ذمم مستحقة على العملاء",
+                        "لا توجد ذمم مستحقة على العملاء",
                         color = Fv.Green,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(vertical = 24.dp),

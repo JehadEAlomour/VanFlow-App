@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -16,13 +18,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun ComingSoonScreen(titleAr: String, titleEn: String, phaseLabel: String, onBack: () -> Unit) {
     Surface(modifier = Modifier.fillMaxSize(), color = Fv.BgDeepest) {
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Text("←", color = Fv.TextHigh, fontSize = 22.sp) }
+                IconButton(onClick = onBack) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_back),
+                        contentDescription = null,
+                        tint = Fv.TextHigh,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
                 Text(titleAr, color = Fv.TextHigh, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             }
             Column(
@@ -30,7 +42,12 @@ fun ComingSoonScreen(titleAr: String, titleEn: String, phaseLabel: String, onBac
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text("🚧", fontSize = 48.sp)
+                Icon(
+                    painter = painterResource(Res.drawable.ic_warning),
+                    contentDescription = null,
+                    tint = Fv.Amber,
+                    modifier = Modifier.size(48.dp),
+                )
                 Spacer(Modifier.height(12.dp))
                 Text(titleAr, color = Fv.TextHigh, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Text(titleEn, color = Fv.TextMid, fontSize = 13.sp)

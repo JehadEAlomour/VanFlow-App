@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
@@ -37,6 +38,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.screens.components.ChurnChip
 import com.jehadalomour.flowvan.screens.components.Fv
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 import com.jehadalomour.flowvan.screens.components.OverdueChip
 import com.jehadalomour.flowvan.screens.components.TierBadge
 import com.jehadalomour.flowvan.shared.domain.model.Customer
@@ -64,7 +68,14 @@ fun RouteScreen(
         ) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) { Text("←", color = Fv.TextHigh, fontSize = 22.sp) }
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_back),
+                            contentDescription = null,
+                            tint = Fv.TextHigh,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                     Text(
                         "مسار اليوم",
                         color = Fv.TextHigh,
@@ -167,7 +178,11 @@ private fun RouteCustomerCard(customer: Customer, onClick: () -> Unit, onNavigat
                             .background(Fv.Blue.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
                             .padding(horizontal = 8.dp, vertical = 6.dp),
                     ) {
-                        Text("🚗", fontSize = 16.sp)
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_directions_car),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
                     }
                 }
             }

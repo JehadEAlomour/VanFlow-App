@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,6 +31,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.screens.components.ChurnChip
 import com.jehadalomour.flowvan.screens.components.Fv
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.painterResource
 import com.jehadalomour.flowvan.screens.components.SegmentChip
 import com.jehadalomour.flowvan.screens.components.TierBadge
 import com.jehadalomour.flowvan.shared.presentation.feature.customerdashboard.CustomerDashboardState
@@ -63,7 +68,14 @@ fun CustomerDashboardScreen(
             ) {
                 item {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onBack) { Text("←", color = Fv.TextHigh, fontSize = 22.sp) }
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_back),
+                                contentDescription = null,
+                                tint = Fv.TextHigh,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
                         Text(
                             "بطاقة العميل",
                             color = Fv.TextHigh,
@@ -72,7 +84,12 @@ fun CustomerDashboardScreen(
                             modifier = Modifier.weight(1f),
                         )
                         IconButton(onClick = { onOpenAi(customerId) }) {
-                            Text("✨", color = Fv.Purple, fontSize = 20.sp)
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_ai_sparkle),
+                                contentDescription = null,
+                                tint = Fv.Purple,
+                                modifier = Modifier.size(20.dp),
+                            )
                         }
                     }
                 }
@@ -205,7 +222,12 @@ private fun ReportButtons(
                     Text("كشف الحساب", color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     Text("جميع الحركات والمديونية من تاريخ إلى تاريخ", color = Fv.TextMid, fontSize = 10.sp)
                 }
-                Text("←", color = Fv.Purple, fontSize = 18.sp)
+                Icon(
+                    painter = painterResource(Res.drawable.ic_back),
+                    contentDescription = null,
+                    tint = Fv.Purple,
+                    modifier = Modifier.size(18.dp),
+                )
             }
         }
     }
