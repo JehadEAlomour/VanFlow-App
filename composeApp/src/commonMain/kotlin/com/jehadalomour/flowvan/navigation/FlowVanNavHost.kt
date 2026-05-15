@@ -20,6 +20,7 @@ import com.jehadalomour.flowvan.screens.reports.PaymentReportScreen
 import com.jehadalomour.flowvan.screens.reports.ReceiptDetailScreen
 import com.jehadalomour.flowvan.screens.reports.TransactionReportScreen
 import com.jehadalomour.flowvan.screens.reports.VoucherDetailScreen
+import com.jehadalomour.flowvan.screens.reports.VoucherReportScreen
 import com.jehadalomour.flowvan.screens.collection.CollectionScreen
 import com.jehadalomour.flowvan.screens.customer.CustomerDashboardScreen
 import com.jehadalomour.flowvan.screens.customers.CustomerListScreen
@@ -53,6 +54,7 @@ object Routes {
     const val TRANSACTION_REPORT = "txnreport/{customerId}"
     const val PAYMENT_REPORT = "payreport/{customerId}"
     const val ACCOUNT_STATEMENT = "statement/{customerId}"
+    const val VOUCHER_REPORT = "voucherreport/{customerId}"
     const val VOUCHER_DETAIL = "voucher/{invoiceId}"
     const val RECEIPT_DETAIL = "receipt/{paymentId}"
     fun customer(id: String) = "customer/$id"
@@ -65,6 +67,7 @@ object Routes {
     fun txnReport(customerId: String) = "txnreport/$customerId"
     fun payReport(customerId: String) = "payreport/$customerId"
     fun statement(customerId: String) = "statement/$customerId"
+    fun voucherReport(customerId: String) = "voucherreport/$customerId"
     fun voucher(invoiceId: String) = "voucher/$invoiceId"
     fun receipt(paymentId: String) = "receipt/$paymentId"
 }
@@ -136,7 +139,7 @@ fun FlowVanNavHost(
                 onOpenRequest = { cid -> navController.navigate(Routes.request(cid)) },
                 onOpenCollection = { cid -> navController.navigate(Routes.collection(cid)) },
                 onOpenAi = { cid -> navController.navigate(Routes.ai(cid)) },
-                onOpenTransactionReport = { cid -> navController.navigate(Routes.txnReport(cid)) },
+                onOpenVoucherReport = { cid -> navController.navigate(Routes.voucherReport(cid)) },
                 onOpenPaymentReport = { cid -> navController.navigate(Routes.payReport(cid)) },
                 onOpenAccountStatement = { cid -> navController.navigate(Routes.statement(cid)) },
             )
@@ -213,7 +216,11 @@ fun FlowVanNavHost(
             arguments = listOf(navArgument("customerId") { type = NavType.StringType }),
         ) { entry ->
             val id = entry.arguments?.getString("customerId").orEmpty()
-            PaymentReportScreen(customerId = id, onBack = { navController.popBackStack() })
+            PaymentReportScreen(
+                customerId = id,
+                onBack = { navController.popBackStack() },
+                onOpenReceipt = { pid -> navController.navigate(Routes.receipt(pid)) },
+            )
         }
         composable(
             Routes.ACCOUNT_STATEMENT,
@@ -225,6 +232,17 @@ fun FlowVanNavHost(
                 onBack = { navController.popBackStack() },
                 onOpenInvoice = { iid -> navController.navigate(Routes.voucher(iid)) },
                 onOpenReceipt = { pid -> navController.navigate(Routes.receipt(pid)) },
+            )
+        }
+        composable(
+            Routes.VOUCHER_REPORT,
+            arguments = listOf(navArgument("customerId") { type = NavType.StringType }),
+        ) { entry ->
+            val id = entry.arguments?.getString("customerId").orEmpty()
+            VoucherReportScreen(
+                customerId = id,
+                onBack = { navController.popBackStack() },
+                onOpenVoucher = { iid -> navController.navigate(Routes.voucher(iid)) },
             )
         }
         composable(

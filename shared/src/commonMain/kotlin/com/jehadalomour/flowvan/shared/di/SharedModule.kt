@@ -25,6 +25,7 @@ import com.jehadalomour.flowvan.shared.presentation.feature.paymentreport.Paymen
 import com.jehadalomour.flowvan.shared.presentation.feature.receiptdetail.ReceiptDetailViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.transactionreport.TransactionReportViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.voucherdetail.VoucherDetailViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.voucherreport.VoucherReportViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.collection.CollectionViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.customerdashboard.CustomerDashboardViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.customers.CustomerListViewModel
@@ -123,6 +124,9 @@ fun sharedModule(): Module = module {
     }
     viewModel { (paymentId: String) ->
         ReceiptDetailViewModel(paymentId, get())
+    }
+    viewModel { (customerId: String) ->
+        VoucherReportViewModel(customerId, get())
     }
 }
 

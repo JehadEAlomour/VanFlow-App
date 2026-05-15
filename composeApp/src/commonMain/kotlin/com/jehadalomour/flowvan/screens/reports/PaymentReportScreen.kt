@@ -1,6 +1,7 @@
 package com.jehadalomour.flowvan.screens.reports
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,7 @@ import org.koin.core.parameter.parametersOf
 fun PaymentReportScreen(
     customerId: String,
     onBack: () -> Unit,
+    onOpenReceipt: (String) -> Unit = {},
     viewModel: PaymentReportViewModel = koinViewModel { parametersOf(customerId) },
 ) {
     val state by viewModel.state.collectAsState()
@@ -124,7 +126,7 @@ fun PaymentReportScreen(
                     }
                 } else {
                     items(state.payments, key = { it.id }) { payment ->
-                        PayReportRow(payment)
+                        PayReportRow(payment, onClick = { onOpenReceipt(payment.id) })
                     }
                 }
             }
@@ -133,7 +135,7 @@ fun PaymentReportScreen(
 }
 
 @Composable
-private fun PayReportRow(p: PaymentEntity) {
+private fun PayReportRow(p: PaymentEntity, onClick: () -> Unit) {
     val (methodLabel, methodColor) = when (p.method) {
         "CASH" -> "نقداً" to Fv.Green
         "CHEQUE" -> "شيك" to Fv.Amber
@@ -151,7 +153,7 @@ private fun PayReportRow(p: PaymentEntity) {
         else -> "مؤكد"
     }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = Fv.Surface),
     ) {
