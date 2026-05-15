@@ -9,8 +9,21 @@ import com.jehadalomour.flowvan.shared.data.repository.ProductRepository
 import com.jehadalomour.flowvan.shared.data.repository.UserRepository
 import com.jehadalomour.flowvan.shared.data.seeder.DemoSeeder
 import com.jehadalomour.flowvan.shared.data.settings.SessionStore
+import com.jehadalomour.flowvan.shared.data.remote.ClaudeApiClient
+import com.jehadalomour.flowvan.shared.data.remote.SyncApi
+import com.jehadalomour.flowvan.shared.data.remote.createHttpClient
 import com.jehadalomour.flowvan.shared.data.repository.LocationRepository
+import com.jehadalomour.flowvan.shared.data.repository.SyncRepository
+import com.jehadalomour.flowvan.shared.data.settings.AiSettings
+import com.jehadalomour.flowvan.shared.data.settings.SyncConfig
 import com.jehadalomour.flowvan.shared.data.tracking.StopDetector
+import com.jehadalomour.flowvan.shared.domain.sync.SyncScheduler
+import com.jehadalomour.flowvan.shared.presentation.feature.reports.AllPaymentsReportViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.reports.AllSalesReportViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.reports.CashFlowReportViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.reports.ItemsSalesReportViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.reports.ReceivablesReportViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.reports.VisitReportViewModel
 import com.jehadalomour.flowvan.shared.domain.tracking.LocationTrackingCoordinator
 import com.jehadalomour.flowvan.shared.domain.usecase.CreateRequestVoucherUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.CreateReturnVoucherUseCase
@@ -79,6 +92,13 @@ fun sharedModule(): Module = module {
     single { StopDetector() }
     single { LocationTrackingCoordinator(get(), get(), get()) }
     single { DemoSeeder(get(), get(), get()) }
+    single { AiSettings(get()) }
+    single { SyncConfig(get()) }
+    single { createHttpClient() }
+    single { ClaudeApiClient(get()) }
+    single { SyncApi(get(), get()) }
+    single { SyncRepository(get(), get(), get(), get(), get()) }
+    single { SyncScheduler(get()) }
 
     factory { LoginUseCase(get(), get()) }
     factory { GetCurrentUserUseCase(get(), get()) }
@@ -92,7 +112,7 @@ fun sharedModule(): Module = module {
     factory { StartShiftUseCase(get(), get()) }
 
     viewModel { LoginViewModel(get(), get()) }
-    viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { RouteViewModel(get(), get()) }
     viewModel { CustomerListViewModel(get()) }
     viewModel { (customerId: String) ->
@@ -111,7 +131,7 @@ fun sharedModule(): Module = module {
         CollectionViewModel(customerId, get(), get(), get())
     }
     viewModel { (customerId: String?) ->
-        AiAssistantViewModel(customerId, get(), get(), get(), get(), get())
+        AiAssistantViewModel(customerId, get(), get(), get(), get(), get(), get(), get())
     }
     viewModel { VanStockViewModel(get()) }
     viewModel { EndOfDayViewModel(get(), get(), get(), get(), get(), get(), get()) }
@@ -136,6 +156,12 @@ fun sharedModule(): Module = module {
     viewModel { (customerId: String) ->
         VoucherReportViewModel(customerId, get())
     }
+    viewModel { AllSalesReportViewModel(get()) }
+    viewModel { AllPaymentsReportViewModel(get()) }
+    viewModel { VisitReportViewModel(get(), get()) }
+    viewModel { CashFlowReportViewModel(get(), get()) }
+    viewModel { ItemsSalesReportViewModel(get()) }
+    viewModel { ReceivablesReportViewModel(get()) }
 }
 
 expect fun platformModule(): Module

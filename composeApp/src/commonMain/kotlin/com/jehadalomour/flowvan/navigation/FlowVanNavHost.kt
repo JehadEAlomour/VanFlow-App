@@ -16,8 +16,15 @@ import androidx.navigation.navArgument
 import com.jehadalomour.flowvan.screens.ai.AiAssistantScreen
 import com.jehadalomour.flowvan.screens.map.MapNavigationScreen
 import com.jehadalomour.flowvan.screens.reports.AccountStatementScreen
+import com.jehadalomour.flowvan.screens.reports.AllPaymentsReportScreen
+import com.jehadalomour.flowvan.screens.reports.AllSalesReportScreen
+import com.jehadalomour.flowvan.screens.reports.CashFlowReportScreen
+import com.jehadalomour.flowvan.screens.reports.ItemsSalesReportScreen
+import com.jehadalomour.flowvan.screens.reports.ReportsHubScreen
+import com.jehadalomour.flowvan.screens.reports.VisitReportScreen
 import com.jehadalomour.flowvan.screens.reports.PaymentReportScreen
 import com.jehadalomour.flowvan.screens.reports.ReceiptDetailScreen
+import com.jehadalomour.flowvan.screens.reports.ReceivablesReportScreen
 import com.jehadalomour.flowvan.screens.reports.TransactionReportScreen
 import com.jehadalomour.flowvan.screens.reports.VoucherDetailScreen
 import com.jehadalomour.flowvan.screens.reports.VoucherReportScreen
@@ -57,6 +64,13 @@ object Routes {
     const val VOUCHER_REPORT = "voucherreport/{customerId}"
     const val VOUCHER_DETAIL = "voucher/{invoiceId}"
     const val RECEIPT_DETAIL = "receipt/{paymentId}"
+    const val REPORTS_HUB = "reports"
+    const val ALL_SALES_REPORT = "allsales"
+    const val ALL_PAYMENTS_REPORT = "allpayments"
+    const val VISIT_REPORT = "visitreport"
+    const val CASH_FLOW_REPORT = "cashflow"
+    const val ITEMS_SALES_REPORT = "itemssales"
+    const val RECEIVABLES_REPORT = "receivables"
     fun customer(id: String) = "customer/$id"
     fun sale(id: String) = "sale/$id"
     fun returns(id: String) = "return/$id"
@@ -105,6 +119,7 @@ fun FlowVanNavHost(
                 onOpenVanStock = { navController.navigate(Routes.VAN_STOCK) },
                 onOpenAi = { navController.navigate(Routes.ai()) },
                 onOpenEndOfDay = { navController.navigate(Routes.END_OF_DAY) },
+                onOpenReports = { navController.navigate(Routes.REPORTS_HUB) },
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
                 onLogout = {
                     logout()
@@ -258,6 +273,45 @@ fun FlowVanNavHost(
         ) { entry ->
             val id = entry.arguments?.getString("paymentId").orEmpty()
             ReceiptDetailScreen(paymentId = id, onBack = { navController.popBackStack() })
+        }
+        composable(Routes.REPORTS_HUB) {
+            ReportsHubScreen(
+                onBack = { navController.popBackStack() },
+                onOpenSalesReport = { navController.navigate(Routes.ALL_SALES_REPORT) },
+                onOpenPaymentsReport = { navController.navigate(Routes.ALL_PAYMENTS_REPORT) },
+                onOpenVisitReport = { navController.navigate(Routes.VISIT_REPORT) },
+                onOpenCashFlow = { navController.navigate(Routes.CASH_FLOW_REPORT) },
+                onOpenItemsSales = { navController.navigate(Routes.ITEMS_SALES_REPORT) },
+                onOpenReceivables = { navController.navigate(Routes.RECEIVABLES_REPORT) },
+            )
+        }
+        composable(Routes.RECEIVABLES_REPORT) {
+            ReceivablesReportScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.ALL_SALES_REPORT) {
+            AllSalesReportScreen(
+                onBack = { navController.popBackStack() },
+                onOpenVoucher = { id -> navController.navigate(Routes.voucher(id)) },
+            )
+        }
+        composable(Routes.ALL_PAYMENTS_REPORT) {
+            AllPaymentsReportScreen(
+                onBack = { navController.popBackStack() },
+                onOpenReceipt = { id -> navController.navigate(Routes.receipt(id)) },
+            )
+        }
+        composable(Routes.VISIT_REPORT) {
+            VisitReportScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.CASH_FLOW_REPORT) {
+            CashFlowReportScreen(
+                onBack = { navController.popBackStack() },
+                onOpenVoucher = { id -> navController.navigate(Routes.voucher(id)) },
+                onOpenReceipt = { id -> navController.navigate(Routes.receipt(id)) },
+            )
+        }
+        composable(Routes.ITEMS_SALES_REPORT) {
+            ItemsSalesReportScreen(onBack = { navController.popBackStack() })
         }
     }
 }

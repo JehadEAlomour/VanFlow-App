@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.jehadalomour.flowvan.shared.data.local.dao.ShiftDao
 import com.jehadalomour.flowvan.shared.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.shared.data.settings.SessionStore
+import com.jehadalomour.flowvan.shared.domain.sync.SyncScheduler
 import com.jehadalomour.flowvan.shared.domain.tracking.LocationTrackingCoordinator
 import com.jehadalomour.flowvan.shared.domain.usecase.GetCurrentUserUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.GetDailyKpiUseCase
@@ -25,6 +26,7 @@ class HomeViewModel(
     private val sessionStore: SessionStore,
     private val startShift: StartShiftUseCase,
     private val coordinator: LocationTrackingCoordinator,
+    private val syncScheduler: SyncScheduler,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeState())
@@ -54,8 +56,13 @@ class HomeViewModel(
         shiftDao.observeActive(userId)
             .onEach { shift ->
                 _state.update { it.copy(activeShift = shift) }
-                if (shift != null) coordinator.start(shift.id, shift.userId)
-                else coordinator.stop()
+                if (shift != null) {
+                    coordinator.start(shift.id, shift.userId)
+                    syncScheduler.start()
+                } else {
+                    coordinator.stop()
+                    syncScheduler.stop()
+                }
             }
             .launchIn(viewModelScope)
     }

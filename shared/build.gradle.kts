@@ -54,8 +54,11 @@ kotlin {
             // Logging
             implementation(libs.kermit)
 
-            // Networking (placeholder; expanded in M17)
+            // Networking
             implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.json)
+            implementation(libs.ktor.client.logging)
 
             // Design system
             implementation(projects.core.designSystem)
@@ -68,6 +71,10 @@ kotlin {
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.kotlinx.coroutines.play.services)
             implementation(libs.play.services.location)
+            implementation(libs.ktor.client.okhttp)
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
         }
     }
 }

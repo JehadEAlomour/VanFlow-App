@@ -36,6 +36,18 @@ interface PaymentDao {
     @Query("SELECT COUNT(*) FROM payments WHERE createdAt >= :sinceMillis AND syncedAt IS NULL")
     suspend fun countUnsyncedSince(sinceMillis: Long): Int
 
+    @Query("SELECT * FROM payments WHERE syncedAt IS NULL LIMIT :limit")
+    suspend fun findUnsynced(limit: Int = 50): List<PaymentEntity>
+
+    @Query("UPDATE payments SET syncedAt = :now WHERE id IN (:ids)")
+    suspend fun markSynced(ids: List<String>, now: Long)
+
+    @Query("SELECT * FROM payments WHERE createdAt >= :from AND createdAt <= :to ORDER BY createdAt DESC")
+    fun observeAllByRange(from: Long, to: Long): Flow<List<PaymentEntity>>
+
+    @Query("SELECT * FROM payments WHERE method = :method AND createdAt >= :from AND createdAt <= :to ORDER BY createdAt DESC")
+    fun observeAllByMethodAndRange(method: String, from: Long, to: Long): Flow<List<PaymentEntity>>
+
     @Query("SELECT COUNT(*) FROM payments")
     suspend fun count(): Int
 }

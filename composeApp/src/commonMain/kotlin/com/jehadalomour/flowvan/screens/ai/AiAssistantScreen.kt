@@ -21,11 +21,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,8 +55,18 @@ fun AiAssistantScreen(
     val state by viewModel.state.collectAsState()
     val listState = rememberLazyListState()
 
-    LaunchedEffect(state.messages.size) {
-        if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.size - 1)
+    val totalItems = state.messages.size + (if (state.isThinking || state.isStreaming) 1 else 0)
+    LaunchedEffect(totalItems) {
+        if (totalItems > 0) listState.animateScrollToItem(totalItems - 1)
+    }
+
+    if (state.showApiKeyDialog) {
+        ApiKeyDialog(
+            value = state.apiKeyInput,
+            onValueChange = { viewModel.onEvent(AiAssistantEvent.ApiKeyInputChanged(it)) },
+            onSave = { viewModel.onEvent(AiAssistantEvent.SaveApiKey) },
+            onDismiss = { viewModel.onEvent(AiAssistantEvent.DismissApiKeyDialog) },
+        )
     }
 
     Surface(modifier = Modifier.fillMaxSize(), color = Fv.BgDeepest) {
@@ -66,9 +78,16 @@ fun AiAssistantScreen(
                 IconButton(onClick = onBack) { Text("←", color = Fv.TextHigh, fontSize = 22.sp) }
                 Text("✨", fontSize = 18.sp)
                 Spacer(Modifier.width(6.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text("المساعد الذكي", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                    if (state.isOffline) Text("وضع تجريبي", color = Fv.TextMid, fontSize = 10.sp)
+                    Text(
+                        if (state.apiKeySet) "متصل بـ Claude AI" else "وضع تجريبي",
+                        color = if (state.apiKeySet) Fv.Green else Fv.TextMid,
+                        fontSize = 10.sp,
+                    )
+                }
+                IconButton(onClick = { viewModel.onEvent(AiAssistantEvent.OpenApiKeyDialog) }) {
+                    Text("⚙", color = if (state.apiKeySet) Fv.Green else Fv.TextMid, fontSize = 18.sp)
                 }
             }
 
@@ -80,6 +99,11 @@ fun AiAssistantScreen(
             ) {
                 items(state.messages) { msg -> MessageBubble(msg) }
                 if (state.isThinking) {
+                    item { ThinkingBubble() }
+                }
+                if (state.isStreaming && state.streamingContent.isNotBlank()) {
+                    item { StreamingBubble(state.streamingContent) }
+                } else if (state.isStreaming) {
                     item { ThinkingBubble() }
                 }
             }
@@ -115,6 +139,7 @@ fun AiAssistantScreen(
                     shape = RoundedCornerShape(20.dp),
                     colors = darkFieldColors(),
                     singleLine = true,
+                    enabled = !state.isThinking && !state.isStreaming,
                 )
                 Spacer(Modifier.width(8.dp))
                 Box(
@@ -124,11 +149,55 @@ fun AiAssistantScreen(
                         .background(Fv.Blue, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("↑", color = Fv.TextHigh, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    if (state.isStreaming) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Fv.TextHigh, strokeWidth = 2.dp)
+                    } else {
+                        Text("↑", color = Fv.TextHigh, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun ApiKeyDialog(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Fv.Surface,
+        title = { Text("مفتاح Claude API", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) },
+        text = {
+            Column {
+                Text("أدخل مفتاح Anthropic API لتفعيل الذكاء الاصطناعي الحقيقي:", color = Fv.TextMid, fontSize = 13.sp)
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    placeholder = { Text("sk-ant-...", color = Fv.TextMid, fontSize = 12.sp) },
+                    colors = darkFieldColors(),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("المفتاح يُحفظ محلياً على الجهاز فقط.", color = Fv.TextMid, fontSize = 11.sp)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onSave) {
+                Text("حفظ", color = Fv.Blue, fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("إلغاء", color = Fv.TextMid)
+            }
+        },
+    )
 }
 
 @Composable
@@ -163,12 +232,33 @@ private fun MessageBubble(msg: AiMessage) {
                 )
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
-            Text(
-                text = msg.content,
-                color = Fv.TextHigh,
-                fontSize = 13.sp,
-                lineHeight = 20.sp,
-            )
+            Text(text = msg.content, color = Fv.TextHigh, fontSize = 13.sp, lineHeight = 20.sp)
+        }
+    }
+}
+
+@Composable
+private fun StreamingBubble(content: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .background(Fv.Purple.copy(alpha = 0.2f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("✨", fontSize = 14.sp)
+        }
+        Spacer(Modifier.width(6.dp))
+        Box(
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .background(Fv.Surface, RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            Text(text = "$content ▌", color = Fv.TextHigh, fontSize = 13.sp, lineHeight = 20.sp)
         }
     }
 }

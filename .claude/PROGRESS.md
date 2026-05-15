@@ -165,10 +165,34 @@ Tracks every completed phase. Updated at phase sign-off (BUILD SUCCESSFUL verifi
 
 ---
 
-## ⏳ P6 — Backend Integration (Deferred)
+## ✅ P6 — Backend Integration + Reports (Complete)
 
-**Modules:** M17 Sync Engine · M18 Real AI Gateway
+**Modules:** M17 Sync Engine · M18 Real AI Gateway · M20 Salesman Reports
 
-**Planned**
-- M17: Ktor-based sync engine, conflict resolution, retry queue
-- M18: SSE streaming AI, real LLM gateway, conversation history upload
+### M18 — Real AI Gateway
+- `AiSettings` — stores Claude API key in Settings (persisted locally)
+- `FlowVanHttpClient` (expect/actual) — OkHttp (Android) / Darwin (iOS) Ktor engines
+- `ClaudeApiClient` — manual SSE streaming via `preparePost + bodyAsChannel + readUTF8Line`
+- `AiAssistantState` updated — `isStreaming`, `streamingContent`, `apiKeySet`, `showApiKeyDialog`
+- `AiAssistantViewModel` — streams tokens when key set, falls back to demo mode when blank
+- `AiAssistantScreen` — streaming bubble with `▌` cursor, ⚙ API key dialog, online/offline status
+
+### M17 — Sync Engine
+- `SyncConfig` — backend URL in Settings (empty = disabled, sync is a no-op)
+- `SyncApi` — Ktor POST to `/api/invoices/batch`, `/api/payments/batch`, `/api/tracking/batch`
+- `SyncRepository` — batches 50 unsynced invoices + 50 payments + 100 location points
+- `SyncScheduler` — 60s interval coroutine loop, `start()`/`stop()` lifecycle
+- `HomeViewModel` — starts/stops `SyncScheduler` with the active shift
+
+### M20 — Salesman Reports
+- **Reports Hub** — 📊 tile on HomeScreen, 5 report cards + 4 coming-soon suggestions
+- **AllSalesReportScreen** — date range + type filter (مبيعات/مرتجعات/طلبات/الكل), totals pills, clickable invoice rows → VoucherDetail
+- **AllPaymentsReportScreen** — date range + method filter (نقد/شيك/حوالة), per-method totals, clickable rows → ReceiptDetail
+- **VisitReportScreen** — route customers with ✓/○ visit indicator, visit-rate progress bar, per-customer sales total
+- **CashFlowReportScreen** (الكشف اليومي) — merged invoices + payments sorted DESC, net cash summary, clickable entries
+- **ItemsSalesReportScreen** (مبيعات الأصناف) — parses linesJson from SALE invoices, aggregates by product, ranked by revenue with share bar
+
+**Suggested reports added to hub (قادمة):**
+- تقرير الطلبات · تقرير الذمم المتأخرة · تقرير المرتجعات · تقرير أداء العملاء
+
+**Build sign-off:** ✅ `BUILD SUCCESSFUL` (assembleDebug)

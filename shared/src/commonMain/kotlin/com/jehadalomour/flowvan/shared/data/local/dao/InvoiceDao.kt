@@ -33,6 +33,18 @@ interface InvoiceDao {
     @Query("SELECT COUNT(*) FROM invoices WHERE createdAt >= :sinceMillis AND syncedAt IS NULL")
     suspend fun countUnsyncedSince(sinceMillis: Long): Int
 
+    @Query("SELECT * FROM invoices WHERE syncedAt IS NULL LIMIT :limit")
+    suspend fun findUnsynced(limit: Int = 50): List<InvoiceEntity>
+
+    @Query("UPDATE invoices SET syncedAt = :now WHERE id IN (:ids)")
+    suspend fun markSynced(ids: List<String>, now: Long)
+
+    @Query("SELECT * FROM invoices WHERE createdAt >= :from AND createdAt <= :to ORDER BY createdAt DESC")
+    fun observeAllByRange(from: Long, to: Long): Flow<List<InvoiceEntity>>
+
+    @Query("SELECT * FROM invoices WHERE type = :type AND createdAt >= :from AND createdAt <= :to ORDER BY createdAt DESC")
+    fun observeAllByTypeAndRange(type: String, from: Long, to: Long): Flow<List<InvoiceEntity>>
+
     @Query("SELECT COUNT(*) FROM invoices")
     suspend fun count(): Int
 }

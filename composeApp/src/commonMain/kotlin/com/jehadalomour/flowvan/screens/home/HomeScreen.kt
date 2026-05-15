@@ -55,6 +55,7 @@ fun HomeScreen(
     onOpenVanStock: () -> Unit,
     onOpenAi: () -> Unit,
     onOpenEndOfDay: () -> Unit,
+    onOpenReports: () -> Unit,
     onOpenCustomer: (String) -> Unit,
     onLogout: () -> Unit,
     viewModel: HomeViewModel = koinViewModel(),
@@ -105,6 +106,7 @@ fun HomeScreen(
                     onOpenVanStock = onOpenVanStock,
                     onOpenAi = onOpenAi,
                     onOpenEndOfDay = onOpenEndOfDay,
+                    onOpenReports = onOpenReports,
                 )
             }
             item {
@@ -241,7 +243,7 @@ private fun KpiCard(label: String, value: String, accent: androidx.compose.ui.gr
 @Composable
 private fun ActionTilesGrid(
     onOpenRoute: () -> Unit, onOpenCustomers: () -> Unit, onOpenVanStock: () -> Unit,
-    onOpenAi: () -> Unit, onOpenEndOfDay: () -> Unit,
+    onOpenAi: () -> Unit, onOpenEndOfDay: () -> Unit, onOpenReports: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -252,7 +254,10 @@ private fun ActionTilesGrid(
             ActionTile("📦", "مخزون الفان", Fv.Amber, Modifier.weight(1f), onOpenVanStock)
             ActionTile("🌙", "نهاية اليوم", Fv.Red, Modifier.weight(1f), onOpenEndOfDay)
         }
-        ActionTile("✨", "المساعد الذكي", Fv.Purple, Modifier.fillMaxWidth(), onOpenAi)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ActionTile("📊", "التقارير", Fv.Green, Modifier.weight(1f), onOpenReports)
+            ActionTile("✨", "المساعد الذكي", Fv.Purple, Modifier.weight(1f), onOpenAi)
+        }
     }
 }
 
