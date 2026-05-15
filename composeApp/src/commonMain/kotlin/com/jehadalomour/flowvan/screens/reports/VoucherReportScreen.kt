@@ -113,7 +113,7 @@ fun VoucherReportScreen(
                                 VoucherKindFilter.CASH -> "نقداً"
                                 VoucherKindFilter.CHEQUE -> "شيك"
                                 VoucherKindFilter.TRANSFER -> "تحويل"
-                                VoucherKindFilter.CREDIT -> "آجل"
+                                VoucherKindFilter.CREDIT -> "ذمم"
                             }
                         },
                         onSelect = { viewModel.onEvent(VoucherReportEvent.KindFilterChanged(it)) },
@@ -185,8 +185,8 @@ private fun VoucherRow(invoice: InvoiceEntity, onClick: () -> Unit) {
         "CASH" -> "نقداً"
         "CHEQUE" -> "شيك"
         "TRANSFER" -> "تحويل"
-        "CREDIT" -> "آجل"
-        else -> "آجل"
+        "CREDIT" -> "ذمم"
+        else -> "ذمم"
     }
     val kindColor = when (invoice.paymentMethod) {
         "CASH" -> Fv.Green

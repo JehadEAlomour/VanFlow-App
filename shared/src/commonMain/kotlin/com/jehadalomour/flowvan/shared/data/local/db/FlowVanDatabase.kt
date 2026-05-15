@@ -1,5 +1,6 @@
 package com.jehadalomour.flowvan.shared.data.local.db
 
+import androidx.room.AutoMigration
 import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
@@ -10,6 +11,7 @@ import com.jehadalomour.flowvan.shared.data.local.dao.InvoiceDao
 import com.jehadalomour.flowvan.shared.data.local.dao.LocationPointDao
 import com.jehadalomour.flowvan.shared.data.local.dao.PaymentDao
 import com.jehadalomour.flowvan.shared.data.local.dao.ProductDao
+import com.jehadalomour.flowvan.shared.data.local.dao.ProductUnitDao
 import com.jehadalomour.flowvan.shared.data.local.dao.RouteStopDao
 import com.jehadalomour.flowvan.shared.data.local.dao.ShiftDao
 import com.jehadalomour.flowvan.shared.data.local.dao.UserDao
@@ -19,6 +21,7 @@ import com.jehadalomour.flowvan.shared.data.local.entity.InvoiceEntity
 import com.jehadalomour.flowvan.shared.data.local.entity.LocationPointEntity
 import com.jehadalomour.flowvan.shared.data.local.entity.PaymentEntity
 import com.jehadalomour.flowvan.shared.data.local.entity.ProductEntity
+import com.jehadalomour.flowvan.shared.data.local.entity.ProductUnitEntity
 import com.jehadalomour.flowvan.shared.data.local.entity.RouteStopEntity
 import com.jehadalomour.flowvan.shared.data.local.entity.ShiftEntity
 import com.jehadalomour.flowvan.shared.data.local.entity.UserEntity
@@ -28,6 +31,7 @@ import com.jehadalomour.flowvan.shared.data.local.entity.UserEntity
         UserEntity::class,
         CustomerEntity::class,
         ProductEntity::class,
+        ProductUnitEntity::class,
         InvoiceEntity::class,
         PaymentEntity::class,
         LocationPointEntity::class,
@@ -35,14 +39,18 @@ import com.jehadalomour.flowvan.shared.data.local.entity.UserEntity
         AiMessageEntity::class,
         RouteStopEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2),
+    ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)
 abstract class FlowVanDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun customerDao(): CustomerDao
     abstract fun productDao(): ProductDao
+    abstract fun productUnitDao(): ProductUnitDao
     abstract fun invoiceDao(): InvoiceDao
     abstract fun paymentDao(): PaymentDao
     abstract fun shiftDao(): ShiftDao

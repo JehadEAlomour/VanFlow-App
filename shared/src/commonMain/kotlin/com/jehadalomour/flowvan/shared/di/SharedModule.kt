@@ -6,6 +6,7 @@ import com.jehadalomour.flowvan.shared.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.shared.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.shared.data.repository.PaymentRepository
 import com.jehadalomour.flowvan.shared.data.repository.ProductRepository
+import com.jehadalomour.flowvan.shared.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.shared.data.repository.UserRepository
 import com.jehadalomour.flowvan.shared.data.seeder.DemoSeeder
 import com.jehadalomour.flowvan.shared.data.settings.SessionStore
@@ -76,6 +77,7 @@ fun sharedModule(): Module = module {
     single { get<FlowVanDatabase>().userDao() }
     single { get<FlowVanDatabase>().customerDao() }
     single { get<FlowVanDatabase>().productDao() }
+    single { get<FlowVanDatabase>().productUnitDao() }
     single { get<FlowVanDatabase>().invoiceDao() }
     single { get<FlowVanDatabase>().paymentDao() }
     single { get<FlowVanDatabase>().shiftDao() }
@@ -86,6 +88,7 @@ fun sharedModule(): Module = module {
     single { UserRepository(get()) }
     single { CustomerRepository(get()) }
     single { ProductRepository(get()) }
+    single { ProductUnitRepository(get()) }
     single { InvoiceRepository(get()) }
     single { PaymentRepository(get()) }
     single { LocationRepository(get()) }
@@ -119,7 +122,7 @@ fun sharedModule(): Module = module {
         CustomerDashboardViewModel(customerId, get(), get(), get())
     }
     viewModel { (customerId: String) ->
-        SaleVoucherViewModel(customerId, get(), get(), get(), get())
+        SaleVoucherViewModel(customerId, get(), get(), get(), get(), get())
     }
     viewModel { (customerId: String) ->
         ReturnVoucherViewModel(customerId, get(), get(), get(), get())

@@ -131,7 +131,7 @@
 
     <!-- Payment Methods -->
     <string name="payment_method_cash">نقد</string>
-    <string name="payment_method_credit">آجل</string>
+    <string name="payment_method_credit">ذمم</string>
     <string name="payment_method_cheque">شيك</string>
     <string name="payment_method_transfer">حوالة</string>
 
@@ -250,7 +250,7 @@
     <string name="voucher_report_filter_type_request">طلب</string>
     <string name="voucher_report_filter_kind_all">الكل</string>
     <string name="voucher_report_filter_kind_cash">نقد</string>
-    <string name="voucher_report_filter_kind_credit">آجل</string>
+    <string name="voucher_report_filter_kind_credit">ذمم</string>
     <string name="voucher_report_count">عدد الفواتير</string>
     <string name="voucher_report_total">إجمالي الفواتير</string>
 

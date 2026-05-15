@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jehadalomour.flowvan.shared.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.shared.data.repository.ProductRepository
+import com.jehadalomour.flowvan.shared.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.shared.data.settings.SessionStore
 import com.jehadalomour.flowvan.shared.domain.model.CartLine
 import com.jehadalomour.flowvan.shared.domain.model.Product
+import com.jehadalomour.flowvan.shared.domain.model.ProductUnit
 import com.jehadalomour.flowvan.shared.domain.usecase.CreateSaleVoucherUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.EmptyCartException
 import com.jehadalomour.flowvan.shared.domain.usecase.StockShortageException
@@ -22,6 +24,7 @@ class SaleVoucherViewModel(
     private val customerId: String,
     customers: CustomerRepository,
     products: ProductRepository,
+    private val productUnits: ProductUnitRepository,
     private val session: SessionStore,
     private val createSale: CreateSaleVoucherUseCase,
 ) : ViewModel() {
@@ -40,6 +43,12 @@ class SaleVoucherViewModel(
                 applySearch()
             }
             .launchIn(viewModelScope)
+
+        productUnits.observeAll()
+            .onEach { units ->
+                _state.update { it.copy(productUnits = units.groupBy { u -> u.productId }) }
+            }
+            .launchIn(viewModelScope)
     }
 
     fun onEvent(event: SaleVoucherEvent) {
@@ -48,14 +57,21 @@ class SaleVoucherViewModel(
                 _state.update { it.copy(searchQuery = event.q) }
                 applySearch()
             }
-            is SaleVoucherEvent.AddToCart -> addOrIncrement(event.product)
+            is SaleVoucherEvent.StepItem -> stepItem(event.product, event.delta)
+            is SaleVoucherEvent.ConfirmItemDialog -> confirmDialog(event)
             is SaleVoucherEvent.ChangeQty -> changeQty(event.productId, event.qty)
             is SaleVoucherEvent.RemoveLine -> _state.update { s ->
                 s.copy(cart = s.cart.filterNot { it.productId == event.productId })
             }
-            is SaleVoucherEvent.DiscountChanged -> _state.update { it.copy(discountAmount = event.amount.coerceAtLeast(0.0)) }
             is SaleVoucherEvent.PaymentMethodSelected -> _state.update { it.copy(paymentMethod = event.method) }
             is SaleVoucherEvent.NotesChanged -> _state.update { it.copy(notes = event.notes) }
+            is SaleVoucherEvent.VoucherDiscountInputChanged -> _state.update { it.copy(voucherDiscountInput = event.input) }
+            SaleVoucherEvent.VoucherDiscountTypeToggled -> _state.update {
+                it.copy(
+                    voucherDiscountType = if (it.voucherDiscountType == DiscountType.PERCENT) DiscountType.VALUE else DiscountType.PERCENT,
+                    voucherDiscountInput = "",
+                )
+            }
             SaleVoucherEvent.ToggleView -> _state.update {
                 it.copy(view = if (it.view == VoucherView.PICKER) VoucherView.CART else VoucherView.PICKER)
             }
@@ -77,19 +93,56 @@ class SaleVoucherViewModel(
         _state.update { it.copy(visibleProducts = filtered) }
     }
 
-    private fun addOrIncrement(product: Product) {
+    private fun stepItem(product: Product, delta: Int) {
         _state.update { s ->
             val existing = s.cart.firstOrNull { it.productId == product.id }
-            val newCart = if (existing == null) {
-                s.cart + CartLine(
-                    productId = product.id,
-                    sku = product.sku,
-                    nameAr = product.nameAr,
-                    unitPrice = product.salePrice,
-                    qty = 1.0,
+            val newCart = when {
+                existing == null && delta > 0 -> {
+                    val defaultUnit = s.productUnits[product.id]?.minByOrNull { it.conversionQty }
+                    s.cart + CartLine(
+                        productId = product.id,
+                        sku = product.sku,
+                        nameAr = product.nameAr,
+                        unitPrice = defaultUnit?.price ?: product.salePrice,
+                        qty = 1.0,
+                        unit = defaultUnit?.name ?: product.unit,
+                        unitConversionQty = defaultUnit?.conversionQty ?: 1.0,
+                    )
+                }
+                existing == null -> s.cart
+                (existing.qty + delta) <= 0 -> s.cart.filterNot { it.productId == product.id }
+                else -> s.cart.map { if (it.productId == product.id) it.copy(qty = it.qty + delta) else it }
+            }
+            s.copy(cart = newCart)
+        }
+    }
+
+    private fun confirmDialog(event: SaleVoucherEvent.ConfirmItemDialog) {
+        _state.update { s ->
+            val existing = s.cart.firstOrNull { it.productId == event.product.id }
+            val newCart = when {
+                event.qty <= 0 -> s.cart.filterNot { it.productId == event.product.id }
+                existing == null -> s.cart + CartLine(
+                    productId = event.product.id,
+                    sku = event.product.sku,
+                    nameAr = event.product.nameAr,
+                    unitPrice = event.unitPrice,
+                    qty = event.qty,
+                    unit = event.unit,
+                    unitConversionQty = event.unitConversionQty,
+                    discountPct = event.discountPct,
                 )
-            } else {
-                s.cart.map { if (it.productId == product.id) it.copy(qty = it.qty + 1) else it }
+                else -> s.cart.map {
+                    if (it.productId == event.product.id)
+                        it.copy(
+                            qty = event.qty,
+                            unit = event.unit,
+                            unitPrice = event.unitPrice,
+                            unitConversionQty = event.unitConversionQty,
+                            discountPct = event.discountPct,
+                        )
+                    else it
+                }
             }
             s.copy(cart = newCart)
         }
@@ -115,18 +168,14 @@ class SaleVoucherViewModel(
                 customerId = customerId,
                 salesmanId = session.currentUserId.orEmpty(),
                 cart = s.cart,
-                discountAmount = s.discountAmount,
+                discountAmount = s.voucherDiscountAmount,
                 paymentMethod = s.paymentMethod,
                 notes = s.notes.takeIf { it.isNotBlank() },
             )
             result.fold(
                 onSuccess = { entity ->
                     _state.update {
-                        it.copy(
-                            isSaving = false,
-                            showSaveSheet = false,
-                            savedNumber = entity.number,
-                        )
+                        it.copy(isSaving = false, showSaveSheet = false, savedNumber = entity.number)
                     }
                 },
                 onFailure = { ex ->

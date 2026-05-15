@@ -225,6 +225,6 @@ private fun paymentMethodLabel(method: String) = when (method) {
     "CASH" -> "نقداً"
     "CHEQUE" -> "شيك"
     "TRANSFER" -> "تحويل"
-    "CREDIT" -> "آجل"
+    "CREDIT" -> "ذمم"
     else -> method
 }

@@ -552,7 +552,7 @@ The salesman's primary action: sell products from van stock to the current custo
    الإجمالي       :  XX.XXX د.أ   ← bold green
    ```
 4. Tap **حفظ الفاتورة** → modal sheet appears:
-   - Payment method radio: **نقداً / آجل / شيك / تحويل**
+   - Payment method radio: **نقداً / ذمم / شيك / تحويل**
    - If cheque/transfer: extra fields (cheque number, bank, date) — optional at sale-time, can be added later via M11.
    - Confirm button.
 5. On confirm:

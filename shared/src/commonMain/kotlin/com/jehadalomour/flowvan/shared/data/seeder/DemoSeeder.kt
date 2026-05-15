@@ -6,6 +6,7 @@ import com.jehadalomour.flowvan.shared.data.local.entity.CustomerEntity
 import com.jehadalomour.flowvan.shared.data.local.entity.InvoiceEntity
 import com.jehadalomour.flowvan.shared.data.local.entity.PaymentEntity
 import com.jehadalomour.flowvan.shared.data.local.entity.ProductEntity
+import com.jehadalomour.flowvan.shared.data.local.entity.ProductUnitEntity
 import com.jehadalomour.flowvan.shared.data.local.entity.ShiftEntity
 import com.jehadalomour.flowvan.shared.data.local.entity.UserEntity
 import com.jehadalomour.flowvan.shared.data.settings.SettingsKeys
@@ -55,6 +56,7 @@ class DemoSeeder(
         db.userDao().upsertAll(seedUsers())
         db.customerDao().upsertAll(seedCustomers())
         db.productDao().upsertAll(seedProducts())
+        db.productUnitDao().upsertAll(seedProductUnits())
         db.invoiceDao().upsertAll(seedInvoices(now, oneDayMs))
         db.paymentDao().upsertAll(seedPayments(now, oneDayMs))
         db.shiftDao().upsert(
@@ -220,6 +222,56 @@ class DemoSeeder(
         val sku: String, val nameAr: String, val nameEn: String, val category: String, val unit: String,
         val sale: Double, val cost: Double, val vanStock: Int, val minStock: Int, val brand: String?,
     )
+
+    private fun seedProductUnits(): List<ProductUnitEntity> {
+        // Each entry: productId, list of (unitName, price, conversionQty)
+        // conversionQty = how many base units this unit contains (for stock deduction)
+        val raw = listOf(
+            "PRD-001" to listOf(u("حبة", 1.250, 1.0),  u("كرتونة", 15.000, 12.0)),
+            "PRD-002" to listOf(u("حبة", 0.350, 1.0),  u("دزينة",  4.200, 12.0),  u("كرتونة", 8.400, 24.0)),
+            "PRD-003" to listOf(u("حبة", 1.100, 1.0),  u("كرتونة", 13.200, 12.0)),
+            "PRD-004" to listOf(u("حبة", 0.900, 1.0),  u("كرتونة", 10.800, 12.0)),
+            "PRD-005" to listOf(u("حبة", 0.250, 1.0),  u("دزينة",  3.000, 12.0),  u("علبة",   6.000, 24.0)),
+            "PRD-006" to listOf(u("حبة", 1.500, 1.0),  u("كرتونة", 18.000, 12.0)),
+            "PRD-007" to listOf(u("حبة", 0.500, 1.0),  u("دزينة",  6.000, 12.0),  u("علبة",  12.000, 24.0)),
+            "PRD-008" to listOf(u("حبة", 8.500, 1.0),  u("كرتونة", 34.000,  4.0)),
+            "PRD-009" to listOf(u("حبة", 1.800, 1.0),  u("كرتونة", 10.800,  6.0)),
+            "PRD-010" to listOf(u("حبة", 2.250, 1.0),  u("كرتونة", 27.000, 12.0)),
+            "PRD-011" to listOf(u("حبة", 3.100, 1.0),  u("كرتونة", 18.600,  6.0)),
+            "PRD-012" to listOf(u("حبة", 7.250, 1.0),  u("كرتونة", 43.500,  6.0)),
+            "PRD-013" to listOf(u("حبة", 4.000, 1.0),  u("كرتونة", 24.000,  6.0)),
+            "PRD-014" to listOf(u("حبة", 9.500, 1.0),  u("طرد",    47.500,  5.0)),
+            "PRD-015" to listOf(u("حبة", 1.000, 1.0),  u("كيس",   10.000, 10.0)),
+            "PRD-016" to listOf(u("حبة", 0.350, 1.0),  u("كرتونة",  4.200, 12.0)),
+            "PRD-017" to listOf(u("حبة", 4.750, 1.0),  u("كرتونة", 28.500,  6.0)),
+            "PRD-018" to listOf(u("حبة", 0.850, 1.0),  u("دزينة", 10.200, 12.0)),
+            "PRD-019" to listOf(u("حبة", 1.150, 1.0),  u("كرتونة", 13.800, 12.0)),
+            "PRD-020" to listOf(u("حبة", 2.000, 1.0),  u("كرتونة", 12.000,  6.0)),
+            "PRD-021" to listOf(u("حبة", 6.500, 1.0),  u("كرتونة", 78.000, 12.0)),
+            "PRD-022" to listOf(u("حبة", 4.250, 1.0),  u("كرتونة", 25.500,  6.0)),
+            "PRD-023" to listOf(u("حبة", 0.400, 1.0),  u("دزينة",  4.800, 12.0),  u("كرتونة", 9.600, 24.0)),
+            "PRD-024" to listOf(u("حبة", 2.100, 1.0),  u("كرتونة", 25.200, 12.0)),
+            "PRD-025" to listOf(u("حبة", 0.450, 1.0),  u("دزينة",  5.400, 12.0),  u("علبة",  10.800, 24.0)),
+            "PRD-026" to listOf(u("حبة", 0.500, 1.0),  u("دزينة",  6.000, 12.0),  u("علبة",  12.000, 24.0)),
+            "PRD-027" to listOf(u("حبة", 1.450, 1.0),  u("كرتونة",  8.700,  6.0)),
+            "PRD-028" to listOf(u("حبة", 1.250, 1.0),  u("دزينة", 15.000, 12.0),  u("كرتونة", 30.000, 24.0)),
+            "PRD-029" to listOf(u("حبة", 3.750, 1.0),  u("كرتونة", 22.500,  6.0)),
+            "PRD-030" to listOf(u("حبة", 5.500, 1.0),  u("كرتونة", 33.000,  6.0)),
+        )
+        return raw.flatMapIndexed { pi, (productId, units) ->
+            units.mapIndexed { ui, triple ->
+                ProductUnitEntity(
+                    id = "PU-${(pi + 1).toString().padStart(3, '0')}-${ui + 1}",
+                    productId = productId,
+                    name = triple.first,
+                    price = triple.second,
+                    conversionQty = triple.third,
+                )
+            }
+        }
+    }
+
+    private fun u(name: String, price: Double, conversionQty: Double) = Triple(name, price, conversionQty)
 
     private fun seedInvoices(now: Long, oneDay: Long): List<InvoiceEntity> {
         return listOf(
