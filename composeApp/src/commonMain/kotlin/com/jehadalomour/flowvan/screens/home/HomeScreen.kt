@@ -1,5 +1,11 @@
 package com.jehadalomour.flowvan.screens.home
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,7 +27,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,17 +34,20 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
-import com.jehadalomour.flowvan.screens.components.OverdueChip
-import com.jehadalomour.flowvan.screens.components.TierBadge
 import com.jehadalomour.flowvan.shared.domain.model.Customer
+import com.jehadalomour.flowvan.shared.domain.model.CustomerTier
 import com.jehadalomour.flowvan.shared.presentation.feature.home.HomeEvent
 import com.jehadalomour.flowvan.shared.presentation.feature.home.HomeViewModel
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
@@ -73,222 +81,400 @@ fun HomeScreen(
 
     Surface(modifier = Modifier.fillMaxSize(), color = Fv.BgDeepest) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 24.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 32.dp),
         ) {
             item {
-                TopBar(
-                    onOpenAi = onOpenAi,
-                    onLogout = onLogout,
-                )
+                TopBar(onLogout = onLogout, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
             }
             item {
-                GreetingBlock(
+                HeroCard(
                     name = state.user?.nameAr ?: "...",
                     dateText = today.formatLevantine(AppLanguage.AR),
-                )
-            }
-            item {
-                ShiftStatusCard(
-                    isActive = state.activeShift != null,
+                    isShiftActive = state.activeShift != null,
                     onStartShift = { viewModel.onEvent(HomeEvent.StartShift) },
+                    modifier = Modifier.padding(horizontal = 14.dp).padding(bottom = 12.dp),
                 )
             }
             item {
-                KpiRow(
+                StatsGrid(
                     sales = state.kpi?.salesTotal ?: 0.0,
                     collections = state.kpi?.collectionsTotal ?: 0.0,
                     returns = state.kpi?.returnsTotal ?: 0.0,
                     visited = state.kpi?.customersVisited ?: 0,
                     planned = state.kpi?.customersPlanned ?: 0,
+                    modifier = Modifier.padding(horizontal = 14.dp),
                 )
             }
             item {
-                ActionTilesGrid(
+                VisitsProgressCard(
+                    visited = state.kpi?.customersVisited ?: 0,
+                    planned = state.kpi?.customersPlanned ?: 0,
+                    modifier = Modifier.padding(horizontal = 14.dp).padding(top = 10.dp),
+                )
+            }
+            item {
+                SectionHeader(
+                    title = "الوصول السريع",
+                    modifier = Modifier.padding(horizontal = 14.dp).padding(top = 18.dp, bottom = 10.dp),
+                )
+            }
+            item {
+                ActionGrid(
                     onOpenRoute = onOpenRoute,
                     onOpenCustomers = onOpenCustomers,
                     onOpenVanStock = onOpenVanStock,
                     onOpenAi = onOpenAi,
                     onOpenEndOfDay = onOpenEndOfDay,
                     onOpenReports = onOpenReports,
+                    modifier = Modifier.padding(horizontal = 14.dp),
                 )
             }
             item {
-                RouteSectionHeader(onSeeAll = onOpenRoute)
-            }
-            items(state.routeTopFive, key = { it.id }) { customer ->
-                CustomerRow(customer, onClick = { onOpenCustomer(customer.id) })
-            }
-        }
-    }
-}
-
-@Composable
-private fun ShiftStatusCard(isActive: Boolean, onStartShift: () -> Unit) {
-    if (isActive) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-        ) {
-            Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
+                Row(
                     modifier = Modifier
-                        .size(8.dp)
-                        .background(Fv.Green, CircleShape),
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    "الوردية نشطة — يتم تتبع الموقع",
-                    color = Fv.Green,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-    } else {
-        Card(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onStartShift),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-        ) {
-            Row(
-                modifier = Modifier.padding(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(Fv.Green.copy(alpha = 0.18f), CircleShape),
-                    contentAlignment = Alignment.Center,
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp)
+                        .padding(top = 18.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        painter = painterResource(Res.drawable.ic_play_circle),
-                        contentDescription = null,
-                        tint = Fv.Green,
-                        modifier = Modifier.size(24.dp),
+                    Text(
+                        "مسار اليوم",
+                        color = Fv.TextHigh,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        "عرض الكل",
+                        color = Fv.Blue,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable(onClick = onOpenRoute).padding(8.dp),
                     )
                 }
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text("بدء اليوم", color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    Text("ابدأ الوردية لتفعيل تتبع الموقع", color = Fv.TextMid, fontSize = 11.sp)
-                }
+            }
+            item {
+                RoutePreviewCard(
+                    customers = state.routeTopFive,
+                    onOpenCustomer = onOpenCustomer,
+                    modifier = Modifier.padding(horizontal = 14.dp),
+                )
             }
         }
     }
 }
 
+// ── Top Bar ───────────────────────────────────────────────────────────────────
+
 @Composable
-private fun TopBar(onOpenAi: () -> Unit, onLogout: () -> Unit) {
+private fun TopBar(onLogout: () -> Unit, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "كاش فلو",
-            color = Fv.TextHigh,
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp,
+            "كاش فلو",
+            color = Fv.Blue,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.weight(1f),
         )
-        IconButton(onClick = onOpenAi) {
-            Icon(
-                painter = painterResource(Res.drawable.ic_ai_sparkle),
-                contentDescription = null,
-                tint = Fv.Purple,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-        IconButton(onClick = onLogout) {
-            Icon(
-                painter = painterResource(Res.drawable.ic_logout),
-                contentDescription = null,
-                tint = Fv.TextMid,
-                modifier = Modifier.size(20.dp),
-            )
-        }
+        TopBarIconBtn(painterResource(Res.drawable.ic_logout), onClick = onLogout)
     }
 }
 
 @Composable
-private fun GreetingBlock(name: String, dateText: String) {
-    Column {
-        Text("أهلاً، $name", color = Fv.TextHigh, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(4.dp))
-        Text(dateText, color = Fv.TextMid, fontSize = 13.sp)
+private fun TopBarIconBtn(icon: Painter, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(RoundedCornerShape(11.dp))
+            .background(Fv.SurfaceTop)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, tint = Fv.TextMid, modifier = Modifier.size(18.dp))
     }
 }
 
+// ── Hero Card ─────────────────────────────────────────────────────────────────
+
 @Composable
-private fun KpiRow(
-    sales: Double, collections: Double, returns: Double,
-    visited: Int, planned: Int,
+private fun HeroCard(
+    name: String,
+    dateText: String,
+    isShiftActive: Boolean,
+    onStartShift: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    val heroGradient = Brush.linearGradient(listOf(Color(0xFF2265CD), Color(0xFF0C447C)))
+    val infiniteTransition = rememberInfiniteTransition(label = "shift_dot")
+    val dotAlpha by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Reverse),
+        label = "dot_alpha",
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .background(heroGradient)
+            .padding(20.dp),
     ) {
-        KpiCard("المبيعات", sales.formatJod(AppLanguage.AR), Fv.Blue, Modifier.weight(1f))
-        KpiCard("التحصيلات", collections.formatJod(AppLanguage.AR), Fv.Green, Modifier.weight(1f))
+        Column {
+            Text(
+                "أهلاً، $name",
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.ExtraBold,
+                lineHeight = 28.sp,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(dateText, color = Color.White.copy(alpha = 0.65f), fontSize = 12.sp)
+            Spacer(Modifier.height(14.dp))
+            if (isShiftActive) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White.copy(alpha = 0.14f))
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(Color(0xFF4ADE80).copy(alpha = dotAlpha), CircleShape),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "الوردية نشطة — يتم تتبع الموقع",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White.copy(alpha = 0.14f))
+                        .clickable(onClick = onStartShift)
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painterResource(Res.drawable.ic_play_circle),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("بدء اليوم", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
-    Spacer(Modifier.height(8.dp))
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        KpiCard("المرتجعات", returns.formatJod(AppLanguage.AR), Fv.Red, Modifier.weight(1f))
-        KpiCard("الزيارات", "$visited / $planned", Fv.Amber, Modifier.weight(1f))
+}
+
+// ── Stats Grid ────────────────────────────────────────────────────────────────
+
+@Composable
+private fun StatsGrid(
+    sales: Double,
+    collections: Double,
+    returns: Double,
+    visited: Int,
+    planned: Int,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StatCard(
+                label = "المبيعات",
+                value = sales.formatJod(AppLanguage.AR),
+                subLabel = "د.أ",
+                accent = Fv.Blue,
+                icon = painterResource(Res.drawable.ic_cart),
+                modifier = Modifier.weight(1f),
+            )
+            StatCard(
+                label = "التحصيلات",
+                value = collections.formatJod(AppLanguage.AR),
+                subLabel = "د.أ",
+                accent = Fv.Green,
+                icon = painterResource(Res.drawable.ic_payment),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StatCard(
+                label = "المرتجعات",
+                value = returns.formatJod(AppLanguage.AR),
+                subLabel = "د.أ",
+                accent = Fv.Red,
+                icon = painterResource(Res.drawable.ic_return_arrow),
+                modifier = Modifier.weight(1f),
+            )
+            StatCard(
+                label = "الزيارات",
+                value = "$visited / $planned",
+                subLabel = "عميل اليوم",
+                accent = Fv.Amber,
+                icon = painterResource(Res.drawable.ic_map),
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 
 @Composable
-private fun KpiCard(label: String, value: String, accent: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier) {
+private fun StatCard(
+    label: String,
+    value: String,
+    subLabel: String,
+    accent: Color,
+    icon: Painter,
+    modifier: Modifier = Modifier,
+) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Fv.Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(label, color = Fv.TextMid, fontSize = 11.sp)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    label,
+                    color = Fv.TextMid,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Box(
+                    modifier = Modifier
+                        .size(30.dp)
+                        .background(accent.copy(alpha = 0.14f), RoundedCornerShape(9.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(value, color = accent, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 22.sp)
+            Spacer(Modifier.height(2.dp))
+            Text(subLabel, color = Fv.TextMid, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        }
+    }
+}
+
+// ── Visits Progress Card ──────────────────────────────────────────────────────
+
+@Composable
+private fun VisitsProgressCard(visited: Int, planned: Int, modifier: Modifier = Modifier) {
+    val ratio = if (planned > 0) visited.toFloat() / planned.toFloat() else 0f
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painterResource(Res.drawable.ic_map),
+                    contentDescription = null,
+                    tint = Fv.Amber,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    "الزيارات اليوم",
+                    color = Fv.TextMid,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Text("$visited / $planned", color = Fv.Amber, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
+            }
+            Spacer(Modifier.height(10.dp))
+            // Progress track
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(7.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Fv.SurfaceTop),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(ratio.coerceIn(0f, 1f))
+                        .height(7.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Brush.horizontalGradient(listOf(Fv.Amber, Color(0xFFF59E0B)))),
+                )
+            }
             Spacer(Modifier.height(6.dp))
-            Text(value, color = accent, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("$visited مكتملة", color = Fv.TextMid, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                Text("${(planned - visited).coerceAtLeast(0)} متبقية", color = Fv.TextMid, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+            }
         }
     }
 }
 
+// ── Section Header ────────────────────────────────────────────────────────────
+
 @Composable
-private fun ActionTilesGrid(
-    onOpenRoute: () -> Unit, onOpenCustomers: () -> Unit, onOpenVanStock: () -> Unit,
-    onOpenAi: () -> Unit, onOpenEndOfDay: () -> Unit, onOpenReports: () -> Unit,
+private fun SectionHeader(title: String, modifier: Modifier = Modifier) {
+    Text(title, color = Fv.TextHigh, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, modifier = modifier)
+}
+
+// ── Action Grid ───────────────────────────────────────────────────────────────
+
+@Composable
+private fun ActionGrid(
+    onOpenRoute: () -> Unit,
+    onOpenCustomers: () -> Unit,
+    onOpenVanStock: () -> Unit,
+    onOpenAi: () -> Unit,
+    onOpenEndOfDay: () -> Unit,
+    onOpenReports: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionTile(painterResource(Res.drawable.ic_truck), "مسار اليوم", Fv.Blue, Modifier.weight(1f), onOpenRoute)
-            ActionTile(painterResource(Res.drawable.ic_customers), "قائمة العملاء", Fv.Teal, Modifier.weight(1f), onOpenCustomers)
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ActionTile(painterResource(Res.drawable.ic_truck), "مسار اليوم", "خطة الزيارات", Fv.Blue, Modifier.weight(1f), onOpenRoute)
+            ActionTile(painterResource(Res.drawable.ic_customers), "قائمة العملاء", "دليل العملاء", Fv.Teal, Modifier.weight(1f), onOpenCustomers)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionTile(painterResource(Res.drawable.ic_inventory), "مخزون الفان", Fv.Amber, Modifier.weight(1f), onOpenVanStock)
-            ActionTile(painterResource(Res.drawable.ic_moon), "نهاية اليوم", Fv.Red, Modifier.weight(1f), onOpenEndOfDay)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ActionTile(painterResource(Res.drawable.ic_inventory), "مخزون الفان", "الأصناف المتاحة", Fv.Amber, Modifier.weight(1f), onOpenVanStock)
+            ActionTile(painterResource(Res.drawable.ic_moon), "نهاية اليوم", "تسوية الحسابات", Fv.Red, Modifier.weight(1f), onOpenEndOfDay)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionTile(painterResource(Res.drawable.ic_bar_chart), "التقارير", Fv.Green, Modifier.weight(1f), onOpenReports)
-            ActionTile(painterResource(Res.drawable.ic_ai_sparkle), "المساعد الذكي", Fv.Purple, Modifier.weight(1f), onOpenAi)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ActionTile(painterResource(Res.drawable.ic_bar_chart), "التقارير", "اليومية والشهرية", Fv.Green, Modifier.weight(1f), onOpenReports)
+            ActionTile(painterResource(Res.drawable.ic_ai_sparkle), "المساعد الذكي", "سؤال وجواب", Fv.Purple, Modifier.weight(1f), onOpenAi)
         }
     }
 }
 
 @Composable
-private fun ActionTile(icon: Painter, label: String, accent: androidx.compose.ui.graphics.Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun ActionTile(
+    icon: Painter,
+    label: String,
+    subLabel: String,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
     Card(
         modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = Fv.Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
@@ -296,72 +482,127 @@ private fun ActionTile(icon: Painter, label: String, accent: androidx.compose.ui
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
-                    .background(accent.copy(alpha = 0.18f), CircleShape),
+                    .size(44.dp)
+                    .background(accent.copy(alpha = 0.14f), RoundedCornerShape(13.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    painter = icon,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(24.dp),
-                )
+                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
             }
-            Spacer(Modifier.width(12.dp))
-            Text(label, color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text(label, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text(subLabel, color = Fv.TextMid, fontSize = 11.sp)
+            }
+        }
+    }
+}
+
+// ── Route Preview Card ────────────────────────────────────────────────────────
+
+@Composable
+private fun RoutePreviewCard(
+    customers: List<Customer>,
+    onOpenCustomer: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (customers.isEmpty()) return
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column {
+            customers.forEachIndexed { index, customer ->
+                RoutePreviewItem(customer = customer, onClick = { onOpenCustomer(customer.id) })
+                if (index < customers.lastIndex) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(0.5.dp).background(Fv.Border))
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun RouteSectionHeader(onSeeAll: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
+private fun RoutePreviewItem(customer: Customer, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 13.dp),
     ) {
-        Text("مسار اليوم", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-        Text(
-            "عرض الكل",
-            color = Fv.Blue,
-            fontSize = 12.sp,
-            modifier = Modifier.clickable(onClick = onSeeAll).padding(8.dp),
-        )
-    }
-}
-
-@Composable
-private fun CustomerRow(customer: Customer, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
                     .size(32.dp)
-                    .background(Fv.SurfaceTop, CircleShape),
+                    .background(Fv.SurfaceTop, RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(customer.visitOrder.toString(), color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text(customer.visitOrder.toString(), color = Fv.TextMid, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(customer.nameAr, color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(
+                    customer.nameAr,
+                    color = Fv.TextHigh,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(customer.area, color = Fv.TextMid, fontSize = 11.sp)
             }
-            TierBadge(customer.tier)
+            Spacer(Modifier.width(8.dp))
+            TierCategoryBadge(customer.tier)
         }
-        if (customer.overdueAmount > 0 || customer.churnRisk >= 0.60) {
-            Row(
-                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+        if (customer.overdueAmount > 0) {
+            Spacer(Modifier.height(7.dp))
+            Box(
+                modifier = Modifier
+                    .background(Fv.Red.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
             ) {
-                if (customer.overdueAmount > 0) OverdueChip(customer.overdueAmount.formatJod(AppLanguage.AR))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Icon(
+                        painterResource(Res.drawable.ic_warning),
+                        contentDescription = null,
+                        tint = Fv.Red,
+                        modifier = Modifier.size(12.dp),
+                    )
+                    Text(
+                        "متأخر ${customer.overdueAmount.formatJod(AppLanguage.AR)} د.أ",
+                        color = Fv.Red,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun TierCategoryBadge(tier: CustomerTier) {
+    val (gradient, label) = when (tier) {
+        CustomerTier.A -> Pair(
+            Brush.linearGradient(listOf(Color(0xFF1D9E75), Color(0xFF0F6E56))),
+            "فئة A",
+        )
+        CustomerTier.B -> Pair(
+            Brush.linearGradient(listOf(Color(0xFFC97B1A), Color(0xFF9A5C10))),
+            "فئة B",
+        )
+        CustomerTier.C -> Pair(
+            Brush.linearGradient(listOf(Color(0xFF637181), Color(0xFF3E4D5C))),
+            "فئة C",
+        )
+    }
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(9.dp))
+            .background(gradient)
+            .padding(horizontal = 12.dp, vertical = 5.dp),
+    ) {
+        Text(label, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
     }
 }
