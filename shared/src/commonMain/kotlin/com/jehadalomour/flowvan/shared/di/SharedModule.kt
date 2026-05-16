@@ -38,6 +38,7 @@ import com.jehadalomour.flowvan.shared.domain.usecase.LoginUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.LogoutUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.RecordCollectionUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.StartShiftUseCase
+import com.jehadalomour.flowvan.shared.presentation.feature.print.VoucherPrintViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.accountstatement.AccountStatementViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.ai.AiAssistantViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.map.MapNavigationViewModel
@@ -161,6 +162,9 @@ fun sharedModule(): Module = module {
     }
     viewModel { (invoiceId: String) ->
         VoucherDetailViewModel(invoiceId, get(), get())
+    }
+    viewModel { (invoiceId: String) ->
+        VoucherPrintViewModel(invoiceId, get(), get(), get(), get(), get())
     }
     viewModel { (paymentId: String) ->
         ReceiptDetailViewModel(paymentId, get())

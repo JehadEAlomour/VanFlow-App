@@ -30,6 +30,7 @@ data class VoucherState(
     val showSaveSheet: Boolean = false,
     val isSaving: Boolean = false,
     val savedNumber: String? = null,
+    val savedId: String? = null,
     val errorAr: String? = null,
     /** Driven from AppSettings — stamps each new CartLine at add-time. */
     val taxType: LineTaxType = LineTaxType.TAXABLE,

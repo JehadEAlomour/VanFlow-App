@@ -93,6 +93,7 @@ fun VoucherScreen(
     customerId: String,
     type: VoucherType,
     onBack: () -> Unit,
+    onPrint: (invoiceId: String) -> Unit,
     viewModel: VoucherViewModel = koinViewModel { parametersOf(customerId, type) },
 ) {
     val state by viewModel.state.collectAsState()
@@ -110,8 +111,9 @@ fun VoucherScreen(
         VoucherType.ORDER -> orderSaveGradient
     }
 
-    LaunchedEffect(state.savedNumber) {
-        if (state.savedNumber != null) onBack()
+    LaunchedEffect(state.savedId) {
+        val id = state.savedId ?: return@LaunchedEffect
+        onPrint(id)
     }
 
     AppBackHandler(enabled = state.view == VoucherView.CART) {

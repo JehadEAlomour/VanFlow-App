@@ -36,6 +36,7 @@ import com.jehadalomour.flowvan.screens.endofday.EndOfDayScreen
 import com.jehadalomour.flowvan.screens.home.HomeScreen
 import com.jehadalomour.flowvan.screens.login.LoginScreen
 import com.jehadalomour.flowvan.screens.route.RouteScreen
+import com.jehadalomour.flowvan.screens.print.VoucherPrintScreen
 import com.jehadalomour.flowvan.screens.voucher.VoucherScreen
 import com.jehadalomour.flowvan.shared.presentation.feature.voucher.VoucherType
 import com.jehadalomour.flowvan.screens.vanstock.VanStockScreen
@@ -71,6 +72,7 @@ object Routes {
     const val CASH_FLOW_REPORT = "cashflow"
     const val ITEMS_SALES_REPORT = "itemssales"
     const val RECEIVABLES_REPORT = "receivables"
+    const val VOUCHER_PRINT = "voucherprint/{invoiceId}"
     const val SETTINGS = "settings"
     fun customer(id: String) = "customer/$id"
     fun sale(id: String) = "sale/$id"
@@ -85,6 +87,7 @@ object Routes {
     fun voucherReport(customerId: String) = "voucherreport/$customerId"
     fun voucher(invoiceId: String) = "voucher/$invoiceId"
     fun receipt(paymentId: String) = "receipt/$paymentId"
+    fun voucherPrint(invoiceId: String) = "voucherprint/$invoiceId"
 }
 
 @Composable
@@ -166,21 +169,48 @@ fun FlowVanNavHost(
             arguments = listOf(navArgument("customerId") { type = NavType.StringType }),
         ) { entry ->
             val id = entry.arguments?.getString("customerId").orEmpty()
-            VoucherScreen(customerId = id, type = VoucherType.SALE, onBack = { navController.popBackStack() })
+            VoucherScreen(
+                customerId = id,
+                type = VoucherType.SALE,
+                onBack = { navController.popBackStack() },
+                onPrint = { invoiceId ->
+                    navController.navigate(Routes.voucherPrint(invoiceId)) {
+                        popUpTo(Routes.customer(id)) { inclusive = false }
+                    }
+                },
+            )
         }
         composable(
             Routes.RETURN,
             arguments = listOf(navArgument("customerId") { type = NavType.StringType }),
         ) { entry ->
             val id = entry.arguments?.getString("customerId").orEmpty()
-            VoucherScreen(customerId = id, type = VoucherType.RETURN, onBack = { navController.popBackStack() })
+            VoucherScreen(
+                customerId = id,
+                type = VoucherType.RETURN,
+                onBack = { navController.popBackStack() },
+                onPrint = { invoiceId ->
+                    navController.navigate(Routes.voucherPrint(invoiceId)) {
+                        popUpTo(Routes.customer(id)) { inclusive = false }
+                    }
+                },
+            )
         }
         composable(
             Routes.REQUEST,
             arguments = listOf(navArgument("customerId") { type = NavType.StringType }),
         ) { entry ->
             val id = entry.arguments?.getString("customerId").orEmpty()
-            VoucherScreen(customerId = id, type = VoucherType.ORDER, onBack = { navController.popBackStack() })
+            VoucherScreen(
+                customerId = id,
+                type = VoucherType.ORDER,
+                onBack = { navController.popBackStack() },
+                onPrint = { invoiceId ->
+                    navController.navigate(Routes.voucherPrint(invoiceId)) {
+                        popUpTo(Routes.customer(id)) { inclusive = false }
+                    }
+                },
+            )
         }
         composable(
             Routes.COLLECTION,
@@ -314,6 +344,13 @@ fun FlowVanNavHost(
         }
         composable(Routes.ITEMS_SALES_REPORT) {
             ItemsSalesReportScreen(onBack = { navController.popBackStack() })
+        }
+        composable(
+            Routes.VOUCHER_PRINT,
+            arguments = listOf(navArgument("invoiceId") { type = NavType.StringType }),
+        ) { entry ->
+            val id = entry.arguments?.getString("invoiceId").orEmpty()
+            VoucherPrintScreen(invoiceId = id, onBack = { navController.popBackStack() })
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(onBack = { navController.popBackStack() })

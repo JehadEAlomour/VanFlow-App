@@ -221,7 +221,7 @@ class VoucherViewModel(
             }
             result.fold(
                 onSuccess = { entity ->
-                    _state.update { it.copy(isSaving = false, savedNumber = entity.number) }
+                    _state.update { it.copy(isSaving = false, savedNumber = entity.number, savedId = entity.id) }
                 },
                 onFailure = { ex ->
                     val msg = when (ex) {
