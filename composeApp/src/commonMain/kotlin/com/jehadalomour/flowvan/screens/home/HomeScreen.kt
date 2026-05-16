@@ -70,6 +70,7 @@ fun HomeScreen(
     onOpenEndOfDay: () -> Unit,
     onOpenReports: () -> Unit,
     onOpenCustomer: (String) -> Unit,
+    onOpenSettings: () -> Unit,
     onLogout: () -> Unit,
     viewModel: HomeViewModel = koinViewModel(),
 ) {
@@ -85,7 +86,7 @@ fun HomeScreen(
             contentPadding = PaddingValues(bottom = 32.dp),
         ) {
             item {
-                TopBar(onLogout = onLogout, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+                TopBar(onSettings = onOpenSettings, onLogout = onLogout, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
             }
             item {
                 HeroCard(
@@ -168,7 +169,7 @@ fun HomeScreen(
 // ── Top Bar ───────────────────────────────────────────────────────────────────
 
 @Composable
-private fun TopBar(onLogout: () -> Unit, modifier: Modifier = Modifier) {
+private fun TopBar(onSettings: () -> Unit, onLogout: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -180,6 +181,8 @@ private fun TopBar(onLogout: () -> Unit, modifier: Modifier = Modifier) {
             fontWeight = FontWeight.ExtraBold,
             modifier = Modifier.weight(1f),
         )
+        TopBarIconBtn(painterResource(Res.drawable.ic_settings), onClick = onSettings)
+        Spacer(Modifier.width(8.dp))
         TopBarIconBtn(painterResource(Res.drawable.ic_logout), onClick = onLogout)
     }
 }

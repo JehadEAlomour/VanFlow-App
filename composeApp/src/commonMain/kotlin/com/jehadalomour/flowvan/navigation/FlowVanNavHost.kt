@@ -14,6 +14,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.jehadalomour.flowvan.screens.ai.AiAssistantScreen
+import com.jehadalomour.flowvan.screens.settings.SettingsScreen
 import com.jehadalomour.flowvan.screens.map.MapNavigationScreen
 import com.jehadalomour.flowvan.screens.reports.AccountStatementScreen
 import com.jehadalomour.flowvan.screens.reports.AllPaymentsReportScreen
@@ -70,6 +71,7 @@ object Routes {
     const val CASH_FLOW_REPORT = "cashflow"
     const val ITEMS_SALES_REPORT = "itemssales"
     const val RECEIVABLES_REPORT = "receivables"
+    const val SETTINGS = "settings"
     fun customer(id: String) = "customer/$id"
     fun sale(id: String) = "sale/$id"
     fun returns(id: String) = "return/$id"
@@ -120,6 +122,7 @@ fun FlowVanNavHost(
                 onOpenEndOfDay = { navController.navigate(Routes.END_OF_DAY) },
                 onOpenReports = { navController.navigate(Routes.REPORTS_HUB) },
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
+                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onLogout = {
                     logout()
                     navController.navigate(Routes.LOGIN) { popUpTo(Routes.HOME) { inclusive = true } }
@@ -311,6 +314,9 @@ fun FlowVanNavHost(
         }
         composable(Routes.ITEMS_SALES_REPORT) {
             ItemsSalesReportScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.SETTINGS) {
+            SettingsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

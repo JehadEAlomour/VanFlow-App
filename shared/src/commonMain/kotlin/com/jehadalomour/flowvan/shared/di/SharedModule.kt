@@ -2,6 +2,7 @@ package com.jehadalomour.flowvan.shared.di
 
 import com.jehadalomour.flowvan.shared.data.local.db.FlowVanDatabase
 import com.jehadalomour.flowvan.shared.data.local.db.buildFlowVanDatabase
+import com.jehadalomour.flowvan.shared.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.shared.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.shared.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.shared.data.repository.PaymentRepository
@@ -25,6 +26,7 @@ import com.jehadalomour.flowvan.shared.presentation.feature.reports.CashFlowRepo
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.ItemsSalesReportViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.ReceivablesReportViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.VisitReportViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.settings.SettingsViewModel
 import com.jehadalomour.flowvan.shared.domain.tracking.LocationTrackingCoordinator
 import com.jehadalomour.flowvan.shared.domain.usecase.CreateRequestVoucherUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.CreateReturnVoucherUseCase
@@ -86,9 +88,11 @@ fun sharedModule(): Module = module {
     single { get<FlowVanDatabase>().locationPointDao() }
     single { get<FlowVanDatabase>().routeStopDao() }
     single { get<FlowVanDatabase>().aiMessageDao() }
+    single { get<FlowVanDatabase>().appSettingsDao() }
 
     single { UserRepository(get()) }
     single { CustomerRepository(get()) }
+    single { AppSettingsRepository(get()) }
     single { ProductRepository(get()) }
     single { ProductUnitRepository(get()) }
     single { InvoiceRepository(get()) }
@@ -170,6 +174,7 @@ fun sharedModule(): Module = module {
     viewModel { CashFlowReportViewModel(get(), get()) }
     viewModel { ItemsSalesReportViewModel(get()) }
     viewModel { ReceivablesReportViewModel(get()) }
+    viewModel { SettingsViewModel(get()) }
 }
 
 expect fun platformModule(): Module

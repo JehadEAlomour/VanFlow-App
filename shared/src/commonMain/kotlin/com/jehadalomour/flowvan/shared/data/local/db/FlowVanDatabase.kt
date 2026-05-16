@@ -6,6 +6,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
 import com.jehadalomour.flowvan.shared.data.local.dao.AiMessageDao
+import com.jehadalomour.flowvan.shared.data.local.dao.AppSettingsDao
 import com.jehadalomour.flowvan.shared.data.local.dao.CustomerDao
 import com.jehadalomour.flowvan.shared.data.local.dao.InvoiceDao
 import com.jehadalomour.flowvan.shared.data.local.dao.LocationPointDao
@@ -16,6 +17,7 @@ import com.jehadalomour.flowvan.shared.data.local.dao.RouteStopDao
 import com.jehadalomour.flowvan.shared.data.local.dao.ShiftDao
 import com.jehadalomour.flowvan.shared.data.local.dao.UserDao
 import com.jehadalomour.flowvan.shared.data.local.entity.AiMessageEntity
+import com.jehadalomour.flowvan.shared.data.local.entity.AppSettingsEntity
 import com.jehadalomour.flowvan.shared.data.local.entity.CustomerEntity
 import com.jehadalomour.flowvan.shared.data.local.entity.InvoiceEntity
 import com.jehadalomour.flowvan.shared.data.local.entity.LocationPointEntity
@@ -38,11 +40,13 @@ import com.jehadalomour.flowvan.shared.data.local.entity.UserEntity
         ShiftEntity::class,
         AiMessageEntity::class,
         RouteStopEntity::class,
+        AppSettingsEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
+        AutoMigration(from = 2, to = 3),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)
@@ -57,6 +61,7 @@ abstract class FlowVanDatabase : RoomDatabase() {
     abstract fun locationPointDao(): LocationPointDao
     abstract fun routeStopDao(): RouteStopDao
     abstract fun aiMessageDao(): AiMessageDao
+    abstract fun appSettingsDao(): AppSettingsDao
 }
 
 @Suppress("KotlinNoActualForExpect", "NO_ACTUAL_FOR_EXPECT")
