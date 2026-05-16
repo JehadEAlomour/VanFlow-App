@@ -1,5 +1,6 @@
 package com.jehadalomour.flowvan.screens.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -31,6 +32,7 @@ import org.jetbrains.compose.resources.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -263,6 +265,106 @@ fun CartLineRow(
                     tint = Fv.Red,
                     modifier = Modifier.size(16.dp),
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun CartItemCard(line: CartLine, onTap: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onTap),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(0.5.dp, Color(0xFFDDE8F5)),
+    ) {
+        Column {
+            // Top section: avatar + name/sku + edit badge
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ProductAvatar(
+                    seed = line.nameAr,
+                    letter = line.nameAr.firstOrNull()?.toString() ?: "؟",
+                    size = 50.dp,
+                )
+                Spacer(Modifier.size(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        line.nameAr,
+                        color = Fv.TextHigh,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    val unitStr = line.unit.takeIf { it.isNotBlank() } ?: ""
+                    Text(
+                        buildString {
+                            append(line.sku)
+                            if (unitStr.isNotBlank()) append(" · $unitStr")
+                        },
+                        color = Fv.TextMid,
+                        fontSize = 11.sp,
+                    )
+                }
+                Spacer(Modifier.size(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFE6F1FB))
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                ) {
+                    Text("تعديل", color = Fv.Blue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            // Divider
+            Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(Color(0xFFDDE8F5)))
+            // Bottom section: price info + qty pill
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "${line.unitPrice.formatJod(AppLanguage.AR)} × ${line.qty.toInt()}",
+                        color = Fv.TextMid,
+                        fontSize = 11.sp,
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            line.lineTotal.formatJod(AppLanguage.AR),
+                            color = Fv.Blue,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                        if (line.discountPct > 0) {
+                            Text(
+                                "خصم ${(line.discountPct * 100).toInt()}%",
+                                color = Fv.Green,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .background(Fv.SurfaceTop, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        "× ${line.qty.toInt()}",
+                        color = Fv.TextHigh,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         }
     }
