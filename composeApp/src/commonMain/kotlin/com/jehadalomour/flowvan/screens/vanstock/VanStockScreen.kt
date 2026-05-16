@@ -1,44 +1,48 @@
 package com.jehadalomour.flowvan.screens.vanstock
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
-import com.jehadalomour.flowvan.screens.components.fvFieldColors
 import com.jehadalomour.flowvan.shared.domain.model.Product
 import com.jehadalomour.flowvan.shared.presentation.feature.vanstock.StockStatus
 import com.jehadalomour.flowvan.shared.presentation.feature.vanstock.VanStockEvent
@@ -47,6 +51,7 @@ import com.jehadalomour.flowvan.shared.presentation.feature.vanstock.stockStatus
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
 import com.jehadalomour.flowvan.shared.presentation.i18n.AppLanguage
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.math.abs
 
 @Composable
 fun VanStockScreen(
@@ -55,153 +60,382 @@ fun VanStockScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
-    Surface(modifier = Modifier.fillMaxSize(), color = Fv.BgDeepest) {
-        Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize()) {
+
+        // ── Sticky Top Bar ────────────────────────────────────────────────────
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = Fv.Surface,
+            shadowElevation = 2.dp,
+        ) {
             Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onBack) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(Fv.SurfaceTop)
+                        .border(0.5.dp, Fv.Border, RoundedCornerShape(11.dp))
+                        .clickable(onClick = onBack),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Icon(
-                        painter = painterResource(Res.drawable.ic_back),
+                        painterResource(Res.drawable.ic_back),
                         contentDescription = null,
                         tint = Fv.TextHigh,
-                        modifier = Modifier.size(22.dp),
+                        modifier = Modifier.size(18.dp),
                     )
                 }
-                Text("مخزون الفان", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceAround,
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    "مخزون الفان",
+                    color = Fv.TextHigh,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Brush.linearGradient(listOf(Color(0xFF185FA5), Color(0xFF0C447C))))
+                        .padding(horizontal = 14.dp, vertical = 9.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    StatCell("الأصناف", state.allProducts.size.toString())
-                    StatCell("القيمة الإجمالية", state.totalInventoryValue.formatJod(AppLanguage.AR))
-                    StatCell("منخفض المخزون", state.allProducts.count { it.vanStock < it.minStock }.toString())
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(
+                            painterResource(Res.drawable.ic_receipt),
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text("طباعة", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
+        }
 
-            OutlinedTextField(
-                value = state.searchQuery,
-                onValueChange = { viewModel.onEvent(VanStockEvent.SearchChanged(it)) },
-                placeholder = { Text("بحث (اسم، SKU، فئة...)", color = Fv.TextMid, fontSize = 12.sp) },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = fvFieldColors(),
-                singleLine = true,
-            )
+        // ── Scrollable Content ────────────────────────────────────────────────
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().background(Fv.BgDeepest),
+            contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            // Stats Hero
+            item {
+                StatsHero(
+                    totalItems = state.allProducts.size,
+                    totalValue = state.totalInventoryValue,
+                    lowStockCount = state.allProducts.count { it.vanStock < it.minStock },
+                )
+            }
 
+            // Search
+            item {
+                OutlinedTextField(
+                    value = state.searchQuery,
+                    onValueChange = { viewModel.onEvent(VanStockEvent.SearchChanged(it)) },
+                    placeholder = { Text("ابحث (اسم، SKU، فئة…)", color = Fv.TextMid, fontSize = 13.sp) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = Fv.TextHigh,
+                        unfocusedTextColor = Fv.TextHigh,
+                        focusedContainerColor = Fv.Surface,
+                        unfocusedContainerColor = Fv.Surface,
+                        focusedIndicatorColor = Fv.Blue,
+                        unfocusedIndicatorColor = Fv.Border,
+                        cursorColor = Fv.Blue,
+                        focusedPlaceholderColor = Fv.TextMid,
+                        unfocusedPlaceholderColor = Fv.TextMid,
+                    ),
+                )
+            }
+
+            // Category pills
             if (state.categories.size > 1) {
-                LazyRow(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(end = 8.dp),
-                ) {
-                    item {
-                        CategoryChip("الكل", state.selectedCategory == null) {
+                item {
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        CategoryPill("الكل", state.selectedCategory == null) {
                             viewModel.onEvent(VanStockEvent.CategorySelected(null))
                         }
-                    }
-                    items(state.categories) { cat ->
-                        CategoryChip(cat, state.selectedCategory == cat) {
-                            viewModel.onEvent(VanStockEvent.CategorySelected(cat))
+                        state.categories.forEach { cat ->
+                            CategoryPill(cat, state.selectedCategory == cat) {
+                                viewModel.onEvent(
+                                    VanStockEvent.CategorySelected(if (state.selectedCategory == cat) null else cat),
+                                )
+                            }
                         }
                     }
                 }
-                Spacer(Modifier.height(8.dp))
             }
 
-            LazyColumn(
-                modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(state.visibleProducts, key = { it.id }) { product ->
-                    ProductCard(product, state.nowMs)
+            // Stock cards
+            items(state.visibleProducts, key = { it.id }) { product ->
+                StockCard(product = product, nowMs = state.nowMs)
+            }
+
+            if (state.visibleProducts.isEmpty() && !state.isLoading) {
+                item {
+                    Text(
+                        "لا توجد نتائج",
+                        color = Fv.TextMid,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(24.dp),
+                    )
                 }
             }
         }
     }
 }
 
+// ── Stats Hero ────────────────────────────────────────────────────────────────
+
 @Composable
-private fun StatCell(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, color = Fv.TextHigh, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-        Text(label, color = Fv.TextMid, fontSize = 10.sp)
+private fun StatsHero(totalItems: Int, totalValue: Double, lowStockCount: Int) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Brush.linearGradient(listOf(Color(0xFF185FA5), Color(0xFF0C447C)))),
+    ) {
+        // Decorative circle
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .offset(x = (-30).dp, y = (-30).dp)
+                .background(Color.White.copy(alpha = 0.07f), RoundedCornerShape(60.dp)),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 18.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            ShStatColumn(value = "$totalItems", label = "الأصناف", valueColor = Color.White)
+            Box(modifier = Modifier.width(0.5.dp).height(48.dp).background(Color.White.copy(alpha = 0.2f)))
+            ShStatColumn(
+                value = totalValue.formatJod(AppLanguage.AR),
+                label = "القيمة الإجمالية د.أ",
+                valueColor = Color(0xFF6EE7B7),
+            )
+            Box(modifier = Modifier.width(0.5.dp).height(48.dp).background(Color.White.copy(alpha = 0.2f)))
+            ShStatColumn(
+                value = "$lowStockCount",
+                label = "منخفض المخزون",
+                valueColor = if (lowStockCount > 0) Color(0xFFFCD34D) else Color.White,
+            )
+        }
     }
 }
 
 @Composable
-private fun CategoryChip(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun ShStatColumn(value: String, label: String, valueColor: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 6.dp)) {
+        Text(
+            value,
+            color = valueColor,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.ExtraBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(label, color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+// ── Category Pill ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun CategoryPill(label: String, active: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .clickable { onClick() }
-            .background(if (selected) Fv.Blue else Fv.Surface, RoundedCornerShape(20.dp))
-            .padding(horizontal = 12.dp, vertical = 7.dp),
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (active) Fv.Blue else Fv.Surface)
+            .border(0.5.dp, if (active) Fv.Blue else Fv.Border, RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 7.dp),
     ) {
         Text(
             label,
-            color = if (selected) Fv.TextHigh else Fv.TextMid,
+            color = if (active) Color.White else Fv.TextMid,
             fontSize = 12.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            fontWeight = FontWeight.Bold,
         )
     }
 }
 
-@Composable
-private fun ProductCard(product: Product, nowMs: Long) {
-    val status = product.stockStatus(nowMs)
-    val (statusLabel, statusColor) = when (status) {
-        StockStatus.OUT -> "نفد" to Fv.Red
-        StockStatus.LOW -> "منخفض" to Fv.Amber
-        StockStatus.EXPIRING -> "ينتهي قريباً" to Fv.Amber
-        StockStatus.GOOD -> "متوفر" to Fv.Green
-    }
+// ── Stock Card ────────────────────────────────────────────────────────────────
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (status == StockStatus.OUT || status == StockStatus.LOW)
-                Fv.Surface else Fv.Surface,
-        ),
+@Composable
+private fun StockCard(product: Product, nowMs: Long) {
+    val status = product.stockStatus(nowMs)
+    val statusColor = when (status) {
+        StockStatus.GOOD -> Fv.Green
+        StockStatus.LOW, StockStatus.EXPIRING -> Fv.Amber
+        StockStatus.OUT -> Fv.Red
+    }
+    val statusLabel = when (status) {
+        StockStatus.GOOD -> "متوفر"
+        StockStatus.LOW -> "منخفض"
+        StockStatus.EXPIRING -> "ينتهي قريباً"
+        StockStatus.OUT -> "نفد"
+    }
+    val statusIcon = when (status) {
+        StockStatus.GOOD -> Res.drawable.ic_check
+        StockStatus.EXPIRING -> Res.drawable.ic_alarm
+        else -> Res.drawable.ic_warning
+    }
+    val qtyColor = when (status) {
+        StockStatus.GOOD -> Fv.TextHigh
+        StockStatus.LOW, StockStatus.EXPIRING -> Fv.Amber
+        StockStatus.OUT -> Fv.Red
+    }
+    val progressBrush = when (status) {
+        StockStatus.GOOD -> Brush.horizontalGradient(listOf(Color(0xFF1D9E75), Color(0xFF4ADE80)))
+        StockStatus.LOW, StockStatus.EXPIRING -> Brush.horizontalGradient(listOf(Color(0xFFB36C00), Color(0xFFF59E0B)))
+        StockStatus.OUT -> Brush.horizontalGradient(listOf(Color(0xFFD63B3B), Color(0xFFF87171)))
+    }
+    val stockRef = maxOf(product.vanStock, product.minStock * 3).toFloat().coerceAtLeast(1f)
+    val progress = (product.vanStock.toFloat() / stockRef).coerceIn(0f, 1f)
+    val pct = (progress * 100).toInt()
+    val (avatarBg, avatarFg) = categoryAvatarStyle(product.category)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Fv.Surface)
+            .border(0.5.dp, Fv.Border, RoundedCornerShape(18.dp)),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(product.nameAr, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.width(6.dp))
+        Column {
+            // ── Top Section ──────────────────────────────────────────────────
+            Row(
+                modifier = Modifier.padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Category avatar
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(avatarBg)
+                        .border(0.5.dp, Fv.Border, RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painterResource(Res.drawable.ic_inventory),
+                        contentDescription = null,
+                        tint = avatarFg,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                // Product info
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        product.nameAr,
+                        color = Fv.TextHigh,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        product.nameEn,
+                        color = Fv.TextLow,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text("${product.sku} · ${product.category}", color = Fv.TextLow, fontSize = 10.sp)
+                }
+                Spacer(Modifier.width(12.dp))
+                // Right column: qty + badge + price
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        "${product.vanStock} / ${product.minStock}",
+                        color = qtyColor,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                    Text("كمية / حد أدنى", color = Fv.TextLow, fontSize = 9.sp)
+                    // Status badge
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(7.dp))
+                            .background(statusColor.copy(alpha = 0.14f))
+                            .padding(horizontal = 9.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            painterResource(statusIcon),
+                            contentDescription = null,
+                            tint = statusColor,
+                            modifier = Modifier.size(10.dp),
+                        )
+                        Text(statusLabel, color = statusColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Text(
+                        product.salePrice.formatJod(AppLanguage.AR),
+                        color = Fv.Blue,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
+            }
+
+            // ── Progress Section ──────────────────────────────────────────────
+            Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(Fv.SurfaceTop))
+            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text("مستوى المخزون", color = Fv.TextMid, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                    Text("$pct%", color = Fv.TextMid, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(Modifier.height(5.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(Fv.SurfaceTop),
+                ) {
                     Box(
                         modifier = Modifier
-                            .background(statusColor.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                    ) {
-                        Text(statusLabel, color = statusColor, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-                    }
+                            .fillMaxWidth(progress)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(progressBrush),
+                    )
                 }
-                Text(product.nameEn, color = Fv.TextMid, fontSize = 11.sp)
-                Text("SKU: ${product.sku} · ${product.category}", color = Fv.TextMid, fontSize = 10.sp)
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    "${product.vanStock} / ${product.minStock}",
-                    color = if (status != StockStatus.GOOD) statusColor else Fv.TextHigh,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text("كمية / حد", color = Fv.TextMid, fontSize = 9.sp)
-                Text(product.salePrice.formatJod(AppLanguage.AR), color = Fv.TextMid, fontSize = 11.sp)
             }
         }
     }
+}
+
+// Maps category name → (avatarBg, avatarFg) using a deterministic palette
+private fun categoryAvatarStyle(category: String): Pair<Color, Color> {
+    val palette = listOf(
+        Color(0xFFFEF3E0) to Color(0xFFB36C00), // amber — Dry Goods
+        Color(0xFFE6F1FB) to Color(0xFF185FA5), // blue  — Cleaning
+        Color(0xFFE1F5EE) to Color(0xFF1D9E75), // green — Snacks
+        Color(0xFFEEE9FB) to Color(0xFF7757D4), // purple — Beverages
+        Color(0xFFFFEBEB) to Color(0xFFD63B3B), // red   — Canned
+    )
+    return palette[abs(category.hashCode()) % palette.size]
 }
