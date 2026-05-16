@@ -54,6 +54,8 @@ import com.jehadalomour.flowvan.shared.presentation.feature.request.RequestVouch
 import com.jehadalomour.flowvan.shared.presentation.feature.returns.ReturnVoucherViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.route.RouteViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.sale.SaleVoucherViewModel
+import com.jehadalomour.flowvan.shared.presentation.feature.voucher.VoucherType
+import com.jehadalomour.flowvan.shared.presentation.feature.voucher.VoucherViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.vanstock.VanStockViewModel
 import com.russhwolf.settings.Settings
 import kotlinx.serialization.json.Json
@@ -129,6 +131,9 @@ fun sharedModule(): Module = module {
     }
     viewModel { (customerId: String) ->
         RequestVoucherViewModel(customerId, get(), get(), get(), get())
+    }
+    viewModel { (customerId: String, type: VoucherType) ->
+        VoucherViewModel(customerId, type, get(), get(), get(), get(), get(), get(), get())
     }
     viewModel { (customerId: String) ->
         CollectionViewModel(customerId, get(), get(), get())

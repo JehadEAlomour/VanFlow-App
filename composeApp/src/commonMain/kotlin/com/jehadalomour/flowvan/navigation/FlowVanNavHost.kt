@@ -34,10 +34,9 @@ import com.jehadalomour.flowvan.screens.customers.CustomerListScreen
 import com.jehadalomour.flowvan.screens.endofday.EndOfDayScreen
 import com.jehadalomour.flowvan.screens.home.HomeScreen
 import com.jehadalomour.flowvan.screens.login.LoginScreen
-import com.jehadalomour.flowvan.screens.request.RequestVoucherScreen
-import com.jehadalomour.flowvan.screens.returns.ReturnVoucherScreen
 import com.jehadalomour.flowvan.screens.route.RouteScreen
-import com.jehadalomour.flowvan.screens.sale.SaleVoucherScreen
+import com.jehadalomour.flowvan.screens.voucher.VoucherScreen
+import com.jehadalomour.flowvan.shared.presentation.feature.voucher.VoucherType
 import com.jehadalomour.flowvan.screens.vanstock.VanStockScreen
 import com.jehadalomour.flowvan.shared.data.seeder.DemoSeeder
 import com.jehadalomour.flowvan.shared.domain.usecase.GetCurrentUserUseCase
@@ -164,21 +163,21 @@ fun FlowVanNavHost(
             arguments = listOf(navArgument("customerId") { type = NavType.StringType }),
         ) { entry ->
             val id = entry.arguments?.getString("customerId").orEmpty()
-            SaleVoucherScreen(customerId = id, onBack = { navController.popBackStack() })
+            VoucherScreen(customerId = id, type = VoucherType.SALE, onBack = { navController.popBackStack() })
         }
         composable(
             Routes.RETURN,
             arguments = listOf(navArgument("customerId") { type = NavType.StringType }),
         ) { entry ->
             val id = entry.arguments?.getString("customerId").orEmpty()
-            ReturnVoucherScreen(customerId = id, onBack = { navController.popBackStack() })
+            VoucherScreen(customerId = id, type = VoucherType.RETURN, onBack = { navController.popBackStack() })
         }
         composable(
             Routes.REQUEST,
             arguments = listOf(navArgument("customerId") { type = NavType.StringType }),
         ) { entry ->
             val id = entry.arguments?.getString("customerId").orEmpty()
-            RequestVoucherScreen(customerId = id, onBack = { navController.popBackStack() })
+            VoucherScreen(customerId = id, type = VoucherType.ORDER, onBack = { navController.popBackStack() })
         }
         composable(
             Routes.COLLECTION,
