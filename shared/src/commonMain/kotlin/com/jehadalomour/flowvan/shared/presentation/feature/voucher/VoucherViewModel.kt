@@ -2,13 +2,15 @@ package com.jehadalomour.flowvan.shared.presentation.feature.voucher
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jehadalomour.flowvan.shared.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.shared.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.shared.data.repository.ProductRepository
 import com.jehadalomour.flowvan.shared.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.shared.data.settings.SessionStore
 import com.jehadalomour.flowvan.shared.domain.model.CartLine
+import com.jehadalomour.flowvan.shared.domain.model.LineTaxType
 import com.jehadalomour.flowvan.shared.domain.model.Product
-import com.jehadalomour.flowvan.shared.domain.model.ProductUnit
+import com.jehadalomour.flowvan.shared.domain.model.TaxType
 import com.jehadalomour.flowvan.shared.domain.usecase.CreateRequestVoucherUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.CreateReturnVoucherUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.CreateSaleVoucherUseCase
@@ -34,6 +36,7 @@ class VoucherViewModel(
     private val createSale: CreateSaleVoucherUseCase,
     private val createReturn: CreateReturnVoucherUseCase,
     private val createRequest: CreateRequestVoucherUseCase,
+    private val appSettings: AppSettingsRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(VoucherState(type = type))
@@ -51,6 +54,19 @@ class VoucherViewModel(
         productUnits.observeAll()
             .onEach { units ->
                 _state.update { it.copy(productUnits = units.groupBy { u -> u.productId }) }
+            }
+            .launchIn(viewModelScope)
+
+        appSettings.observe()
+            .onEach { settings ->
+                val lineTaxType = settings.taxType.toLineTaxType()
+                _state.update { s ->
+                    // Also re-stamp existing cart lines so live totals stay in sync
+                    s.copy(
+                        taxType = lineTaxType,
+                        cart = s.cart.map { it.copy(lineTaxType = lineTaxType) },
+                    )
+                }
             }
             .launchIn(viewModelScope)
     }
@@ -80,7 +96,6 @@ class VoucherViewModel(
             VoucherEvent.ToggleView -> _state.update {
                 it.copy(view = if (it.view == VoucherView.PICKER) VoucherView.CART else VoucherView.PICKER)
             }
-            // Single save trigger — VM decides per type: open dialog vs save directly
             VoucherEvent.Save -> {
                 val s = _state.value
                 when {
@@ -121,6 +136,8 @@ class VoucherViewModel(
                         qty = 1.0,
                         unit = defaultUnit?.name ?: product.unit,
                         unitConversionQty = defaultUnit?.conversionQty ?: 1.0,
+                        taxRate = product.taxRate,
+                        lineTaxType = s.taxType,
                     )
                 }
                 existing == null -> s.cart
@@ -145,6 +162,8 @@ class VoucherViewModel(
                     unit = event.unit,
                     unitConversionQty = event.unitConversionQty,
                     discountPct = event.discountPct,
+                    taxRate = event.product.taxRate,
+                    lineTaxType = s.taxType,
                 )
                 else -> s.cart.map {
                     if (it.productId == event.product.id)
@@ -216,4 +235,10 @@ class VoucherViewModel(
             )
         }
     }
+}
+
+/** Maps the global settings tax treatment to the per-line calculator type. */
+private fun TaxType.toLineTaxType(): LineTaxType = when (this) {
+    TaxType.EXCLUDED_TAX -> LineTaxType.TAXABLE
+    TaxType.INCLUDED_TAX -> LineTaxType.INCLUSIVE
 }

@@ -16,4 +16,5 @@ fun ProductEntity.toDomain(): Product = Product(
     minStock = minStock,
     expiryDate = expiryDate,
     brand = brand,
+    taxRate = taxRate,
 )

@@ -13,4 +13,5 @@ data class Product(
     val minStock: Int,
     val expiryDate: Long?,
     val brand: String?,
+    val taxRate: Double = 0.16,
 )

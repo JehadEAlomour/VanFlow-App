@@ -168,37 +168,37 @@ class DemoSeeder(
 
     private fun seedProducts(): List<ProductEntity> {
         val raw = listOf(
-            // sku, ar, en, category, unit, sale, cost, vanStock, minStock, brand
-            P("SKU-001", "عصير تروبيكانا برتقال 1لتر", "Tropicana Orange 1L",   "Beverages",      "carton", 1.250,  0.900, 80, 20, "Tropicana"),
-            P("SKU-002", "بيبسي 330مل علبة",          "Pepsi 330ml Can",       "Beverages",      "carton", 0.350,  0.220, 200, 50, "Pepsi"),
-            P("SKU-003", "حليب يونيفريش 1لتر",        "Unifresh Milk 1L",      "Dairy",          "carton", 1.100,  0.800, 60, 25, "Unifresh"),
-            P("SKU-004", "لبن يونيفريش 500غ",         "Unifresh Yogurt 500g",  "Dairy",          "pack",   0.900,  0.620, 5,  20, "Unifresh"),  // low
-            P("SKU-005", "شيبس ليز ملح 25غ",          "Lays Salt 25g",         "Snacks",         "box",    0.250,  0.150, 300, 80, "Lays"),
-            P("SKU-006", "برينجلز 165غ ساور كريم",    "Pringles 165g",         "Snacks",         "carton", 1.500,  1.050, 45, 15, "Pringles"),
-            P("SKU-007", "تويكس 50غ",                  "Twix 50g",              "Confectionery",  "box",    0.500,  0.300, 250, 60, "Twix"),
-            P("SKU-008", "اريال مسحوق 3كغ",            "Ariel Powder 3kg",      "Cleaning",       "box",    8.500,  6.200, 25, 10, "Ariel"),
-            P("SKU-009", "فيم سائل تنظيف 750مل",      "Vim Liquid 750ml",      "Cleaning",       "bottle", 1.800,  1.250, 40, 15, "Vim"),
-            P("SKU-010", "هاينز كاتشب 460غ",          "Heinz Ketchup 460g",    "Canned",         "bottle", 2.250,  1.600, 30, 12, "Heinz"),
-            P("SKU-011", "ماجي مرق دجاج 24 مكعب",     "Maggi Cubes 24",        "Canned",         "box",    3.100,  2.300, 22, 10, "Maggi"),
-            P("SKU-012", "نسكافيه 200غ",               "Nescafe 200g",          "Hot Beverages",  "jar",    7.250,  5.400, 18,  8, "Nescafe"),
-            P("SKU-013", "ليبتون شاي 100 كيس",        "Lipton Tea 100",        "Hot Beverages",  "box",    4.000,  2.900, 35, 12, "Lipton"),
-            P("SKU-014", "أرز بركة 5كغ",               "Baraka Rice 5kg",       "Dry Goods",      "bag",    9.500,  7.000, 28, 10, "Baraka"),
-            P("SKU-015", "سكر تحمير 1كغ",              "Brown Sugar 1kg",       "Dry Goods",      "bag",    1.000,  0.700, 60, 20, null),
-            P("SKU-016", "مياه معدنية 1.5لتر",         "Water 1.5L",            "Water",          "carton", 0.350,  0.180, 400,100, null),
-            P("SKU-017", "هيد آند شولدرز شامبو 400مل","Head&Shoulders 400ml",  "Personal Care",  "bottle", 4.750,  3.300, 24, 10, "Head & Shoulders"),
-            P("SKU-018", "دوف صابون 100غ",            "Dove Soap 100g",        "Personal Care",  "box",    0.850,  0.550, 80, 30, "Dove"),
-            P("SKU-019", "مناديل ورقية 200 منديل",    "Tissues 200",           "Household",      "box",    1.150,  0.700, 100, 40, null),
-            P("SKU-020", "ورق ألمنيوم 30م",           "Aluminum Foil 30m",     "Household",      "roll",   2.000,  1.350, 18,  8, null),
-            P("SKU-021", "زيت زيتون 1لتر",            "Olive Oil 1L",          "Cooking Oils",   "bottle", 6.500,  4.800, 12,  6, null),
-            P("SKU-022", "زيت دوار شمس 3لتر",         "Sunflower Oil 3L",      "Cooking Oils",   "bottle", 4.250,  3.100, 32, 10, null),
-            P("SKU-023", "كولا دايت 330مل",           "Diet Cola 330ml",       "Beverages",      "carton", 0.400,  0.250, 150, 40, "Pepsi"),
-            P("SKU-024", "جبنة كرافت 200غ",           "Kraft Cheese 200g",     "Dairy",          "pack",   2.100,  1.450,  3, 12, "Kraft"),  // low
-            P("SKU-025", "بطاطا ليز شواء 50غ",        "Lays BBQ 50g",          "Snacks",         "box",    0.450,  0.280, 220, 60, "Lays"),
-            P("SKU-026", "كيت كات 45غ",               "Kit Kat 45g",           "Confectionery",  "box",    0.500,  0.310, 180, 50, null),
-            P("SKU-027", "سائل جلي بريل 750مل",       "Pril 750ml",            "Cleaning",       "bottle", 1.450,  1.000, 38, 15, null),
-            P("SKU-028", "تونة رياسة 170غ",           "Rayyan Tuna 170g",      "Canned",         "can",    1.250,  0.850, 70, 25, null),
-            P("SKU-029", "قهوة عربية 250غ",           "Arabic Coffee 250g",    "Hot Beverages",  "bag",    3.750,  2.700,  4, 10, null),  // low
-            P("SKU-030", "تمر مجدول 500غ",            "Medjool Dates 500g",    "Special Items",  "pack",   5.500,  4.000, 20,  8, null),
+            // sku, ar, en, category, unit, sale, cost, vanStock, minStock, brand, taxRate
+            P("SKU-001", "عصير تروبيكانا برتقال 1لتر", "Tropicana Orange 1L",   "Beverages",      "carton", 1.250,  0.900, 80, 20, "Tropicana",     0.16),
+            P("SKU-002", "بيبسي 330مل علبة",          "Pepsi 330ml Can",       "Beverages",      "carton", 0.350,  0.220, 200, 50, "Pepsi",         0.16),
+            P("SKU-003", "حليب يونيفريش 1لتر",        "Unifresh Milk 1L",      "Dairy",          "carton", 1.100,  0.800, 60, 25, "Unifresh",      0.00),
+            P("SKU-004", "لبن يونيفريش 500غ",         "Unifresh Yogurt 500g",  "Dairy",          "pack",   0.900,  0.620, 5,  20, "Unifresh",      0.00),  // low
+            P("SKU-005", "شيبس ليز ملح 25غ",          "Lays Salt 25g",         "Snacks",         "box",    0.250,  0.150, 300, 80, "Lays",          0.16),
+            P("SKU-006", "برينجلز 165غ ساور كريم",    "Pringles 165g",         "Snacks",         "carton", 1.500,  1.050, 45, 15, "Pringles",      0.16),
+            P("SKU-007", "تويكس 50غ",                  "Twix 50g",              "Confectionery",  "box",    0.500,  0.300, 250, 60, "Twix",          0.16),
+            P("SKU-008", "اريال مسحوق 3كغ",            "Ariel Powder 3kg",      "Cleaning",       "box",    8.500,  6.200, 25, 10, "Ariel",         0.16),
+            P("SKU-009", "فيم سائل تنظيف 750مل",      "Vim Liquid 750ml",      "Cleaning",       "bottle", 1.800,  1.250, 40, 15, "Vim",           0.16),
+            P("SKU-010", "هاينز كاتشب 460غ",          "Heinz Ketchup 460g",    "Canned",         "bottle", 2.250,  1.600, 30, 12, "Heinz",         0.16),
+            P("SKU-011", "ماجي مرق دجاج 24 مكعب",     "Maggi Cubes 24",        "Canned",         "box",    3.100,  2.300, 22, 10, "Maggi",         0.16),
+            P("SKU-012", "نسكافيه 200غ",               "Nescafe 200g",          "Hot Beverages",  "jar",    7.250,  5.400, 18,  8, "Nescafe",       0.16),
+            P("SKU-013", "ليبتون شاي 100 كيس",        "Lipton Tea 100",        "Hot Beverages",  "box",    4.000,  2.900, 35, 12, "Lipton",        0.16),
+            P("SKU-014", "أرز بركة 5كغ",               "Baraka Rice 5kg",       "Dry Goods",      "bag",    9.500,  7.000, 28, 10, "Baraka",        0.00),
+            P("SKU-015", "سكر تحمير 1كغ",              "Brown Sugar 1kg",       "Dry Goods",      "bag",    1.000,  0.700, 60, 20, null,            0.00),
+            P("SKU-016", "مياه معدنية 1.5لتر",         "Water 1.5L",            "Water",          "carton", 0.350,  0.180, 400,100, null,            0.00),
+            P("SKU-017", "هيد آند شولدرز شامبو 400مل","Head&Shoulders 400ml",  "Personal Care",  "bottle", 4.750,  3.300, 24, 10, "Head & Shoulders", 0.16),
+            P("SKU-018", "دوف صابون 100غ",            "Dove Soap 100g",        "Personal Care",  "box",    0.850,  0.550, 80, 30, "Dove",          0.16),
+            P("SKU-019", "مناديل ورقية 200 منديل",    "Tissues 200",           "Household",      "box",    1.150,  0.700, 100, 40, null,            0.16),
+            P("SKU-020", "ورق ألمنيوم 30م",           "Aluminum Foil 30m",     "Household",      "roll",   2.000,  1.350, 18,  8, null,            0.16),
+            P("SKU-021", "زيت زيتون 1لتر",            "Olive Oil 1L",          "Cooking Oils",   "bottle", 6.500,  4.800, 12,  6, null,            0.16),
+            P("SKU-022", "زيت دوار شمس 3لتر",         "Sunflower Oil 3L",      "Cooking Oils",   "bottle", 4.250,  3.100, 32, 10, null,            0.16),
+            P("SKU-023", "كولا دايت 330مل",           "Diet Cola 330ml",       "Beverages",      "carton", 0.400,  0.250, 150, 40, "Pepsi",         0.16),
+            P("SKU-024", "جبنة كرافت 200غ",           "Kraft Cheese 200g",     "Dairy",          "pack",   2.100,  1.450,  3, 12, "Kraft",         0.00),  // low
+            P("SKU-025", "بطاطا ليز شواء 50غ",        "Lays BBQ 50g",          "Snacks",         "box",    0.450,  0.280, 220, 60, "Lays",          0.16),
+            P("SKU-026", "كيت كات 45غ",               "Kit Kat 45g",           "Confectionery",  "box",    0.500,  0.310, 180, 50, null,            0.16),
+            P("SKU-027", "سائل جلي بريل 750مل",       "Pril 750ml",            "Cleaning",       "bottle", 1.450,  1.000, 38, 15, null,            0.16),
+            P("SKU-028", "تونة رياسة 170غ",           "Rayyan Tuna 170g",      "Canned",         "can",    1.250,  0.850, 70, 25, null,            0.16),
+            P("SKU-029", "قهوة عربية 250غ",           "Arabic Coffee 250g",    "Hot Beverages",  "bag",    3.750,  2.700,  4, 10, null,            0.16),  // low
+            P("SKU-030", "تمر مجدول 500غ",            "Medjool Dates 500g",    "Special Items",  "pack",   5.500,  4.000, 20,  8, null,            0.16),
         )
         return raw.mapIndexed { i, p ->
             ProductEntity(
@@ -214,6 +214,7 @@ class DemoSeeder(
                 minStock = p.minStock,
                 expiryDate = null,
                 brand = p.brand,
+                taxRate = p.taxRate,
             )
         }
     }
@@ -221,6 +222,7 @@ class DemoSeeder(
     private data class P(
         val sku: String, val nameAr: String, val nameEn: String, val category: String, val unit: String,
         val sale: Double, val cost: Double, val vanStock: Int, val minStock: Int, val brand: String?,
+        val taxRate: Double,
     )
 
     private fun seedProductUnits(): List<ProductUnitEntity> {

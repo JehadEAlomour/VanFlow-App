@@ -2,9 +2,13 @@ package com.jehadalomour.flowvan.shared.presentation.feature.voucher
 
 import com.jehadalomour.flowvan.shared.domain.model.CartLine
 import com.jehadalomour.flowvan.shared.domain.model.Customer
+import com.jehadalomour.flowvan.shared.domain.model.InvoiceDiscountInput
+import com.jehadalomour.flowvan.shared.domain.model.InvoiceTaxCalculator
+import com.jehadalomour.flowvan.shared.domain.model.LineTaxType
 import com.jehadalomour.flowvan.shared.domain.model.PaymentMethod
 import com.jehadalomour.flowvan.shared.domain.model.Product
 import com.jehadalomour.flowvan.shared.domain.model.ProductUnit
+import com.jehadalomour.flowvan.shared.domain.model.VoucherSummary
 import com.jehadalomour.flowvan.shared.presentation.feature.returns.ReturnReason
 import com.jehadalomour.flowvan.shared.presentation.feature.sale.DiscountType
 import com.jehadalomour.flowvan.shared.presentation.feature.sale.VoucherView
@@ -27,40 +31,52 @@ data class VoucherState(
     val isSaving: Boolean = false,
     val savedNumber: String? = null,
     val errorAr: String? = null,
+    /** Driven from AppSettings — stamps each new CartLine at add-time. */
+    val taxType: LineTaxType = LineTaxType.TAXABLE,
 ) {
-    val subtotal: Double get() = cart.sumOf { it.grossLineTotal }
-    val lineDiscountTotal: Double get() = cart.sumOf { it.lineDiscount }
-    val taxAmount: Double get() = cart.sumOf { it.lineTax }
+    /** Full invoice calculation via the tax calculator (pure, no side effects). */
+    val summary: VoucherSummary get() = InvoiceTaxCalculator.calculateInvoice(
+        cart = cart,
+        invoiceDiscount = voucherDiscountInput.toDoubleOrNull()?.let { v ->
+            when (voucherDiscountType) {
+                DiscountType.PERCENT -> InvoiceDiscountInput.Percent(v)
+                DiscountType.VALUE   -> InvoiceDiscountInput.Fixed(v)
+            }
+        } ?: InvoiceDiscountInput.None,
+    )
 
-    val voucherDiscountAmount: Double get() {
-        val afterLines = subtotal - lineDiscountTotal
-        val input = voucherDiscountInput.toDoubleOrNull() ?: 0.0
-        return when (voucherDiscountType) {
-            DiscountType.PERCENT -> (afterLines * (input / 100.0)).coerceIn(0.0, afterLines)
-            DiscountType.VALUE -> input.coerceIn(0.0, afterLines)
-        }
+    val subtotal: Double get() = summary.subtotalBeforeDiscounts
+    val lineDiscountTotal: Double get() = summary.totalLineDiscounts
+    val taxAmount: Double get() = summary.totalTax
+    val voucherDiscountAmount: Double get() = summary.invoiceDiscountAmount
+    val totalDiscount: Double get() = summary.totalLineDiscounts + summary.invoiceDiscountAmount
+    val total: Double get() = summary.grandTotal
+
+    /** Label shown next to the tax row — clarifies inclusive vs additive. */
+    val taxLabelAr: String get() = when (taxType) {
+        LineTaxType.INCLUSIVE -> "الضريبة (مضمّنة)"
+        LineTaxType.TAXABLE   -> "الضريبة"
+        LineTaxType.EXEMPT    -> "الضريبة"
     }
-    val totalDiscount: Double get() = lineDiscountTotal + voucherDiscountAmount
-    val total: Double get() = subtotal - totalDiscount + taxAmount
 
     val canSave: Boolean get() = cart.isNotEmpty() && !isSaving &&
         (type != VoucherType.RETURN || reason != null)
 
-    // UI helpers — screen reads these so it contains no when(type) logic for behavior
+    // ── UI helpers — screen reads these, no when(type) logic in the screen ──
     val titleAr: String get() = when (type) {
-        VoucherType.SALE -> "فاتورة بيع"
+        VoucherType.SALE   -> "فاتورة بيع"
         VoucherType.RETURN -> "فاتورة مرتجع"
-        VoucherType.ORDER -> "طلب مسبق"
+        VoucherType.ORDER  -> "طلب مسبق"
     }
     val saveLabelAr: String get() = when (type) {
-        VoucherType.SALE -> "حفظ الفاتورة"
+        VoucherType.SALE   -> "حفظ الفاتورة"
         VoucherType.RETURN -> "حفظ المرتجع"
-        VoucherType.ORDER -> "حفظ الطلب"
+        VoucherType.ORDER  -> "حفظ الطلب"
     }
     val confirmTextAr: String get() = when (type) {
-        VoucherType.SALE -> ""  // SALE uses PaymentMethodDialog, not this text
+        VoucherType.SALE   -> ""
         VoucherType.RETURN -> "سيتم تسجيل المرتجع وإعادة المخزون وتعديل الرصيد"
-        VoucherType.ORDER -> "سيتم تسجيل الطلب للمراجعة"
+        VoucherType.ORDER  -> "سيتم تسجيل الطلب للمراجعة"
     }
     val showReasonRow: Boolean get() = type == VoucherType.RETURN
     val showStockBadge: Boolean get() = type == VoucherType.SALE
@@ -86,7 +102,7 @@ sealed interface VoucherEvent {
     data class VoucherDiscountInputChanged(val input: String) : VoucherEvent
     data object VoucherDiscountTypeToggled : VoucherEvent
     data object ToggleView : VoucherEvent
-    data object Save : VoucherEvent          // unified trigger — VM decides dialog vs direct
+    data object Save : VoucherEvent
     data object ConfirmSave : VoucherEvent
     data object DismissSaveSheet : VoucherEvent
     data class ReasonSelected(val reason: ReturnReason) : VoucherEvent

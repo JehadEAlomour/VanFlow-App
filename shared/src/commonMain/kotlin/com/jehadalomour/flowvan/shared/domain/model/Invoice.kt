@@ -15,6 +15,8 @@ data class InvoiceLine(
     val unitPrice: Double,
     val discountPct: Double = 0.0,
     val lineTotal: Double,
+    val taxType: String = "TAXABLE",    // LineTaxType.name — defaults to TAXABLE for old records
+    val taxAmount: Double = 0.0,        // per-line tax (before invoice discount)
 )
 
 data class Invoice(

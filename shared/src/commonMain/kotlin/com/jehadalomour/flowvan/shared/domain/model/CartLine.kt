@@ -10,11 +10,43 @@ data class CartLine(
     val unit: String = "",
     val unitConversionQty: Double = 1.0,
     val taxRate: Double = 0.16,
+    val lineTaxType: LineTaxType = LineTaxType.TAXABLE,
 ) {
+    /** qty × unitPrice — gross before any discount. */
     val grossLineTotal: Double get() = unitPrice * qty
+
+    /** Line-level discount amount (clamped to [0, gross]). */
     val lineDiscount: Double get() = grossLineTotal * discountPct.coerceIn(0.0, 1.0)
-    val lineTotal: Double get() = grossLineTotal - lineDiscount
-    val lineTax: Double get() = lineTotal * taxRate
-    /** Base-unit equivalent qty for stock deduction */
+
+    /** Net after line discount, before tax. Used by the invoice calculator. */
+    val lineNet: Double get() = grossLineTotal - lineDiscount
+
+    /**
+     * Tax amount on this line (before invoice-level discount).
+     *
+     * TAXABLE   → lineNet × taxRate         (tax added on top)
+     * INCLUSIVE → lineNet × r / (1 + r)     (tax extracted from price)
+     * EXEMPT    → 0
+     */
+    val lineTax: Double get() = when (lineTaxType) {
+        LineTaxType.TAXABLE   -> lineNet * taxRate
+        LineTaxType.INCLUSIVE -> lineNet * (taxRate / (1.0 + taxRate))
+        LineTaxType.EXEMPT    -> 0.0
+    }
+
+    /**
+     * What the customer pays for this line (before invoice-level discount).
+     *
+     * TAXABLE   → lineNet + lineTax  (tax added on top)
+     * INCLUSIVE → lineNet            (tax is already inside the price)
+     * EXEMPT    → lineNet
+     */
+    val lineTotal: Double get() = when (lineTaxType) {
+        LineTaxType.TAXABLE   -> lineNet + lineTax
+        LineTaxType.INCLUSIVE -> lineNet
+        LineTaxType.EXEMPT    -> lineNet
+    }
+
+    /** Base-unit equivalent qty for stock deduction. */
     val stockQty: Double get() = qty * unitConversionQty
 }

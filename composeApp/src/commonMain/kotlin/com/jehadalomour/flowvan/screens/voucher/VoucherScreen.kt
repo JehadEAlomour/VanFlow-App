@@ -586,7 +586,7 @@ private fun CartSummaryCard(
                     }
                     if (state.taxAmount > 0) {
                         Spacer(Modifier.height(6.dp))
-                        SummaryDetailRow("الضريبة", state.taxAmount.formatJod(AppLanguage.AR), Fv.TextMid)
+                        SummaryDetailRow(state.taxLabelAr, state.taxAmount.formatJod(AppLanguage.AR), Fv.TextMid)
                     }
                     Spacer(Modifier.height(12.dp))
                     Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(Fv.Border))

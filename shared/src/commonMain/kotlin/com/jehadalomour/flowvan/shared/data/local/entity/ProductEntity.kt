@@ -1,5 +1,6 @@
 package com.jehadalomour.flowvan.shared.data.local.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -17,4 +18,5 @@ data class ProductEntity(
     val minStock: Int,
     val expiryDate: Long?,
     val brand: String?,
+    @ColumnInfo(defaultValue = "0.16") val taxRate: Double = 0.16,
 )
