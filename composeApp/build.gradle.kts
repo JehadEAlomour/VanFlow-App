@@ -29,6 +29,10 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.koin.android)
+            implementation(libs.maps.compose)
+            implementation(libs.play.services.maps)
+            implementation(libs.play.services.location)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -39,7 +43,13 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation(libs.navigation.compose)
+            implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
+            implementation(libs.koin.compose.viewmodel.navigation)
+            implementation(libs.kotlinx.datetime)
             implementation(projects.core.designSystem)
+            implementation(projects.shared)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

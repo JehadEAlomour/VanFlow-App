@@ -73,6 +73,8 @@ cashflow/
 | M14 | Van Stock | P4 | required |
 | M15 | End of Day | P4 | required |
 | M16 | Location Tracking (Shift) | P5 | required |
+| M19 | In-App Map Navigation | P4-ext | required |
+| M20 | App Settings | P4-ext | required |
 | M17 | Sync Engine (when backend ready) | P6 | deferred |
 | M18 | Real AI Gateway integration | P6 | deferred |
 
@@ -102,6 +104,8 @@ cashflow/
 - M13 AI Assistant
 - M14 Van Stock
 - M15 End of Day
+- M19 In-App Map Navigation (added)
+- M20 App Settings (added)
 
 **P5 — Tracking (Days 9–10)**
 - M16 Location Tracking
@@ -550,7 +554,7 @@ The salesman's primary action: sell products from van stock to the current custo
    الإجمالي       :  XX.XXX د.أ   ← bold green
    ```
 4. Tap **حفظ الفاتورة** → modal sheet appears:
-   - Payment method radio: **نقداً / آجل / شيك / تحويل**
+   - Payment method radio: **نقداً / ذمم / شيك / تحويل**
    - If cheque/transfer: extra fields (cheque number, bank, date) — optional at sale-time, can be added later via M11.
    - Confirm button.
 5. On confirm:
@@ -884,6 +888,47 @@ Generating a printable end-of-day report (v1.1, needs M17 + a PDF skill).
 
 ---
 
+### M19 — In-App Map Navigation
+
+**Purpose**
+Show the salesman a live map from their current GPS position to a selected customer's location. Supports both in-app preview (Google Maps / MapKit) and one-tap handoff to the device navigation app.
+
+**Phase:** P4-ext
+**Dependencies:** M01, M02, M05, M06
+
+**Entry Points**
+- 🚗 button on each customer card in Route Screen (M05) — only shown when customer has GPS coordinates.
+- 🚗 button on each customer card in Customer Directory (M06) — same condition.
+
+**User Flow**
+1. Tap 🚗 on a customer card → `MapNavigationScreen` opens with that customer's `customerId`.
+2. Screen fetches the customer's lat/lng from Room and requests the device's last known location via `LocationProvider`.
+3. Map shows:
+   - Customer pin (red marker, customer name label).
+   - Dashed polyline from user to customer (Android only; iOS shows both markers).
+   - Blue dot = user position (via `isMyLocationEnabled = true` on Android / `showsUserLocation = true` on iOS).
+4. Bottom sheet shows customer name, address, phone.
+5. **"🚗 ابدأ الملاحة"** button opens Google Maps / Apple Maps in the device for turn-by-turn navigation.
+   - URL: `https://www.google.com/maps/dir/?api=1&destination={lat},{lng}&travelmode=driving`
+6. If customer has no coordinates → "لا تتوفر إحداثيات لهذا العميل" message; navigate button hidden.
+
+**Technical Notes**
+- Google Maps API key: stored in AndroidManifest `<meta-data>` under `com.google.android.geo.API_KEY`.
+- Android: `maps-compose 6.4.1` + `play-services-maps 19.0.0`.
+- iOS: `UIKitView` wrapping `MKMapView` (native MapKit).
+- `MapNavigationViewModel` reuses the existing `LocationProvider` (expect/actual, already registered in `platformModule`).
+- Map only shows when `customer.lat != null && customer.lng != null`.
+
+**Acceptance Criteria**
+- [ ] 🚗 button visible on customer cards that have coordinates; hidden otherwise.
+- [ ] Map opens centred between user and customer.
+- [ ] Customer marker shows customer name.
+- [ ] Android: blue polyline drawn from user to customer.
+- [ ] "ابدأ الملاحة" opens Google Maps / Apple Maps with the correct destination.
+- [ ] No crash when location permission is denied (map still shows customer pin).
+
+---
+
 ### M16 — Location Tracking & Shift Lifecycle
 
 **Purpose**
@@ -921,6 +966,178 @@ Track the salesman's GPS position throughout an active shift. Buffer locally; sy
 
 **Out of scope**
 Live WebSocket streaming to the server (needs backend → M17). OSRM map snapping (server-side, M17). The AI shift report (M18).
+
+---
+
+### M20 — App Settings
+
+**Purpose**
+A single settings screen where an admin or supervisor can configure per-device behaviour: appearance, language, tax treatment, server connection, salesman identity, voucher numbering limits, and salesman permissions. All settings persisted to a dedicated Room table (`app_settings`) as a single-row record (id = 1).
+
+**Phase:** P4-ext
+**Dependencies:** M01, M02, M03 (session must exist before settings are meaningful)
+**Owner:** mobile lead
+
+**Entry Point**
+- ⚙️ settings icon in the top bar of Home Screen (right of logout icon).
+
+**Settings Sections**
+
+| Section | Field | Type | Default | Notes |
+|---|---|---|---|---|
+| المظهر واللغة | Theme | `AppTheme` (SYSTEM/LIGHT/DARK) | SYSTEM | Segmented chip picker |
+| المظهر واللغة | Language | `AppLanguage` (AR/EN) | AR | Segmented chip picker |
+| الضريبة | Tax Type | `TaxType` (INCLUDED_TAX/EXCLUDED_TAX) | EXCLUDED_TAX | Segmented chip picker |
+| الاتصال | IP Address | `String` | `""` | Server base URL / IP for sync |
+| بيانات المندوب | Salesman Number | `String` | `""` | Business identifier for the salesman |
+| بيانات المندوب | Branch | `String` | `""` | Branch name / code |
+| حدود الفواتير | Max Sale Voucher No. | `Int` | 9999 | Resets to 1 after reaching max |
+| حدود الفواتير | Max Return Voucher No. | `Int` | 9999 | Same reset rule |
+| حدود الفواتير | Max Order Voucher No. | `Int` | 9999 | Same reset rule |
+| صلاحيات المندوب | Can Edit Price | `Boolean` | false | Allows changing unit price on sale voucher lines |
+| صلاحيات المندوب | Offline Mode | `Boolean` | false | Forces offline mode even when network available |
+
+**Data layer**
+
+```
+AppSettingsEntity (tableName = "app_settings")
+  id: Int = 1                    ← always 1, single-row pattern
+  theme: String                  ← AppTheme.name
+  language: String               ← AppLanguage.name
+  taxType: String                ← TaxType.name
+  ipAddress: String
+  salesmanNumber: String
+  maxSaleVoucherNumber: Int
+  maxReturnVoucherNumber: Int
+  maxOrderVoucherNumber: Int
+  branch: String
+  canEditPrice: Boolean
+  offlineModeEnabled: Boolean
+```
+
+DB version bumped from **2 → 3** with `AutoMigration(from = 2, to = 3)` — Room creates the new table automatically with no manual SQL.
+
+**Domain models**
+```kotlin
+enum class AppTheme { SYSTEM, LIGHT, DARK }
+enum class TaxType  { INCLUDED_TAX, EXCLUDED_TAX }
+
+data class AppSettings(
+    theme, language, taxType,
+    ipAddress, salesmanNumber,
+    maxSaleVoucherNumber, maxReturnVoucherNumber, maxOrderVoucherNumber,
+    branch, canEditPrice, offlineModeEnabled
+)
+```
+
+**Repository**
+```kotlin
+class AppSettingsRepository(dao: AppSettingsDao) {
+    fun observe(): Flow<AppSettings>       // live; emits defaults if row missing
+    suspend fun get(): AppSettings
+    suspend fun save(settings: AppSettings)
+}
+```
+
+**State (SettingsViewModel)**
+```
+SettingsState(
+  isLoading, theme, language, taxType,
+  ipAddress, salesmanNumber,
+  maxSaleVoucherNumber, maxReturnVoucherNumber, maxOrderVoucherNumber  ← String (for text field)
+  branch, canEditPrice, offlineModeEnabled,
+  saved                          ← one-shot snackbar trigger
+)
+```
+
+**Events:** `ThemeChanged · LanguageChanged · TaxTypeChanged · IpAddressChanged · SalesmanNumberChanged · MaxSaleVoucherChanged · MaxReturnVoucherChanged · MaxOrderVoucherChanged · BranchChanged · CanEditPriceChanged · OfflineModeChanged · Save · DismissSaved`
+
+**Screen layout**
+
+```
+┌─ Back ─── الإعدادات ──────────────────────────────┐
+│                                                    │
+│  المظهر واللغة                                     │
+│  ┌────────────────────────────────────────────┐   │
+│  │ المظهر    [ تلقائي ]  [ فاتح ]  [ داكن ]  │   │
+│  │ ─────────────────────────────────────────  │   │
+│  │ اللغة     [ العربية ]  [ English ]         │   │
+│  └────────────────────────────────────────────┘   │
+│                                                    │
+│  الضريبة                                           │
+│  ┌────────────────────────────────────────────┐   │
+│  │ نوع الضريبة  [ غير شاملة ]  [ شاملة ]     │   │
+│  └────────────────────────────────────────────┘   │
+│                                                    │
+│  الاتصال                                           │
+│  ┌────────────────────────────────────────────┐   │
+│  │ عنوان IP   [ 192.168.1.100 ____________ ]  │   │
+│  └────────────────────────────────────────────┘   │
+│                                                    │
+│  بيانات المندوب                                    │
+│  ┌────────────────────────────────────────────┐   │
+│  │ رقم المندوب  [ SM-001 ___________________ ] │  │
+│  │ ─────────────────────────────────────────   │  │
+│  │ الفرع        [ الفرع الرئيسي ____________ ] │  │
+│  └────────────────────────────────────────────┘   │
+│                                                    │
+│  حدود الفواتير                                     │
+│  ┌────────────────────────────────────────────┐   │
+│  │ أقصى رقم فاتورة بيع      [ 9999 _______ ] │   │
+│  │ أقصى رقم فاتورة مرتجع   [ 9999 _______ ] │   │
+│  │ أقصى رقم طلب مسبق        [ 9999 _______ ] │   │
+│  └────────────────────────────────────────────┘   │
+│                                                    │
+│  صلاحيات المندوب                                   │
+│  ┌────────────────────────────────────────────┐   │
+│  │ تعديل السعر    السماح بتغيير سعر المنتج ●○ │   │
+│  │ ──────────────────────────────────────────  │  │
+│  │ وضع عدم الاتصال  العمل بدون إنترنت      ○● │  │
+│  └────────────────────────────────────────────┘   │
+│                                                    │
+│  ┌──────────────────────────────────────────┐     │
+│  │            حفظ الإعدادات                 │     │  ← blue gradient
+│  └──────────────────────────────────────────┘     │
+│                                                    │
+└────────────────────────────────────────────────────┘
+```
+
+On successful save → green snackbar "تم حفظ الإعدادات".
+
+**Files created / modified**
+
+| File | Action |
+|---|---|
+| `shared/.../domain/model/AppSettings.kt` | NEW — domain model + enums |
+| `shared/.../data/local/entity/AppSettingsEntity.kt` | NEW — Room entity |
+| `shared/.../data/local/dao/AppSettingsDao.kt` | NEW — observe/get/upsert |
+| `shared/.../data/local/mapper/AppSettingsMapper.kt` | NEW — toDomain / toEntity |
+| `shared/.../data/repository/AppSettingsRepository.kt` | NEW |
+| `shared/.../data/local/db/FlowVanDatabase.kt` | MOD — version 3, new entity + DAO |
+| `shared/.../di/SharedModule.kt` | MOD — registers DAO, repo, SettingsViewModel |
+| `shared/.../presentation/feature/settings/SettingsContract.kt` | NEW |
+| `shared/.../presentation/feature/settings/SettingsViewModel.kt` | NEW |
+| `composeApp/.../screens/settings/SettingsScreen.kt` | NEW |
+| `composeApp/.../navigation/FlowVanNavHost.kt` | MOD — `Routes.SETTINGS`, composable |
+| `composeApp/.../screens/home/HomeScreen.kt` | MOD — settings icon in top bar |
+
+**Acceptance Criteria**
+- [ ] Settings icon visible in Home top bar; tapping opens SettingsScreen.
+- [ ] All fields render with current values from DB on open (or defaults if first run).
+- [ ] Segmented chips for Theme, Language, and Tax Type update state immediately on tap.
+- [ ] Text fields accept input and retain it across scroll.
+- [ ] Toggle switches for Edit Price and Offline Mode work correctly.
+- [ ] Tapping "حفظ الإعدادات" writes all values to `app_settings` (id=1) in Room.
+- [ ] Green snackbar "تم حفظ الإعدادات" appears after successful save.
+- [ ] Navigating away and back to settings shows the previously saved values.
+- [ ] DB migration from version 2 → 3 runs automatically on upgrade with no data loss.
+- [ ] `maxSaleVoucherNumber`, `maxReturnVoucherNumber`, `maxOrderVoucherNumber` only accept numeric input; non-numeric input defaults to 9999 on save.
+
+**Out of scope**
+- Applying theme dynamically to the running app without restart (requires wiring `AppTheme` to the Compose MaterialTheme at App root — v1.1).
+- Language hot-swap without app restart (v1.1).
+- Syncing settings to backend (settings are device-local by design).
+- Per-user permission management (settings are device-wide; user-level permissions come from backend in M17).
 
 ---
 
@@ -971,7 +1188,7 @@ Replace the demo responses in M13 with real Claude-powered streaming. Plus all t
                             │                    │
                             ▼                    │
                     ┌── M04 Home ──┐             │
-                    │              │             │
+                    │    │  ⚙️M20   │             │
         ┌───────────┼──────┬───────┼─────────────┘
         │           │      │       │
         ▼           ▼      ▼       ▼
@@ -988,6 +1205,12 @@ Replace the demo responses in M13 with real Claude-powered streaming. Plus all t
        │    │   │   │   (tabs)
        └────┴───┴───┴────────────► writes back to Room
                                   → auto-refreshes M04, M07, M14
+
+       M20 Settings ──────────────► app_settings table (device-local)
+          reads by: M08 (canEditPrice, taxType, maxSaleVoucherNumber)
+                    M09 (maxReturnVoucherNumber)
+                    M10 (maxOrderVoucherNumber)
+                    M17 (ipAddress for sync base URL)
 
        Every write also flagged for M17 Sync Engine
        (synced=false until M17 acks)
