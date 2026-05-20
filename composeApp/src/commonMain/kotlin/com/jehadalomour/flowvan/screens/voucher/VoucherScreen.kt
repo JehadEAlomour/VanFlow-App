@@ -30,14 +30,21 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -517,6 +524,7 @@ private fun CartView(
         if (state.showReasonRow) {
             item { ReasonRow(state.reason, onReasonSelect) }
         }
+
         item {
             OutlinedTextField(
                 value = state.notes,
@@ -550,6 +558,59 @@ private fun ReasonRow(selected: ReturnReason?, onSelect: (ReturnReason) -> Unit)
                 }
             }
         }
+    }
+}
+
+// ── Delivery Date Field (shown only for ORDER via state.showDeliveryDate) ─────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DeliveryDateField(dateMillis: Long?, onChange: (Long?) -> Unit) {
+    var showPicker by remember { mutableStateOf(false) }
+    val label = dateMillis?.let { millis ->
+        val dt = Instant.fromEpochMilliseconds(millis)
+            .toLocalDateTime(TimeZone.currentSystemDefault())
+        "${dt.dayOfMonth.toString().padStart(2, '0')}/${dt.monthNumber.toString().padStart(2, '0')}/${dt.year}"
+    } ?: "تاريخ التسليم المتوقع (اختياري)"
+
+    Column {
+        Text(
+            "موعد التسليم المتوقع",
+            color = Fv.TextMid,
+            fontSize = 11.sp,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(Fv.Surface)
+                .border(1.dp, Fv.Border, RoundedCornerShape(10.dp))
+                .clickable { showPicker = true }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+        ) {
+            Text(
+                label,
+                color = if (dateMillis != null) Fv.TextHigh else Fv.TextMid,
+                fontSize = 13.sp,
+            )
+        }
+    }
+
+    if (showPicker) {
+        val pickerState = rememberDatePickerState(initialSelectedDateMillis = dateMillis)
+        DatePickerDialog(
+            onDismissRequest = { showPicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    onChange(pickerState.selectedDateMillis)
+                    showPicker = false
+                }) { Text("تأكيد", color = Fv.Blue) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPicker = false }) { Text("إلغاء", color = Fv.TextMid) }
+            },
+        ) { DatePicker(state = pickerState) }
     }
 }
 

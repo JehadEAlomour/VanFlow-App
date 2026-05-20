@@ -54,6 +54,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun RouteScreen(
     onBack: () -> Unit,
+    onOpenCustomers: () -> Unit,
     onOpenCustomer: (String) -> Unit,
     onNavigateTo: (String) -> Unit = {},
     viewModel: RouteViewModel = koinViewModel(),
@@ -108,6 +109,22 @@ fun RouteScreen(
                             "${state.visitedCount} / ${state.plannedCount}",
                             color = Color.White,
                             fontSize = 14.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(Fv.SurfaceTop)
+                            .border(0.5.dp, Fv.Border, RoundedCornerShape(11.dp))
+                            .clickable(onClick = onOpenCustomers),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            "الكل",
+                            color = Fv.TextHigh,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold,
                         )
                     }

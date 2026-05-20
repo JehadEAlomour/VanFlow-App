@@ -135,6 +135,7 @@ fun FlowVanNavHost(
         composable(Routes.ROUTE) {
             RouteScreen(
                 onBack = { navController.popBackStack() },
+                onOpenCustomers = { navController.navigate(Routes.CUSTOMERS) },
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
                 onNavigateTo = { id -> navController.navigate(Routes.map(id)) },
             )

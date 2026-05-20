@@ -22,14 +22,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,12 +59,14 @@ import com.jehadalomour.flowvan.shared.presentation.i18n.AppLanguage
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.abs
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VanStockScreen(
     onBack: () -> Unit,
     viewModel: VanStockViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    var selectedProduct by remember { mutableStateOf<Product?>(null) }
 
     Column(modifier = Modifier.fillMaxSize()) {
 
@@ -180,7 +188,7 @@ fun VanStockScreen(
 
             // Stock cards
             items(state.visibleProducts, key = { it.id }) { product ->
-                StockCard(product = product, nowMs = state.nowMs)
+                StockCard(product = product, nowMs = state.nowMs, onClick = { selectedProduct = product })
             }
 
             if (state.visibleProducts.isEmpty() && !state.isLoading) {
@@ -193,6 +201,17 @@ fun VanStockScreen(
                     )
                 }
             }
+        }
+    }
+
+    selectedProduct?.let { product ->
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { selectedProduct = null },
+            sheetState = sheetState,
+            containerColor = Fv.Surface,
+        ) {
+            ProductDetailSheet(product = product, nowMs = state.nowMs)
         }
     }
 }
@@ -275,7 +294,7 @@ private fun CategoryPill(label: String, active: Boolean, onClick: () -> Unit) {
 // ── Stock Card ────────────────────────────────────────────────────────────────
 
 @Composable
-private fun StockCard(product: Product, nowMs: Long) {
+private fun StockCard(product: Product, nowMs: Long, onClick: () -> Unit) {
     val status = product.stockStatus(nowMs)
     val statusColor = when (status) {
         StockStatus.GOOD -> Fv.Green
@@ -313,7 +332,8 @@ private fun StockCard(product: Product, nowMs: Long) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(Fv.Surface)
-            .border(0.5.dp, Fv.Border, RoundedCornerShape(18.dp)),
+            .border(0.5.dp, Fv.Border, RoundedCornerShape(18.dp))
+            .clickable(onClick = onClick),
     ) {
         Column {
             // ── Top Section ──────────────────────────────────────────────────
@@ -425,6 +445,65 @@ private fun StockCard(product: Product, nowMs: Long) {
                 }
             }
         }
+    }
+}
+
+// ── Product Detail Sheet ──────────────────────────────────────────────────────
+
+@Composable
+private fun ProductDetailSheet(product: Product, nowMs: Long) {
+    val status = product.stockStatus(nowMs)
+    val statusColor = when (status) {
+        StockStatus.GOOD -> Fv.Green
+        StockStatus.LOW, StockStatus.EXPIRING -> Fv.Amber
+        StockStatus.OUT -> Fv.Red
+    }
+    Column(
+        modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text(product.nameAr, color = Fv.TextHigh, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+        Text(product.nameEn, color = Fv.TextMid, fontSize = 13.sp)
+
+        DetailRow("SKU", product.sku)
+        DetailRow("الفئة", product.category)
+        DetailRow("الوحدة", product.unit)
+        DetailRow("الكمية الحالية", "${product.vanStock}")
+        DetailRow("الحد الأدنى", "${product.minStock}")
+        DetailRow("سعر البيع", product.salePrice.formatJod(AppLanguage.AR) + " د.أ")
+        DetailRow("سعر الشراء", product.costPrice.formatJod(AppLanguage.AR) + " د.أ")
+
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(statusColor.copy(alpha = 0.12f))
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                when (status) {
+                    StockStatus.GOOD -> "متوفر"
+                    StockStatus.LOW -> "⚠️ منخفض المخزون"
+                    StockStatus.EXPIRING -> "⏰ ينتهي قريباً"
+                    StockStatus.OUT -> "نفد المخزون"
+                },
+                color = statusColor,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(label, color = Fv.TextMid, fontSize = 13.sp)
+        Text(value, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 

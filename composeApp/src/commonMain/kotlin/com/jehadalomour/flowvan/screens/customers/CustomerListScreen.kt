@@ -142,7 +142,7 @@ fun CustomerListScreen(
                 )
             }
 
-            // Filter pills
+            // Tier filter pills
             item {
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -154,6 +154,53 @@ fun CustomerListScreen(
                     CustomerTier.entries.forEach { tier ->
                         TierPill("فئة ${tier.name}", state.tierFilter == tier) {
                             viewModel.onEvent(CustomerListEvent.TierFilter(if (state.tierFilter == tier) null else tier))
+                        }
+                    }
+                }
+            }
+
+            // Segment filter chips
+            item {
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    SegmentPill(
+                        label = "الكل",
+                        active = state.segmentFilter == null,
+                        activeBg = Fv.SurfaceTop,
+                        activeFg = Fv.TextHigh,
+                    ) {
+                        viewModel.onEvent(CustomerListEvent.SegmentFilter(null))
+                    }
+                    CustomerSegment.entries.forEach { seg ->
+                        val (activeBg, activeFg) = when (seg) {
+                            CustomerSegment.CHAMPIONS -> Fv.Purple.copy(alpha = 0.13f) to Fv.Purple
+                            CustomerSegment.LOYAL     -> Fv.Blue.copy(alpha = 0.13f)   to Fv.Blue
+                            CustomerSegment.AT_RISK   -> Fv.Red.copy(alpha = 0.13f)    to Fv.Red
+                            CustomerSegment.PROMISING -> Fv.Amber.copy(alpha = 0.13f)  to Fv.Amber
+                            CustomerSegment.DORMANT   -> Fv.SurfaceTop                 to Fv.TextMid
+                            CustomerSegment.REGULAR   -> Fv.SurfaceTop                 to Fv.TextMid
+                        }
+                        val label = when (seg) {
+                            CustomerSegment.CHAMPIONS -> "عميل مميز"
+                            CustomerSegment.LOYAL     -> "مخلصون"
+                            CustomerSegment.AT_RISK   -> "عرضة للفقدان"
+                            CustomerSegment.PROMISING -> "واعدون"
+                            CustomerSegment.DORMANT   -> "نائم"
+                            CustomerSegment.REGULAR   -> "عادي"
+                        }
+                        SegmentPill(
+                            label = label,
+                            active = state.segmentFilter == seg,
+                            activeBg = activeBg,
+                            activeFg = activeFg,
+                        ) {
+                            viewModel.onEvent(
+                                CustomerListEvent.SegmentFilter(
+                                    if (state.segmentFilter == seg) null else seg
+                                )
+                            )
                         }
                     }
                 }
@@ -199,6 +246,33 @@ private fun TierPill(label: String, active: Boolean, onClick: () -> Unit) {
         Text(
             label,
             color = if (active) Color.White else Fv.TextMid,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+// ── Segment Filter Pill ───────────────────────────────────────────────────────
+
+@Composable
+private fun SegmentPill(
+    label: String,
+    active: Boolean,
+    activeBg: Color,
+    activeFg: Color,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (active) activeBg else Fv.Surface)
+            .border(0.5.dp, if (active) activeFg.copy(alpha = 0.4f) else Fv.Border, RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 8.dp),
+    ) {
+        Text(
+            label,
+            color = if (active) activeFg else Fv.TextMid,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
         )

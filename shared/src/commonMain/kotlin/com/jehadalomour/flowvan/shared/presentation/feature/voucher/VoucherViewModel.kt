@@ -215,7 +215,7 @@ class VoucherViewModel(
                     customerId = customerId,
                     salesmanId = salesmanId,
                     cart = s.cart,
-                    expectedDeliveryAt = null,
+                    expectedDeliveryAt = s.deliveryDate,
                     notes = s.notes.takeIf { it.isNotBlank() },
                 )
             }

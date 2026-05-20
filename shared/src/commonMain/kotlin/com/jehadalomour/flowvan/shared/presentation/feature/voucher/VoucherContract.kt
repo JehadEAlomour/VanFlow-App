@@ -79,6 +79,9 @@ data class VoucherState(
         VoucherType.RETURN -> "سيتم تسجيل المرتجع وإعادة المخزون وتعديل الرصيد"
         VoucherType.ORDER  -> "سيتم تسجيل الطلب للمراجعة"
     }
+    val deliveryDate: Long? = null
+    val showDeliveryDate: Boolean get() = type == VoucherType.ORDER
+
     val showReasonRow: Boolean get() = type == VoucherType.RETURN
     val showStockBadge: Boolean get() = type == VoucherType.SALE
     val showDiscountSection: Boolean get() = type == VoucherType.SALE
