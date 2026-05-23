@@ -51,8 +51,10 @@ import com.jehadalomour.flowvan.shared.presentation.feature.settings.SettingsEve
 import com.jehadalomour.flowvan.shared.presentation.feature.settings.SettingsViewModel
 import com.jehadalomour.flowvan.shared.presentation.i18n.AppLanguage
 import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
 import flowvan.composeapp.generated.resources.ic_back
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -62,10 +64,11 @@ fun SettingsScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val snackbar = remember { SnackbarHostState() }
+    val settingsSavedMessage = stringResource(Res.string.settings_saved)
 
     LaunchedEffect(state.saved) {
         if (state.saved) {
-            snackbar.showSnackbar("تم حفظ الإعدادات")
+            snackbar.showSnackbar(settingsSavedMessage)
             viewModel.onEvent(SettingsEvent.DismissSaved)
         }
     }
@@ -81,26 +84,26 @@ fun SettingsScreen(
                 }
 
                 // ── Appearance ──────────────────────────────────────────────
-                item { SectionHeader("المظهر واللغة") }
+                item { SectionHeader(stringResource(Res.string.settings_section_appearance)) }
 
                 item {
                     SettingsCard {
                         SegmentedRow(
-                            label = "المظهر",
+                            label = stringResource(Res.string.settings_theme),
                             options = listOf(
-                                AppTheme.SYSTEM to "تلقائي",
-                                AppTheme.LIGHT to "فاتح",
-                                AppTheme.DARK to "داكن",
+                                AppTheme.SYSTEM to stringResource(Res.string.settings_theme_system),
+                                AppTheme.LIGHT to stringResource(Res.string.settings_theme_light),
+                                AppTheme.DARK to stringResource(Res.string.settings_theme_dark),
                             ),
                             selected = state.theme,
                             onSelect = { viewModel.onEvent(SettingsEvent.ThemeChanged(it)) },
                         )
                         SettingsDivider()
                         SegmentedRow(
-                            label = "اللغة",
+                            label = stringResource(Res.string.settings_language),
                             options = listOf(
-                                AppLanguage.AR to "العربية",
-                                AppLanguage.EN to "English",
+                                AppLanguage.AR to stringResource(Res.string.settings_language_ar),
+                                AppLanguage.EN to stringResource(Res.string.settings_language_en),
                             ),
                             selected = state.language,
                             onSelect = { viewModel.onEvent(SettingsEvent.LanguageChanged(it)) },
@@ -109,15 +112,15 @@ fun SettingsScreen(
                 }
 
                 // ── Tax ─────────────────────────────────────────────────────
-                item { SectionHeader("الضريبة") }
+                item { SectionHeader(stringResource(Res.string.settings_section_tax)) }
 
                 item {
                     SettingsCard {
                         SegmentedRow(
-                            label = "نوع الضريبة",
+                            label = stringResource(Res.string.settings_tax_type),
                             options = listOf(
-                                TaxType.EXCLUDED_TAX to "غير شاملة",
-                                TaxType.INCLUDED_TAX to "شاملة",
+                                TaxType.EXCLUDED_TAX to stringResource(Res.string.settings_tax_excluded),
+                                TaxType.INCLUDED_TAX to stringResource(Res.string.settings_tax_included),
                             ),
                             selected = state.taxType,
                             onSelect = { viewModel.onEvent(SettingsEvent.TaxTypeChanged(it)) },
@@ -126,12 +129,12 @@ fun SettingsScreen(
                 }
 
                 // ── Connection ──────────────────────────────────────────────
-                item { SectionHeader("الاتصال") }
+                item { SectionHeader(stringResource(Res.string.settings_section_connection)) }
 
                 item {
                     SettingsCard {
                         SettingsTextField(
-                            label = "عنوان IP",
+                            label = stringResource(Res.string.settings_ip_address),
                             value = state.ipAddress,
                             placeholder = "192.168.1.100",
                             keyboardType = KeyboardType.Uri,
@@ -141,12 +144,12 @@ fun SettingsScreen(
                 }
 
                 // ── Salesman ────────────────────────────────────────────────
-                item { SectionHeader("بيانات المندوب") }
+                item { SectionHeader(stringResource(Res.string.settings_section_salesman)) }
 
                 item {
                     SettingsCard {
                         SettingsTextField(
-                            label = "رقم المندوب",
+                            label = stringResource(Res.string.settings_salesman_number),
                             value = state.salesmanNumber,
                             placeholder = "SM-001",
                             keyboardType = KeyboardType.Text,
@@ -154,9 +157,9 @@ fun SettingsScreen(
                         )
                         SettingsDivider()
                         SettingsTextField(
-                            label = "الفرع",
+                            label = stringResource(Res.string.settings_branch),
                             value = state.branch,
-                            placeholder = "الفرع الرئيسي",
+                            placeholder = stringResource(Res.string.settings_branch_placeholder),
                             keyboardType = KeyboardType.Text,
                             onChange = { viewModel.onEvent(SettingsEvent.BranchChanged(it)) },
                         )
@@ -164,12 +167,12 @@ fun SettingsScreen(
                 }
 
                 // ── Voucher Limits ──────────────────────────────────────────
-                item { SectionHeader("حدود الفواتير") }
+                item { SectionHeader(stringResource(Res.string.settings_section_voucher_limits)) }
 
                 item {
                     SettingsCard {
                         SettingsTextField(
-                            label = "أقصى رقم فاتورة بيع",
+                            label = stringResource(Res.string.settings_max_sale_voucher),
                             value = state.maxSaleVoucherNumber,
                             placeholder = "9999",
                             keyboardType = KeyboardType.Number,
@@ -177,7 +180,7 @@ fun SettingsScreen(
                         )
                         SettingsDivider()
                         SettingsTextField(
-                            label = "أقصى رقم فاتورة مرتجع",
+                            label = stringResource(Res.string.settings_max_return_voucher),
                             value = state.maxReturnVoucherNumber,
                             placeholder = "9999",
                             keyboardType = KeyboardType.Number,
@@ -185,7 +188,7 @@ fun SettingsScreen(
                         )
                         SettingsDivider()
                         SettingsTextField(
-                            label = "أقصى رقم طلب مسبق",
+                            label = stringResource(Res.string.settings_max_order_voucher),
                             value = state.maxOrderVoucherNumber,
                             placeholder = "9999",
                             keyboardType = KeyboardType.Number,
@@ -195,20 +198,20 @@ fun SettingsScreen(
                 }
 
                 // ── Permissions ─────────────────────────────────────────────
-                item { SectionHeader("صلاحيات المندوب") }
+                item { SectionHeader(stringResource(Res.string.settings_section_permissions)) }
 
                 item {
                     SettingsCard {
                         ToggleRow(
-                            label = "تعديل السعر",
-                            sublabel = "السماح بتغيير سعر المنتج عند البيع",
+                            label = stringResource(Res.string.settings_edit_price),
+                            sublabel = stringResource(Res.string.settings_edit_price_sublabel),
                             checked = state.canEditPrice,
                             onCheckedChange = { viewModel.onEvent(SettingsEvent.CanEditPriceChanged(it)) },
                         )
                         SettingsDivider()
                         ToggleRow(
-                            label = "وضع عدم الاتصال",
-                            sublabel = "العمل بدون اتصال بالإنترنت",
+                            label = stringResource(Res.string.settings_offline_mode),
+                            sublabel = stringResource(Res.string.settings_offline_mode_sublabel),
                             checked = state.offlineModeEnabled,
                             onCheckedChange = { viewModel.onEvent(SettingsEvent.OfflineModeChanged(it)) },
                         )
@@ -233,7 +236,7 @@ fun SettingsScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            "حفظ الإعدادات",
+                            stringResource(Res.string.settings_save),
                             color = Color.White,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
@@ -277,7 +280,7 @@ private fun SettingsTopBar(onBack: () -> Unit) {
             )
         }
         Text(
-            "الإعدادات",
+            stringResource(Res.string.settings_title),
             color = Fv.TextHigh,
             fontSize = 17.sp,
             fontWeight = FontWeight.ExtraBold,

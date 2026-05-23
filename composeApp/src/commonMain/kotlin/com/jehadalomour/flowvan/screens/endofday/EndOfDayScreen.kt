@@ -36,6 +36,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.presentation.feature.endofday.EndOfDayEvent
 import com.jehadalomour.flowvan.shared.presentation.feature.endofday.EndOfDayViewModel
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
@@ -62,7 +63,7 @@ fun EndOfDayScreen(
                     modifier = Modifier.size(20.dp).padding(start = 8.dp),
                 )
                 Text(
-                    "نهاية اليوم",
+                    stringResource(Res.string.home_quick_end_of_day),
                     color = Fv.TextHigh,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -80,41 +81,41 @@ fun EndOfDayScreen(
                 Spacer(Modifier.height(4.dp))
 
                 state.kpi?.let { kpi ->
-                    SectionCard(title = "ملخص اليوم") {
-                        KpiRow("إجمالي المبيعات", kpi.salesTotal.formatJod(AppLanguage.AR), Fv.Green)
-                        KpiRow("إجمالي المرتجعات", kpi.returnsTotal.formatJod(AppLanguage.AR), Fv.Red)
+                    SectionCard(title = stringResource(Res.string.end_of_day_summary_title)) {
+                        KpiRow(stringResource(Res.string.end_of_day_total_sales), kpi.salesTotal.formatJod(AppLanguage.AR), Fv.Green)
+                        KpiRow(stringResource(Res.string.end_of_day_total_returns), kpi.returnsTotal.formatJod(AppLanguage.AR), Fv.Red)
                         HorizontalDivider(color = Fv.SurfaceHigh, modifier = Modifier.padding(vertical = 4.dp))
-                        KpiRow("صافي المبيعات", (kpi.salesTotal - kpi.returnsTotal).formatJod(AppLanguage.AR), Fv.TextHigh)
-                        KpiRow("إجمالي التحصيلات", kpi.collectionsTotal.formatJod(AppLanguage.AR), Fv.Amber)
+                        KpiRow(stringResource(Res.string.end_of_day_net_sales), (kpi.salesTotal - kpi.returnsTotal).formatJod(AppLanguage.AR), Fv.TextHigh)
+                        KpiRow(stringResource(Res.string.end_of_day_total_collections), kpi.collectionsTotal.formatJod(AppLanguage.AR), Fv.Amber)
                         Spacer(Modifier.height(4.dp))
                         KpiRow(
-                            "العملاء المزارون",
+                            stringResource(Res.string.end_of_day_customers_visited),
                             "${kpi.customersVisited} / ${kpi.customersPlanned}",
                             if (kpi.customersVisited >= kpi.customersPlanned) Fv.Green else Fv.Amber,
                         )
                     }
                 }
 
-                SectionCard(title = "التسوية النقدية") {
-                    KpiRow("نقداً", state.cashCollectedToday.formatJod(AppLanguage.AR), Fv.Green)
-                    KpiRow("شيكات", state.chequesCollectedToday.formatJod(AppLanguage.AR), Fv.Blue)
-                    KpiRow("تحويلات", state.transfersCollectedToday.formatJod(AppLanguage.AR), Fv.Teal)
+                SectionCard(title = stringResource(Res.string.end_of_day_cash_settlement)) {
+                    KpiRow(stringResource(Res.string.method_cash_label), state.cashCollectedToday.formatJod(AppLanguage.AR), Fv.Green)
+                    KpiRow(stringResource(Res.string.end_of_day_cheques), state.chequesCollectedToday.formatJod(AppLanguage.AR), Fv.Blue)
+                    KpiRow(stringResource(Res.string.end_of_day_transfers), state.transfersCollectedToday.formatJod(AppLanguage.AR), Fv.Teal)
                 }
 
-                SectionCard(title = "حالة المزامنة") {
+                SectionCard(title = stringResource(Res.string.end_of_day_sync_status)) {
                     KpiRow(
-                        "فواتير غير محفوظة",
+                        stringResource(Res.string.end_of_day_unsynced_invoices),
                         state.unsyncedInvoices.toString(),
                         if (state.unsyncedInvoices == 0) Fv.Green else Fv.Amber,
                     )
                     KpiRow(
-                        "مدفوعات غير محفوظة",
+                        stringResource(Res.string.end_of_day_unsynced_payments),
                         state.unsyncedPayments.toString(),
                         if (state.unsyncedPayments == 0) Fv.Green else Fv.Amber,
                     )
                     if (state.unsyncedInvoices > 0 || state.unsyncedPayments > 0) {
                         Text(
-                            "سيتم المزامنة تلقائياً عند الاتصال",
+                            stringResource(Res.string.end_of_day_sync_note),
                             color = Fv.TextMid,
                             fontSize = 11.sp,
                             modifier = Modifier.padding(top = 4.dp),
@@ -138,7 +139,7 @@ fun EndOfDayScreen(
                 ),
             ) {
                 Text(
-                    if (state.isEnding) "جارٍ الإنهاء..." else "إنهاء اليوم وتسجيل الخروج",
+                    if (state.isEnding) stringResource(Res.string.end_of_day_ending) else stringResource(Res.string.end_of_day_end_button),
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                 )
@@ -149,16 +150,16 @@ fun EndOfDayScreen(
     if (state.showConfirmDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.onEvent(EndOfDayEvent.DismissConfirmDialog) },
-            title = { Text("تأكيد إنهاء اليوم", color = Fv.TextHigh) },
-            text = { Text("سيتم إغلاق الوردية وتسجيل الخروج من التطبيق. هل أنت متأكد؟", color = Fv.TextHigh) },
+            title = { Text(stringResource(Res.string.end_of_day_confirm_end_title), color = Fv.TextHigh) },
+            text = { Text(stringResource(Res.string.end_of_day_confirm_end_message), color = Fv.TextHigh) },
             confirmButton = {
                 TextButton(onClick = { viewModel.onEvent(EndOfDayEvent.ConfirmEndShift) }) {
-                    Text("تأكيد", color = Fv.Red, fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.confirm), color = Fv.Red, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.onEvent(EndOfDayEvent.DismissConfirmDialog) }) {
-                    Text("إلغاء", color = Fv.TextMid)
+                    Text(stringResource(Res.string.cancel), color = Fv.TextMid)
                 }
             },
             containerColor = Fv.Surface,

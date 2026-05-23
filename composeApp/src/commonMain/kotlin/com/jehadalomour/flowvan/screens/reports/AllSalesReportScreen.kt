@@ -33,6 +33,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.data.local.entity.InvoiceEntity
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.AllSalesReportViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.SalesTypeFilter
@@ -65,7 +66,7 @@ fun AllSalesReportScreen(
                         )
                     }
                     Spacer(Modifier.width(4.dp))
-                    Text("تقرير المبيعات", color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.all_sales_title), color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
             }
             item {
@@ -74,15 +75,19 @@ fun AllSalesReportScreen(
                 }
             }
             item {
+                val labelAll = stringResource(Res.string.all_sales_filter_all)
+                val labelSales = stringResource(Res.string.all_sales_filter_sales)
+                val labelReturns = stringResource(Res.string.all_sales_filter_returns)
+                val labelRequests = stringResource(Res.string.all_sales_filter_requests)
                 FilterChipRow(
                     filters = SalesTypeFilter.entries,
                     selected = state.typeFilter,
                     label = {
                         when (it) {
-                            SalesTypeFilter.ALL -> "الكل"
-                            SalesTypeFilter.SALE -> "مبيعات"
-                            SalesTypeFilter.RETURN -> "مرتجعات"
-                            SalesTypeFilter.REQUEST -> "طلبات"
+                            SalesTypeFilter.ALL -> labelAll
+                            SalesTypeFilter.SALE -> labelSales
+                            SalesTypeFilter.RETURN -> labelReturns
+                            SalesTypeFilter.REQUEST -> labelRequests
                         }
                     },
                     onSelect = { viewModel.setTypeFilter(it) },
@@ -90,20 +95,20 @@ fun AllSalesReportScreen(
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SummaryPill("المبيعات", state.salesTotal.formatJod(AppLanguage.AR), Fv.Blue, Modifier.weight(1f))
-                    SummaryPill("المرتجعات", state.returnsTotal.formatJod(AppLanguage.AR), Fv.Red, Modifier.weight(1f))
+                    SummaryPill(stringResource(Res.string.all_sales_pill_sales), state.salesTotal.formatJod(AppLanguage.AR), Fv.Blue, Modifier.weight(1f))
+                    SummaryPill(stringResource(Res.string.all_sales_pill_returns), state.returnsTotal.formatJod(AppLanguage.AR), Fv.Red, Modifier.weight(1f))
                 }
             }
             item {
                 SummaryPill(
-                    "الصافي",
+                    stringResource(Res.string.all_sales_pill_net),
                     (state.salesTotal - state.returnsTotal).formatJod(AppLanguage.AR),
                     Fv.Green,
                     Modifier.fillMaxWidth(),
                 )
             }
             if (state.invoices.isEmpty()) {
-                item { Text("لا توجد بيانات في هذه الفترة", color = Fv.TextMid, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp)) }
+                item { Text(stringResource(Res.string.report_empty_period), color = Fv.TextMid, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp)) }
             } else {
                 items(state.invoices, key = { it.id }) { inv ->
                     SalesInvoiceRow(inv, onClick = { onOpenVoucher(inv.id) })
@@ -127,9 +132,9 @@ private fun SalesInvoiceRow(inv: InvoiceEntity, onClick: () -> Unit) {
                 else -> Fv.Amber
             }
             val typeLabel = when (inv.type) {
-                "SALE" -> "بيع"
-                "RETURN" -> "مرتجع"
-                else -> "طلب"
+                "SALE" -> stringResource(Res.string.chip_sale)
+                "RETURN" -> stringResource(Res.string.chip_return)
+                else -> stringResource(Res.string.chip_request)
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(inv.number, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)

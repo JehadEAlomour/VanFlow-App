@@ -49,7 +49,8 @@ import com.jehadalomour.flowvan.shared.presentation.feature.print.VoucherPrintSt
 import com.jehadalomour.flowvan.shared.presentation.feature.print.VoucherPrintViewModel
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
 import flowvan.composeapp.generated.resources.Res
-import flowvan.composeapp.generated.resources.ic_back
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -98,7 +99,7 @@ fun VoucherPrintScreen(
                 IconButton(onClick = onBack) {
                     Icon(painterResource(Res.drawable.ic_back), contentDescription = null, tint = Color.White)
                 }
-                Text("طباعة الفاتورة", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(Res.string.print_title), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
         }
 
@@ -116,7 +117,7 @@ fun VoucherPrintScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ActionButton(
-                label = "طباعة",
+                label = stringResource(Res.string.print_action_print),
                 filled = true,
                 onClick = {
                     scope.launch {
@@ -127,7 +128,7 @@ fun VoucherPrintScreen(
             )
             Spacer(Modifier.size(10.dp))
             ActionButton(
-                label = "مشاركة PDF",
+                label = stringResource(Res.string.print_action_share_pdf),
                 filled = false,
                 onClick = {
                     scope.launch {
@@ -257,16 +258,16 @@ private fun ReceiptBody(state: VoucherPrintState) {
         SepDash()
 
         // Invoice meta
-        KvRow("رقم الفاتورة", "#${state.number}", valueColor = Blue)
-        KvRow("التاريخ", state.createdAt.toReceiptDateStr())
-        KvRow("المندوب", state.salesmanNameAr)
+        KvRow(stringResource(Res.string.voucher_detail_number), "#${state.number}", valueColor = Blue)
+        KvRow(stringResource(Res.string.voucher_detail_date), state.createdAt.toReceiptDateStr())
+        KvRow(stringResource(Res.string.print_salesman), state.salesmanNameAr)
 
         SepDash()
 
         // Customer
-        KvRow("العميل", state.customerNameAr)
-        KvRow("الكود", state.customerCode)
-        state.customerTaxNumber?.let { KvRow("ر.ض العميل", it) }
+        KvRow(stringResource(Res.string.print_customer), state.customerNameAr)
+        KvRow(stringResource(Res.string.print_customer_code), state.customerCode)
+        state.customerTaxNumber?.let { KvRow(stringResource(Res.string.print_customer_tax_number), it) }
 
         SepSolid()
 
@@ -281,12 +282,12 @@ private fun ReceiptBody(state: VoucherPrintState) {
         SepDash()
 
         // Totals
-        TotRow("المجموع الفرعي", state.subtotal.formatJod())
+        TotRow(stringResource(Res.string.voucher_detail_subtotal), state.subtotal.formatJod())
         if (state.discountAmount > 0.0) {
-            TotRow("إجمالي الخصم", "- ${state.discountAmount.formatJod()}", valueColor = Red)
+            TotRow(stringResource(Res.string.print_total_discount), "- ${state.discountAmount.formatJod()}", valueColor = Red)
         }
         if (state.taxAmount > 0.0) {
-            TotRow("الضريبة", "+ ${state.taxAmount.formatJod()}", valueColor = Amber)
+            TotRow(stringResource(Res.string.voucher_detail_tax), "+ ${state.taxAmount.formatJod()}", valueColor = Amber)
         }
 
         // Grand total
@@ -300,7 +301,7 @@ private fun ReceiptBody(state: VoucherPrintState) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "الإجمالي",
+                text = stringResource(Res.string.voucher_detail_total),
                 modifier = Modifier.padding(horizontal = 10.dp),
                 fontWeight = FontWeight.ExtraBold,
                 fontSize = 13.sp,
@@ -320,7 +321,7 @@ private fun ReceiptBody(state: VoucherPrintState) {
         state.notes?.let { notes ->
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "ملاحظات: $notes",
+                text = stringResource(Res.string.print_notes_prefix, notes),
                 fontSize = 8.5.sp,
                 color = SubText,
                 modifier = Modifier.fillMaxWidth(),
@@ -333,8 +334,8 @@ private fun ReceiptBody(state: VoucherPrintState) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            SignatureBox("توقيع المستلم")
-            SignatureBox("ختم المؤسسة")
+            SignatureBox(stringResource(Res.string.print_signature_recipient))
+            SignatureBox(stringResource(Res.string.print_signature_stamp))
         }
 
         // QR placeholder
@@ -372,8 +373,8 @@ private fun ReceiptBody(state: VoucherPrintState) {
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("شكراً لتعاملكم معنا", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = SubText)
-            Text("هذه الفاتورة مستند قانوني معتمد", fontSize = 8.5.sp, color = DivLight, lineHeight = 14.sp)
+            Text(stringResource(Res.string.print_footer_thanks), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = SubText)
+            Text(stringResource(Res.string.print_footer_legal), fontSize = 8.5.sp, color = DivLight, lineHeight = 14.sp)
         }
         Spacer(Modifier.height(4.dp))
     }
@@ -388,7 +389,14 @@ private fun ItemColHeader() {
             .fillMaxWidth()
             .padding(vertical = 3.dp),
     ) {
-        listOf("الكمية", "الوحدة", "ض%", "السعر", "خصم", "الإجمالي").forEach { label ->
+        listOf(
+            stringResource(Res.string.print_col_qty),
+            stringResource(Res.string.print_col_unit),
+            stringResource(Res.string.print_col_tax),
+            stringResource(Res.string.print_col_price),
+            stringResource(Res.string.print_col_discount),
+            stringResource(Res.string.print_col_total),
+        ).forEach { label ->
             Text(
                 text = label,
                 modifier = Modifier.weight(1f),
@@ -551,10 +559,11 @@ private fun SignatureBox(label: String) {
 
 // ── Pure helpers ──────────────────────────────────────────────────────────────
 
+@Composable
 private fun typeLabel(type: String) = when (type) {
-    "SALE"    -> "فاتورة مبيعات"
-    "RETURN"  -> "فاتورة مرتجع"
-    "REQUEST" -> "طلب مسبق"
+    "SALE"    -> stringResource(Res.string.print_voucher_type_sale)
+    "RETURN"  -> stringResource(Res.string.print_voucher_type_return)
+    "REQUEST" -> stringResource(Res.string.print_voucher_type_request)
     else      -> type
 }
 
@@ -565,11 +574,12 @@ private fun typeColor(type: String) = when (type) {
     else      -> SubText
 }
 
-private fun paymentLabel(method: String?) = when (method) {
-    "CASH"     -> "نقداً"
-    "CHEQUE"   -> "شيك"
-    "TRANSFER" -> "تحويل"
-    "CREDIT"   -> "آجل"
+@Composable
+private fun paymentLabel(method: String?): String? = when (method) {
+    "CASH"     -> stringResource(Res.string.print_payment_cash)
+    "CHEQUE"   -> stringResource(Res.string.payment_method_cheque)
+    "TRANSFER" -> stringResource(Res.string.print_payment_transfer)
+    "CREDIT"   -> stringResource(Res.string.print_payment_credit)
     else       -> null
 }
 
@@ -578,8 +588,9 @@ private fun paymentColor(method: String?) = when (method) {
     else     -> SubText
 }
 
+@Composable
 private fun InvoiceLine.taxPctLabel(): String = when (taxType) {
-    "INCLUSIVE" -> "مضمّن"
+    "INCLUSIVE" -> stringResource(Res.string.print_tax_inclusive)
     "TAXABLE"   -> if (taxRate > 0.0) "${(taxRate * 100).toInt()}%" else "—"
     else        -> "—"
 }

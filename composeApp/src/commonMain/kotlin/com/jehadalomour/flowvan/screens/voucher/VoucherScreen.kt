@@ -87,6 +87,7 @@ import com.jehadalomour.flowvan.shared.presentation.i18n.AppLanguage
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -259,12 +260,12 @@ fun VoucherScreen(
         } else {
             AlertDialog(
                 onDismissRequest = { viewModel.onEvent(VoucherEvent.DismissSaveSheet) },
-                title = { Text("تأكيد الحفظ", color = Fv.TextHigh) },
+                title = { Text(stringResource(Res.string.voucher_confirm_save_title), color = Fv.TextHigh) },
                 text = { Text(state.confirmTextAr, color = Fv.TextHigh) },
                 confirmButton = {
                     TextButton(onClick = { viewModel.onEvent(VoucherEvent.ConfirmSave) }) {
                         Text(
-                            "تأكيد",
+                            stringResource(Res.string.confirm),
                             color = when (state.type) {
                                 VoucherType.RETURN -> Fv.Red
                                 VoucherType.ORDER -> Fv.Teal
@@ -275,7 +276,7 @@ fun VoucherScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { viewModel.onEvent(VoucherEvent.DismissSaveSheet) }) {
-                        Text("إلغاء", color = Fv.TextMid)
+                        Text(stringResource(Res.string.cancel), color = Fv.TextMid)
                     }
                 },
                 containerColor = Fv.Surface,
@@ -286,11 +287,11 @@ fun VoucherScreen(
     state.errorAr?.let { msg ->
         AlertDialog(
             onDismissRequest = { viewModel.onEvent(VoucherEvent.DismissError) },
-            title = { Text("خطأ", color = Fv.TextHigh) },
+            title = { Text(stringResource(Res.string.dialog_error_title), color = Fv.TextHigh) },
             text = { Text(msg, color = Fv.TextHigh) },
             confirmButton = {
                 TextButton(onClick = { viewModel.onEvent(VoucherEvent.DismissError) }) {
-                    Text("حسناً", color = Fv.Blue)
+                    Text(stringResource(Res.string.dialog_ok), color = Fv.Blue)
                 }
             },
             containerColor = Fv.Surface,
@@ -361,7 +362,7 @@ private fun ProductListPicker(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearch,
-            placeholder = { Text("ابحث عن منتج...", color = Fv.TextMid) },
+            placeholder = { Text(stringResource(Res.string.sale_search_product), color = Fv.TextMid) },
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
@@ -378,7 +379,7 @@ private fun ProductListPicker(
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                CategoryPill("الكل", selectedCategory == null) { onSelectCategory(null) }
+                CategoryPill(stringResource(Res.string.all), selectedCategory == null) { onSelectCategory(null) }
                 categories.forEach { cat ->
                     CategoryPill(cat, selectedCategory == cat) { onSelectCategory(cat) }
                 }
@@ -404,7 +405,7 @@ private fun ProductListPicker(
             }
             if (products.isEmpty()) {
                 item {
-                    Text("لا توجد منتجات", color = Fv.TextMid, fontSize = 13.sp, modifier = Modifier.padding(24.dp))
+                    Text(stringResource(Res.string.voucher_no_products), color = Fv.TextMid, fontSize = 13.sp, modifier = Modifier.padding(24.dp))
                 }
             }
         }
@@ -462,9 +463,9 @@ private fun StockBadge(product: Product) {
     val low = !outOfStock && product.vanStock < product.minStock
     val chipColor = if (outOfStock) Fv.Red else if (low) Fv.Amber else Fv.Green
     val chipLabel = when {
-        outOfStock -> "نافد"
-        low -> "منخفض · ${product.vanStock}"
-        else -> "متوفر · ${product.vanStock}"
+        outOfStock -> stringResource(Res.string.van_stock_out_of_stock)
+        low -> stringResource(Res.string.voucher_stock_low_count, product.vanStock)
+        else -> stringResource(Res.string.voucher_stock_available_count, product.vanStock)
     }
     Box(
         modifier = Modifier.background(chipColor.copy(alpha = 0.14f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
@@ -494,7 +495,7 @@ private fun PickerSummaryBar(itemCount: Int, total: Double) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(total.formatJod(AppLanguage.AR), color = Fv.Green, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        Text("$itemCount ${if (itemCount == 1) "صنف" else "أصناف"}", color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp)
+        Text(stringResource(Res.string.voucher_item_count, itemCount), color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp)
     }
 }
 
@@ -518,7 +519,7 @@ private fun CartView(
         }
         if (state.cart.isEmpty()) {
             item {
-                Text("السلة فارغة — أضف منتجات من قسم المنتجات", color = Fv.TextMid, fontSize = 12.sp, modifier = Modifier.padding(24.dp))
+                Text(stringResource(Res.string.voucher_cart_empty_hint), color = Fv.TextMid, fontSize = 12.sp, modifier = Modifier.padding(24.dp))
             }
         }
         if (state.showReasonRow) {
@@ -529,7 +530,7 @@ private fun CartView(
             OutlinedTextField(
                 value = state.notes,
                 onValueChange = onNotesChange,
-                label = { Text("ملاحظات (اختياري)", color = Fv.TextMid, fontSize = 11.sp) },
+                label = { Text(stringResource(Res.string.voucher_notes_optional), color = Fv.TextMid, fontSize = 11.sp) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
                 colors = fvFieldColors(),
@@ -543,7 +544,7 @@ private fun CartView(
 @Composable
 private fun ReasonRow(selected: ReturnReason?, onSelect: (ReturnReason) -> Unit) {
     Column {
-        Text("سبب الإرجاع *", color = Fv.TextMid, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
+        Text("${stringResource(Res.string.return_reason)} *", color = Fv.TextMid, fontSize = 11.sp, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
         Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ReturnReason.entries.forEach { reason ->
                 val active = reason == selected
@@ -571,11 +572,11 @@ private fun DeliveryDateField(dateMillis: Long?, onChange: (Long?) -> Unit) {
         val dt = Instant.fromEpochMilliseconds(millis)
             .toLocalDateTime(TimeZone.currentSystemDefault())
         "${dt.dayOfMonth.toString().padStart(2, '0')}/${dt.monthNumber.toString().padStart(2, '0')}/${dt.year}"
-    } ?: "تاريخ التسليم المتوقع (اختياري)"
+    } ?: stringResource(Res.string.voucher_delivery_date_placeholder)
 
     Column {
         Text(
-            "موعد التسليم المتوقع",
+            stringResource(Res.string.voucher_delivery_date_label),
             color = Fv.TextMid,
             fontSize = 11.sp,
             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
@@ -605,10 +606,10 @@ private fun DeliveryDateField(dateMillis: Long?, onChange: (Long?) -> Unit) {
                 TextButton(onClick = {
                     onChange(pickerState.selectedDateMillis)
                     showPicker = false
-                }) { Text("تأكيد", color = Fv.Blue) }
+                }) { Text(stringResource(Res.string.confirm), color = Fv.Blue) }
             },
             dismissButton = {
-                TextButton(onClick = { showPicker = false }) { Text("إلغاء", color = Fv.TextMid) }
+                TextButton(onClick = { showPicker = false }) { Text(stringResource(Res.string.cancel), color = Fv.TextMid) }
             },
         ) { DatePicker(state = pickerState) }
     }
@@ -634,9 +635,9 @@ private fun CartSummaryCard(
         Column {
             AnimatedVisibility(visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
                 Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 4.dp)) {
-                    SummaryDetailRow("المجموع الفرعي", state.subtotal.formatJod(AppLanguage.AR), Fv.TextMid)
+                    SummaryDetailRow(stringResource(Res.string.voucher_detail_subtotal), state.subtotal.formatJod(AppLanguage.AR), Fv.TextMid)
                     if (state.lineDiscountTotal > 0)
-                        SummaryDetailRow("خصم السطور", "- ${state.lineDiscountTotal.formatJod(AppLanguage.AR)}", Fv.Red)
+                        SummaryDetailRow(stringResource(Res.string.voucher_line_discount_total), "- ${state.lineDiscountTotal.formatJod(AppLanguage.AR)}", Fv.Red)
                     if (state.showDiscountSection) {
                         Spacer(Modifier.height(8.dp))
                         VoucherDiscountSection(
@@ -660,7 +661,7 @@ private fun CartSummaryCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("الإجمالي النهائي", color = Fv.TextMid, fontSize = 12.sp)
+                    Text(stringResource(Res.string.voucher_final_total), color = Fv.TextMid, fontSize = 12.sp)
                     Text(state.total.formatJod(AppLanguage.AR), color = Fv.Blue, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
                 }
                 Text(if (expanded) "▲" else "▼", color = Fv.TextMid, fontSize = 13.sp)
@@ -688,7 +689,7 @@ private fun VoucherDiscountSection(
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(modifier = Modifier.background(Fv.SurfaceTop, RoundedCornerShape(20.dp)).padding(2.dp)) {
-            listOf(DiscountType.PERCENT to "%", DiscountType.VALUE to "قيمة").forEach { (t, label) ->
+            listOf(DiscountType.PERCENT to "%", DiscountType.VALUE to stringResource(Res.string.voucher_discount_type_value)).forEach { (t, label) ->
                 val active = t == type
                 Box(
                     modifier = Modifier
@@ -704,7 +705,7 @@ private fun VoucherDiscountSection(
         OutlinedTextField(
             value = input,
             onValueChange = { v -> onInputChange(v.filter { it.isDigit() || it == '.' }.take(8)) },
-            placeholder = { Text(if (type == DiscountType.PERCENT) "خصم الفاتورة %" else "خصم الفاتورة د.أ", color = Fv.TextMid, fontSize = 11.sp) },
+            placeholder = { Text(if (type == DiscountType.PERCENT) stringResource(Res.string.voucher_discount_hint_percent) else stringResource(Res.string.voucher_discount_hint_value), color = Fv.TextMid, fontSize = 11.sp) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             suffix = { Text(if (type == DiscountType.PERCENT) "%" else "د.أ", color = Fv.TextMid, fontSize = 11.sp) },
@@ -822,7 +823,7 @@ private fun AddItemBottomSheet(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("العدد المطلوب", color = Color(0xFF5A7399), fontSize = 14.sp)
+                            Text(stringResource(Res.string.voucher_qty_required), color = Color(0xFF5A7399), fontSize = 14.sp)
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier.size(38.dp).background(Color.White, CircleShape).border(0.5.dp, Color(0xFFC8D8EC), CircleShape).clickable(enabled = qty > 1) { qty -= 1 },
@@ -865,14 +866,14 @@ private fun AddItemBottomSheet(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(selectedUnit.price.formatJod(AppLanguage.AR), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF185FA5))
-                            Text("· سعر الوحدة", fontSize = 13.sp, color = Color(0xFF5A7399))
+                            Text("· ${stringResource(Res.string.voucher_unit_price)}", fontSize = 13.sp, color = Color(0xFF5A7399))
                         }
 
                         // Line discount
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Row(modifier = Modifier.clip(RoundedCornerShape(10.dp)).border(0.5.dp, Color(0xFFC8D8EC), RoundedCornerShape(10.dp))) {
-                                    listOf(DiscountType.PERCENT to "%", DiscountType.VALUE to "قيمة").forEach { (t, label) ->
+                                    listOf(DiscountType.PERCENT to "%", DiscountType.VALUE to stringResource(Res.string.voucher_discount_type_value)).forEach { (t, label) ->
                                         val active = t == lineDiscountType
                                         Box(
                                             modifier = Modifier.clickable { if (!active) { lineDiscountType = t; discountText = "" } }.then(if (active) Modifier.background(blueGradient) else Modifier).padding(horizontal = 14.dp, vertical = 6.dp),
@@ -882,7 +883,7 @@ private fun AddItemBottomSheet(
                                         }
                                     }
                                 }
-                                Text("خصم السطر", color = Color(0xFF8A9AB0), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(stringResource(Res.string.voucher_line_discount), color = Color(0xFF8A9AB0), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                             OutlinedTextField(
                                 value = discountText,
@@ -904,7 +905,7 @@ private fun AddItemBottomSheet(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(lineTotal.formatJod(AppLanguage.AR), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            Text("إجمالي السعر", fontSize = 14.sp, color = Color.White.copy(alpha = 0.75f))
+                            Text(stringResource(Res.string.voucher_line_total), fontSize = 14.sp, color = Color.White.copy(alpha = 0.75f))
                         }
                     }
 
@@ -914,12 +915,12 @@ private fun AddItemBottomSheet(
                             Box(
                                 modifier = Modifier.height(52.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFFFF0F0)).border(0.5.dp, Color(0xFFF7C1C1), RoundedCornerShape(16.dp)).clickable { onDelete() }.padding(horizontal = 16.dp),
                                 contentAlignment = Alignment.Center,
-                            ) { Text("حذف", color = Color(0xFFE24B4A), fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }
+                            ) { Text(stringResource(Res.string.delete), color = Color(0xFFE24B4A), fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }
                         }
                         Box(
                             modifier = Modifier.weight(1f).height(52.dp).clip(RoundedCornerShape(16.dp)).border(0.5.dp, Color(0xFFC8D8EC), RoundedCornerShape(16.dp)).clickable { onDismiss() },
                             contentAlignment = Alignment.Center,
-                        ) { Text("إلغاء", color = Color(0xFF5A7399), fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }
+                        ) { Text(stringResource(Res.string.cancel), color = Color(0xFF5A7399), fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }
                         Box(
                             modifier = Modifier.weight(if (onDelete != null) 1.8f else 2f).height(52.dp).clip(RoundedCornerShape(16.dp))
                                 .then(if (qty > 0) Modifier.background(greenGradient) else Modifier.background(Fv.SurfaceTop))
@@ -936,7 +937,7 @@ private fun AddItemBottomSheet(
                                     modifier = Modifier.size(19.dp),
                                 )
                                 Text(
-                                    if (currentLine == null) "إضافة للسلة" else "تحديث السطر",
+                                    if (currentLine == null) stringResource(Res.string.voucher_add_to_cart) else stringResource(Res.string.voucher_update_line),
                                     color = if (qty > 0) Color.White else Fv.TextMid,
                                     fontSize = 15.sp, fontWeight = FontWeight.Bold,
                                 )
@@ -965,10 +966,10 @@ private fun PaymentMethodDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("طريقة الدفع", color = Fv.TextHigh) },
+        title = { Text(stringResource(Res.string.sale_payment_method), color = Fv.TextHigh) },
         text = {
             Column {
-                listOf(PaymentMethod.CASH to "نقداً", PaymentMethod.CREDIT to "ذمم").forEach { (method, label) ->
+                listOf(PaymentMethod.CASH to stringResource(Res.string.payment_method_cash), PaymentMethod.CREDIT to stringResource(Res.string.payment_method_credit)).forEach { (method, label) ->
                     val active = method == current
                     Box(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable { onSelect(method) }
@@ -979,8 +980,8 @@ private fun PaymentMethodDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("تأكيد", color = Fv.Green) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء", color = Fv.TextMid) } },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(Res.string.confirm), color = Fv.Green) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel), color = Fv.TextMid) } },
         containerColor = Fv.Surface,
     )
 }

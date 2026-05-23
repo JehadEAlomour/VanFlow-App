@@ -37,6 +37,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.presentation.feature.accountstatement.AccountStatementEvent
 import com.jehadalomour.flowvan.shared.presentation.feature.accountstatement.AccountStatementViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.accountstatement.StatementEntry
@@ -71,7 +72,7 @@ fun AccountStatementScreen(
                 }
                 Column {
                     Text(
-                        "كشف الحساب",
+                        stringResource(Res.string.statement_title),
                         color = Fv.TextHigh,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -104,17 +105,17 @@ fun AccountStatementScreen(
                         colors = CardDefaults.cardColors(containerColor = Fv.Surface),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text("ملخص الحساب", color = Fv.TextMid, fontSize = 11.sp)
+                            Text(stringResource(Res.string.statement_summary), color = Fv.TextMid, fontSize = 11.sp)
                             Spacer(Modifier.height(10.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 SummaryPill(
-                                    label = "إجمالي المديونية",
+                                    label = stringResource(Res.string.statement_debits),
                                     value = state.totalDebits.formatJod(AppLanguage.AR),
                                     accent = Fv.Red,
                                     modifier = Modifier.weight(1f),
                                 )
                                 SummaryPill(
-                                    label = "إجمالي السداد",
+                                    label = stringResource(Res.string.statement_credits),
                                     value = state.totalCredits.formatJod(AppLanguage.AR),
                                     accent = Fv.Green,
                                     modifier = Modifier.weight(1f),
@@ -128,7 +129,7 @@ fun AccountStatementScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
-                                Text("صافي الرصيد", color = Fv.TextMid, fontSize = 12.sp)
+                                Text(stringResource(Res.string.statement_net), color = Fv.TextMid, fontSize = 12.sp)
                                 Text(
                                     state.net.formatJod(AppLanguage.AR),
                                     color = if (state.net > 0) Fv.Red else Fv.Green,
@@ -149,7 +150,7 @@ fun AccountStatementScreen(
                 } else if (state.entries.isEmpty()) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text("لا توجد حركات في هذه الفترة", color = Fv.TextMid, fontSize = 13.sp)
+                            Text(stringResource(Res.string.statement_empty), color = Fv.TextMid, fontSize = 13.sp)
                         }
                     }
                 } else {
@@ -180,9 +181,9 @@ private fun StatementEntryRow(entry: StatementEntry, onClick: () -> Unit) {
     when (entry) {
         is StatementEntry.Invoice -> {
             val (typeLabel, typeColor) = when (entry.entity.type) {
-                "SALE" -> "بيع" to Fv.Red
-                "RETURN" -> "مرتجع" to Fv.Green
-                "REQUEST" -> "طلب" to Fv.Teal
+                "SALE" -> stringResource(Res.string.voucher_type_sale) to Fv.Red
+                "RETURN" -> stringResource(Res.string.voucher_type_return) to Fv.Green
+                "REQUEST" -> stringResource(Res.string.voucher_type_request) to Fv.Teal
                 else -> entry.entity.type to Fv.TextMid
             }
             StatementRow(
@@ -192,15 +193,15 @@ private fun StatementEntryRow(entry: StatementEntry, onClick: () -> Unit) {
                 date = entry.entity.createdAt.toDateTimeString(),
                 amount = entry.entity.total.formatJod(AppLanguage.AR),
                 amountColor = typeColor,
-                side = if (entry.entity.type == "RETURN") "دائن" else "مدين",
+                side = if (entry.entity.type == "RETURN") stringResource(Res.string.statement_credit_side) else stringResource(Res.string.statement_debit_side),
                 onClick = onClick,
             )
         }
         is StatementEntry.Payment -> {
             val methodLabel = when (entry.entity.method) {
-                "CASH" -> "نقداً"
-                "CHEQUE" -> "شيك"
-                "TRANSFER" -> "تحويل"
+                "CASH" -> stringResource(Res.string.method_cash_label)
+                "CHEQUE" -> stringResource(Res.string.method_cheque_label)
+                "TRANSFER" -> stringResource(Res.string.method_transfer_label)
                 else -> entry.entity.method
             }
             StatementRow(
@@ -210,7 +211,7 @@ private fun StatementEntryRow(entry: StatementEntry, onClick: () -> Unit) {
                 date = entry.entity.createdAt.toDateTimeString(),
                 amount = entry.entity.amount.formatJod(AppLanguage.AR),
                 amountColor = Fv.Green,
-                side = "دائن",
+                side = stringResource(Res.string.statement_credit_side),
                 onClick = onClick,
             )
         }

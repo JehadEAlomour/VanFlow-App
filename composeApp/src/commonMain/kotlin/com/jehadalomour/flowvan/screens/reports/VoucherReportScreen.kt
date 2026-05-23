@@ -36,6 +36,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.data.local.entity.InvoiceEntity
 import com.jehadalomour.flowvan.shared.presentation.feature.voucherreport.VoucherKindFilter
 import com.jehadalomour.flowvan.shared.presentation.feature.voucherreport.VoucherReportEvent
@@ -55,6 +56,16 @@ fun VoucherReportScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
+    val typeAllLabel = stringResource(Res.string.voucher_report_filter_type_all)
+    val typeSaleLabel = stringResource(Res.string.all_sales_filter_sales)
+    val typeReturnLabel = stringResource(Res.string.all_sales_filter_returns)
+    val typeRequestLabel = stringResource(Res.string.all_sales_filter_requests)
+    val kindAllLabel = stringResource(Res.string.voucher_report_filter_kind_all)
+    val kindCashLabel = stringResource(Res.string.voucher_payment_cash)
+    val kindChequeLabel = stringResource(Res.string.chip_cheque)
+    val kindTransferLabel = stringResource(Res.string.voucher_payment_transfer)
+    val kindCreditLabel = stringResource(Res.string.payment_method_credit)
+
     Surface(modifier = Modifier.fillMaxSize(), color = Fv.BgDeepest) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
@@ -69,7 +80,7 @@ fun VoucherReportScreen(
                         modifier = Modifier.size(22.dp),
                     )
                 }
-                Text("تقرير الفواتير", color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(Res.string.voucher_report_title), color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
             }
 
             LazyColumn(
@@ -93,10 +104,10 @@ fun VoucherReportScreen(
                         selected = state.typeFilter,
                         label = { filter ->
                             when (filter) {
-                                VoucherTypeFilter.ALL -> "الكل"
-                                VoucherTypeFilter.SALE -> "مبيعات"
-                                VoucherTypeFilter.RETURN -> "مرتجعات"
-                                VoucherTypeFilter.REQUEST -> "طلبات"
+                                VoucherTypeFilter.ALL -> typeAllLabel
+                                VoucherTypeFilter.SALE -> typeSaleLabel
+                                VoucherTypeFilter.RETURN -> typeReturnLabel
+                                VoucherTypeFilter.REQUEST -> typeRequestLabel
                             }
                         },
                         onSelect = { viewModel.onEvent(VoucherReportEvent.TypeFilterChanged(it)) },
@@ -109,11 +120,11 @@ fun VoucherReportScreen(
                         selected = state.kindFilter,
                         label = { filter ->
                             when (filter) {
-                                VoucherKindFilter.ALL -> "الكل"
-                                VoucherKindFilter.CASH -> "نقداً"
-                                VoucherKindFilter.CHEQUE -> "شيك"
-                                VoucherKindFilter.TRANSFER -> "تحويل"
-                                VoucherKindFilter.CREDIT -> "ذمم"
+                                VoucherKindFilter.ALL -> kindAllLabel
+                                VoucherKindFilter.CASH -> kindCashLabel
+                                VoucherKindFilter.CHEQUE -> kindChequeLabel
+                                VoucherKindFilter.TRANSFER -> kindTransferLabel
+                                VoucherKindFilter.CREDIT -> kindCreditLabel
                             }
                         },
                         onSelect = { viewModel.onEvent(VoucherReportEvent.KindFilterChanged(it)) },
@@ -136,7 +147,7 @@ fun VoucherReportScreen(
                         Box(
                             modifier = Modifier.fillMaxWidth().padding(32.dp),
                             contentAlignment = Alignment.Center,
-                        ) { Text("لا توجد فواتير في هذه الفترة", color = Fv.TextMid, fontSize = 13.sp) }
+                        ) { Text(stringResource(Res.string.voucher_report_empty), color = Fv.TextMid, fontSize = 13.sp) }
                     }
                 } else {
                     items(state.invoices, key = { it.id }) { invoice ->
@@ -160,13 +171,13 @@ private fun SummaryCard(count: Int, total: Double) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("عدد الفواتير", color = Fv.TextMid, fontSize = 10.sp)
-                Text("$count فاتورة", color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(Res.string.voucher_report_count), color = Fv.TextMid, fontSize = 10.sp)
+                Text(stringResource(Res.string.voucher_report_count_value, count), color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             }
             HorizontalDivider(modifier = Modifier.width(1.dp), color = Fv.SurfaceHigh)
             Spacer(Modifier.width(16.dp))
             Column(horizontalAlignment = Alignment.End) {
-                Text("الإجمالي", color = Fv.TextMid, fontSize = 10.sp)
+                Text(stringResource(Res.string.total), color = Fv.TextMid, fontSize = 10.sp)
                 Text(total.formatJod(AppLanguage.AR), color = Fv.Blue, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
@@ -176,17 +187,18 @@ private fun SummaryCard(count: Int, total: Double) {
 @Composable
 private fun VoucherRow(invoice: InvoiceEntity, onClick: () -> Unit) {
     val (typeLabel, typeColor) = when (invoice.type) {
-        "SALE" -> "بيع" to Fv.Green
-        "RETURN" -> "مرتجع" to Fv.Red
-        "REQUEST" -> "طلب" to Fv.Teal
+        "SALE" -> stringResource(Res.string.voucher_type_sale) to Fv.Green
+        "RETURN" -> stringResource(Res.string.voucher_type_return) to Fv.Red
+        "REQUEST" -> stringResource(Res.string.voucher_type_request) to Fv.Teal
         else -> invoice.type to Fv.TextMid
     }
+    val creditLabel = stringResource(Res.string.payment_method_credit)
     val kindLabel = when (invoice.paymentMethod) {
-        "CASH" -> "نقداً"
-        "CHEQUE" -> "شيك"
-        "TRANSFER" -> "تحويل"
-        "CREDIT" -> "ذمم"
-        else -> "ذمم"
+        "CASH" -> stringResource(Res.string.voucher_payment_cash)
+        "CHEQUE" -> stringResource(Res.string.chip_cheque)
+        "TRANSFER" -> stringResource(Res.string.voucher_payment_transfer)
+        "CREDIT" -> creditLabel
+        else -> creditLabel
     }
     val kindColor = when (invoice.paymentMethod) {
         "CASH" -> Fv.Green

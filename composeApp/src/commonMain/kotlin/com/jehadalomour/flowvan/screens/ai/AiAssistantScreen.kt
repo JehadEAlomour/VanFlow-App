@@ -43,6 +43,7 @@ import com.jehadalomour.flowvan.screens.components.fvFieldColors
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.domain.model.AiMessage
 import com.jehadalomour.flowvan.shared.presentation.feature.ai.AiAssistantEvent
 import com.jehadalomour.flowvan.shared.presentation.feature.ai.AiAssistantViewModel
@@ -94,9 +95,9 @@ fun AiAssistantScreen(
                 )
                 Spacer(Modifier.width(6.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("المساعد الذكي", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.ai_title), color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     Text(
-                        if (state.apiKeySet) "متصل بـ Claude AI" else "وضع تجريبي",
+                        if (state.apiKeySet) stringResource(Res.string.ai_connected_claude) else stringResource(Res.string.ai_demo_mode),
                         color = if (state.apiKeySet) Fv.Green else Fv.TextMid,
                         fontSize = 10.sp,
                     )
@@ -154,7 +155,7 @@ fun AiAssistantScreen(
                 OutlinedTextField(
                     value = state.inputText,
                     onValueChange = { viewModel.onEvent(AiAssistantEvent.InputChanged(it)) },
-                    placeholder = { Text("اكتب سؤالك...", color = Fv.TextMid, fontSize = 13.sp) },
+                    placeholder = { Text(stringResource(Res.string.ai_input_hint), color = Fv.TextMid, fontSize = 13.sp) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(20.dp),
                     colors = fvFieldColors(),
@@ -190,31 +191,31 @@ private fun ApiKeyDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Fv.Surface,
-        title = { Text("مفتاح Claude API", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) },
+        title = { Text(stringResource(Res.string.ai_api_key_title), color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.SemiBold) },
         text = {
             Column {
-                Text("أدخل مفتاح Anthropic API لتفعيل الذكاء الاصطناعي الحقيقي:", color = Fv.TextMid, fontSize = 13.sp)
+                Text(stringResource(Res.string.ai_api_key_dialog_message), color = Fv.TextMid, fontSize = 13.sp)
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = value,
                     onValueChange = onValueChange,
-                    placeholder = { Text("sk-ant-...", color = Fv.TextMid, fontSize = 12.sp) },
+                    placeholder = { Text(stringResource(Res.string.ai_api_key_hint), color = Fv.TextMid, fontSize = 12.sp) },
                     colors = fvFieldColors(),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
                 Spacer(Modifier.height(8.dp))
-                Text("المفتاح يُحفظ محلياً على الجهاز فقط.", color = Fv.TextMid, fontSize = 11.sp)
+                Text(stringResource(Res.string.ai_api_key_local_note), color = Fv.TextMid, fontSize = 11.sp)
             }
         },
         confirmButton = {
             TextButton(onClick = onSave) {
-                Text("حفظ", color = Fv.Blue, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(Res.string.save), color = Fv.Blue, fontWeight = FontWeight.SemiBold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("إلغاء", color = Fv.TextMid)
+                Text(stringResource(Res.string.cancel), color = Fv.TextMid)
             }
         },
     )

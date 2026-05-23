@@ -30,6 +30,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.shared.domain.model.User
 import com.jehadalomour.flowvan.shared.domain.usecase.GetCurrentUserUseCase
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
 @Composable
@@ -60,14 +63,14 @@ fun HomePlaceholderScreen(onLogout: () -> Unit) {
                 ) {
                     Spacer(Modifier.height(48.dp))
                     Text(
-                        text = "أهلاً، ${user?.nameAr ?: ""}",
+                        text = stringResource(Res.string.home_greeting_name, user?.nameAr ?: ""),
                         color = Color(0xFFEDF0FA),
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Welcome, ${user?.nameEn ?: ""}",
+                        text = stringResource(Res.string.home_welcome_name, user?.nameEn ?: ""),
                         color = Color(0xFF7B8BAA),
                         fontSize = 14.sp,
                     )
@@ -79,20 +82,20 @@ fun HomePlaceholderScreen(onLogout: () -> Unit) {
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
                             Text(
-                                text = "P1 — Foundation",
+                                text = stringResource(Res.string.placeholder_phase_title),
                                 color = Color(0xFF1DC97A),
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 16.sp,
                             )
                             Spacer(Modifier.height(8.dp))
                             Text(
-                                text = "تم تسجيل الدخول. مرحلة 2 (الواجهة الرئيسية، المسار، العملاء) قادمة.",
+                                text = stringResource(Res.string.placeholder_logged_in),
                                 color = Color(0xFFEDF0FA),
                                 fontSize = 13.sp,
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                text = "Phase 2 (Home dashboard, Route, Customer directory) coming next.",
+                                text = stringResource(Res.string.placeholder_phase2_next),
                                 color = Color(0xFF7B8BAA),
                                 fontSize = 12.sp,
                             )
@@ -108,7 +111,7 @@ fun HomePlaceholderScreen(onLogout: () -> Unit) {
                             contentColor = Color(0xFFEDF0FA),
                         ),
                     ) {
-                        Text("تسجيل الخروج / Logout")
+                        Text(stringResource(Res.string.placeholder_logout))
                     }
                 }
             }

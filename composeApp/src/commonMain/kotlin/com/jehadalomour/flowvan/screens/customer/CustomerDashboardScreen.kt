@@ -40,6 +40,7 @@ import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.domain.model.CustomerSegment
 import com.jehadalomour.flowvan.shared.domain.model.CustomerTier
 import com.jehadalomour.flowvan.shared.presentation.feature.customerdashboard.CustomerDashboardState
@@ -94,7 +95,7 @@ fun CustomerDashboardScreen(
                 }
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    "بطاقة العميل",
+                    stringResource(Res.string.customer_card_title),
                     color = Fv.TextHigh,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.ExtraBold,
@@ -204,19 +205,19 @@ private fun HeroCard(state: CustomerDashboardState) {
             // Frosted stat boxes
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FrostedStatBox(
-                    label = "الرصيد",
+                    label = stringResource(Res.string.balance_label),
                     value = c.balance.formatJod(AppLanguage.AR),
                     valueColor = if (c.balance < 0) Color(0xFFFF8080) else Color.White,
                     modifier = Modifier.weight(1f),
                 )
                 FrostedStatBox(
-                    label = "متأخر",
+                    label = stringResource(Res.string.receivables_overdue_label),
                     value = c.overdueAmount.formatJod(AppLanguage.AR),
                     valueColor = if (c.overdueAmount > 0) Color(0xFFFFB570) else Color.White,
                     modifier = Modifier.weight(1f),
                 )
                 FrostedStatBox(
-                    label = "السقف",
+                    label = stringResource(Res.string.customer_credit_ceiling),
                     value = c.creditLimit.formatJod(AppLanguage.AR),
                     valueColor = Color.White,
                     modifier = Modifier.weight(1f),
@@ -229,9 +230,9 @@ private fun HeroCard(state: CustomerDashboardState) {
 @Composable
 private fun HeroTierBadge(tier: CustomerTier) {
     val (label, colors) = when (tier) {
-        CustomerTier.A -> "فئة A" to listOf(Color(0xFF1D9E75), Color(0xFF0F6E56))
-        CustomerTier.B -> "فئة B" to listOf(Color(0xFFC97B1A), Color(0xFF9A5C10))
-        CustomerTier.C -> "فئة C" to listOf(Color(0xFF637181), Color(0xFF3E4D5C))
+        CustomerTier.A -> stringResource(Res.string.customer_tier_a) to listOf(Color(0xFF1D9E75), Color(0xFF0F6E56))
+        CustomerTier.B -> stringResource(Res.string.customer_tier_b) to listOf(Color(0xFFC97B1A), Color(0xFF9A5C10))
+        CustomerTier.C -> stringResource(Res.string.customer_tier_c) to listOf(Color(0xFF637181), Color(0xFF3E4D5C))
     }
     Box(
         modifier = Modifier
@@ -246,12 +247,12 @@ private fun HeroTierBadge(tier: CustomerTier) {
 @Composable
 private fun SegmentStatusTag(segment: CustomerSegment) {
     val (dotColor, label) = when (segment) {
-        CustomerSegment.CHAMPIONS -> Color(0xFFB5F5D5) to "عميل مميز"
-        CustomerSegment.LOYAL -> Color(0xFFAACAFF) to "مخلصون"
-        CustomerSegment.AT_RISK -> Color(0xFFFFAAAA) to "عرضة للفقدان"
-        CustomerSegment.PROMISING -> Color(0xFFFFD9A0) to "واعدون"
-        CustomerSegment.DORMANT -> Color(0xFFBBCCDD) to "نائم"
-        CustomerSegment.REGULAR -> Color(0xFFBBCCDD) to "عادي"
+        CustomerSegment.CHAMPIONS -> Color(0xFFB5F5D5) to stringResource(Res.string.customer_segment_champions)
+        CustomerSegment.LOYAL -> Color(0xFFAACAFF) to stringResource(Res.string.customer_segment_loyal)
+        CustomerSegment.AT_RISK -> Color(0xFFFFAAAA) to stringResource(Res.string.customer_segment_at_risk)
+        CustomerSegment.PROMISING -> Color(0xFFFFD9A0) to stringResource(Res.string.customer_segment_promising)
+        CustomerSegment.DORMANT -> Color(0xFFBBCCDD) to stringResource(Res.string.customer_segment_dormant)
+        CustomerSegment.REGULAR -> Color(0xFFBBCCDD) to stringResource(Res.string.customer_segment_regular)
     }
     Row(
         modifier = Modifier
@@ -324,7 +325,7 @@ private fun AccountSummaryCard(state: CustomerDashboardState) {
                         modifier = Modifier.size(17.dp),
                     )
                 }
-                Text("ملخص الحساب", color = Fv.TextHigh, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
+                Text(stringResource(Res.string.customer_account_summary), color = Fv.TextHigh, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
             }
             Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(Fv.Border))
             Column(
@@ -333,25 +334,25 @@ private fun AccountSummaryCard(state: CustomerDashboardState) {
             ) {
                 SummaryIconRow(
                     iconRes = Res.drawable.ic_receipt,
-                    label = "عدد الفواتير",
+                    label = stringResource(Res.string.voucher_report_count),
                     value = "${state.sales.size + state.returns.size + state.requests.size}",
                     accent = Fv.Blue,
                 )
                 SummaryIconRow(
                     iconRes = Res.drawable.ic_cart,
-                    label = "إجمالي المبيعات",
+                    label = stringResource(Res.string.all_sales_total_sales),
                     value = state.salesTotal.formatJod(AppLanguage.AR),
                     accent = Fv.Green,
                 )
                 SummaryIconRow(
                     iconRes = Res.drawable.ic_return_arrow,
-                    label = "إجمالي المرتجعات",
+                    label = stringResource(Res.string.all_sales_total_returns),
                     value = state.returnsTotal.formatJod(AppLanguage.AR),
                     accent = Fv.Red,
                 )
                 SummaryIconRow(
                     iconRes = Res.drawable.ic_payment,
-                    label = "إجمالي التحصيلات",
+                    label = stringResource(Res.string.all_payments_total),
                     value = state.collectionsTotal.formatJod(AppLanguage.AR),
                     accent = Fv.Teal,
                 )
@@ -381,7 +382,7 @@ private fun AccountSummaryCard(state: CustomerDashboardState) {
                     }
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        "الرصيد الحالي",
+                        stringResource(Res.string.customer_current_balance),
                         color = Fv.TextHigh,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
@@ -434,7 +435,7 @@ private fun ReportCardsGrid(
         ReportCard(
             iconRes = Res.drawable.ic_receipt,
             iconGradient = Brush.linearGradient(listOf(Color(0xFF2C6FE4), Color(0xFF185FA5))),
-            label = "تقرير الفواتير",
+            label = stringResource(Res.string.customer_report_vouchers),
             value = state.salesTotal.formatJod(AppLanguage.AR),
             accent = Fv.Blue,
             modifier = Modifier.weight(1f),
@@ -443,7 +444,7 @@ private fun ReportCardsGrid(
         ReportCard(
             iconRes = Res.drawable.ic_payment,
             iconGradient = Brush.linearGradient(listOf(Color(0xFF0FA968), Color(0xFF0A7A4B))),
-            label = "تقرير المدفوعات",
+            label = stringResource(Res.string.customer_payments_report),
             value = state.collectionsTotal.formatJod(AppLanguage.AR),
             accent = Fv.Green,
             modifier = Modifier.weight(1f),
@@ -496,7 +497,7 @@ private fun ReportCard(
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(6.dp))
-            Text("عرض التقرير ←", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(Res.string.customer_view_report), color = accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -532,8 +533,8 @@ private fun StatementCard(onOpenAccountStatement: () -> Unit) {
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("كشف الحساب", color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                Text("جميع الحركات والمديونية", color = Fv.TextMid, fontSize = 11.sp)
+                Text(stringResource(Res.string.statement_title), color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                Text(stringResource(Res.string.customer_statement_subtitle), color = Fv.TextMid, fontSize = 11.sp)
             }
             Box(
                 modifier = Modifier
@@ -541,7 +542,7 @@ private fun StatementCard(onOpenAccountStatement: () -> Unit) {
                     .background(Fv.Purple.copy(alpha = 0.1f))
                     .padding(horizontal = 12.dp, vertical = 5.dp),
             ) {
-                Text("تصفية", color = Fv.Purple, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(Res.string.filter), color = Fv.Purple, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -561,7 +562,7 @@ private fun BottomActionBar(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
             Text(
-                "إجراءات سريعة",
+                stringResource(Res.string.customer_quick_actions),
                 color = Fv.TextMid,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -571,7 +572,7 @@ private fun BottomActionBar(
                 ActionTile(
                     iconRes = Res.drawable.ic_cart,
                     iconGradient = Brush.linearGradient(listOf(Color(0xFF0FA968), Color(0xFF0A7A4B))),
-                    label = "بيع",
+                    label = stringResource(Res.string.customer_action_sale),
                     labelColor = Fv.Green,
                     modifier = Modifier.weight(1f),
                     onClick = onSale,
@@ -579,7 +580,7 @@ private fun BottomActionBar(
                 ActionTile(
                     iconRes = Res.drawable.ic_return_arrow,
                     iconGradient = Brush.linearGradient(listOf(Color(0xFFD63B3B), Color(0xFF992828))),
-                    label = "مرتجع",
+                    label = stringResource(Res.string.customer_action_return),
                     labelColor = Fv.Red,
                     modifier = Modifier.weight(1f),
                     onClick = onReturn,
@@ -587,7 +588,7 @@ private fun BottomActionBar(
                 ActionTile(
                     iconRes = Res.drawable.ic_receipt,
                     iconGradient = Brush.linearGradient(listOf(Color(0xFF0E9E91), Color(0xFF0A6E66))),
-                    label = "طلب",
+                    label = stringResource(Res.string.customer_action_request),
                     labelColor = Fv.Teal,
                     modifier = Modifier.weight(1f),
                     onClick = onRequest,
@@ -595,7 +596,7 @@ private fun BottomActionBar(
                 ActionTile(
                     iconRes = Res.drawable.ic_payment,
                     iconGradient = Brush.linearGradient(listOf(Color(0xFFB36C00), Color(0xFF7A4A00))),
-                    label = "تحصيل",
+                    label = stringResource(Res.string.customer_action_collection),
                     labelColor = Fv.Amber,
                     modifier = Modifier.weight(1f),
                     onClick = onCollection,

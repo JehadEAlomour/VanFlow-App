@@ -35,6 +35,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ReportsHubScreen(
@@ -63,15 +64,15 @@ fun ReportsHubScreen(
                         )
                     }
                     Spacer(Modifier.width(4.dp))
-                    Text("التقارير", color = Fv.TextHigh, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.reports_title), color = Fv.TextHigh, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
             item {
                 ReportCard(
                     icon = painterResource(Res.drawable.ic_receipt),
-                    title = "تقرير المبيعات",
-                    subtitle = "فواتير البيع والمرتجعات حسب التاريخ",
+                    title = stringResource(Res.string.reports_sales_title),
+                    subtitle = stringResource(Res.string.reports_sales_subtitle),
                     accent = Fv.Blue,
                     onClick = onOpenSalesReport,
                 )
@@ -79,8 +80,8 @@ fun ReportsHubScreen(
             item {
                 ReportCard(
                     icon = painterResource(Res.drawable.ic_payment),
-                    title = "تقرير التحصيلات",
-                    subtitle = "المدفوعات المستلمة حسب التاريخ والطريقة",
+                    title = stringResource(Res.string.reports_payments_title),
+                    subtitle = stringResource(Res.string.reports_payments_subtitle),
                     accent = Fv.Green,
                     onClick = onOpenPaymentsReport,
                 )
@@ -88,8 +89,8 @@ fun ReportsHubScreen(
             item {
                 ReportCard(
                     icon = painterResource(Res.drawable.ic_map),
-                    title = "تقرير الزيارات",
-                    subtitle = "العملاء المزارين والمتبقين في المسار",
+                    title = stringResource(Res.string.reports_visits_title),
+                    subtitle = stringResource(Res.string.reports_visits_subtitle),
                     accent = Fv.Teal,
                     onClick = onOpenVisitReport,
                 )
@@ -97,8 +98,8 @@ fun ReportsHubScreen(
             item {
                 ReportCard(
                     icon = painterResource(Res.drawable.ic_bar_chart),
-                    title = "الكشف اليومي",
-                    subtitle = "ملخص كامل للمبيعات والتحصيلات والمرتجعات",
+                    title = stringResource(Res.string.reports_cash_flow_title),
+                    subtitle = stringResource(Res.string.reports_cash_flow_subtitle),
                     accent = Fv.Amber,
                     onClick = onOpenCashFlow,
                 )
@@ -106,8 +107,8 @@ fun ReportsHubScreen(
             item {
                 ReportCard(
                     icon = painterResource(Res.drawable.ic_inventory),
-                    title = "مبيعات الأصناف",
-                    subtitle = "إجمالي مبيعات كل صنف من تاريخ إلى تاريخ",
+                    title = stringResource(Res.string.reports_items_title),
+                    subtitle = stringResource(Res.string.reports_items_subtitle),
                     accent = Fv.Purple,
                     onClick = onOpenItemsSales,
                 )
@@ -115,8 +116,8 @@ fun ReportsHubScreen(
             item {
                 ReportCard(
                     icon = painterResource(Res.drawable.ic_warning),
-                    title = "تقرير ذمم العملاء",
-                    subtitle = "العملاء الذين لديهم أرصدة مستحقة مرتبة تنازلياً",
+                    title = stringResource(Res.string.reports_receivables_title),
+                    subtitle = stringResource(Res.string.reports_receivables_subtitle),
                     accent = Fv.Red,
                     onClick = onOpenReceivables,
                 )

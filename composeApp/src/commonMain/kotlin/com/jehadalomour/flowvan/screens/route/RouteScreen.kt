@@ -42,6 +42,7 @@ import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.domain.model.Customer
 import com.jehadalomour.flowvan.shared.domain.model.CustomerSegment
 import com.jehadalomour.flowvan.shared.domain.model.CustomerTier
@@ -93,7 +94,7 @@ fun RouteScreen(
                         )
                     }
                     Text(
-                        "مسار اليوم",
+                        stringResource(Res.string.route_title),
                         color = Fv.TextHigh,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.ExtraBold,
@@ -122,7 +123,7 @@ fun RouteScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            "الكل",
+                            stringResource(Res.string.all),
                             color = Fv.TextHigh,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.ExtraBold,
@@ -147,7 +148,7 @@ fun RouteScreen(
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = { viewModel.onEvent(RouteEvent.SearchChanged(it)) },
-                placeholder = { Text("ابحث بالاسم أو الكود أو المنطقة…", color = Fv.TextMid, fontSize = 13.sp) },
+                placeholder = { Text(stringResource(Res.string.route_search_hint), color = Fv.TextMid, fontSize = 13.sp) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
@@ -183,7 +184,7 @@ fun RouteScreen(
             if (visible.isEmpty() && !state.isLoading) {
                 item {
                     Text(
-                        text = if (state.searchQuery.isBlank()) "لا يوجد عملاء في المسار" else "لا نتائج",
+                        text = if (state.searchQuery.isBlank()) stringResource(Res.string.route_empty) else stringResource(Res.string.route_no_results),
                         color = Fv.TextMid,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(24.dp),
@@ -232,9 +233,9 @@ private fun ProgressSection(visited: Int, planned: Int) {
                     tint = Fv.Green,
                     modifier = Modifier.size(13.dp),
                 )
-                Text("تمت $visited زيارات", color = Fv.Green, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(Res.string.route_visited_count, visited), color = Fv.Green, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
-            Text("$remaining متبقية", color = Fv.TextLow, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Text(stringResource(Res.string.route_remaining_count, remaining), color = Fv.TextLow, fontSize = 12.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -354,7 +355,7 @@ private fun RouteCustomerCard(customer: Customer, onClick: () -> Unit, onNavigat
                                 bg = Fv.Red.copy(alpha = 0.12f),
                                 fg = Fv.Red,
                                 icon = Res.drawable.ic_warning,
-                                label = "متأخر ${customer.overdueAmount.formatJod(AppLanguage.AR)}",
+                                label = stringResource(Res.string.route_overdue_amount, customer.overdueAmount.formatJod(AppLanguage.AR)),
                             )
                         }
                         if (customer.churnRisk >= 0.60) {
@@ -362,7 +363,7 @@ private fun RouteCustomerCard(customer: Customer, onClick: () -> Unit, onNavigat
                                 bg = Fv.Amber.copy(alpha = 0.14f),
                                 fg = Fv.Amber,
                                 icon = Res.drawable.ic_alarm,
-                                label = "خطر تسرب ${(customer.churnRisk * 100).toInt()}%",
+                                label = stringResource(Res.string.route_churn_pct, (customer.churnRisk * 100).toInt()),
                             )
                         }
                         if (customer.segment == CustomerSegment.CHAMPIONS) {
@@ -370,7 +371,7 @@ private fun RouteCustomerCard(customer: Customer, onClick: () -> Unit, onNavigat
                                 bg = Fv.Purple.copy(alpha = 0.12f),
                                 fg = Fv.Purple,
                                 icon = Res.drawable.ic_ai_sparkle,
-                                label = "عميل مميز",
+                                label = stringResource(Res.string.route_champion),
                             )
                         }
                     }
@@ -385,9 +386,9 @@ private fun RouteCustomerCard(customer: Customer, onClick: () -> Unit, onNavigat
 @Composable
 private fun RouteTierBadge(tier: CustomerTier) {
     val (label, colors) = when (tier) {
-        CustomerTier.A -> "فئة A" to listOf(Color(0xFF1D9E75), Color(0xFF0F6E56))
-        CustomerTier.B -> "فئة B" to listOf(Color(0xFFC97B1A), Color(0xFF9A5C10))
-        CustomerTier.C -> "فئة C" to listOf(Color(0xFF637181), Color(0xFF3E4D5C))
+        CustomerTier.A -> stringResource(Res.string.route_tier_a) to listOf(Color(0xFF1D9E75), Color(0xFF0F6E56))
+        CustomerTier.B -> stringResource(Res.string.route_tier_b) to listOf(Color(0xFFC97B1A), Color(0xFF9A5C10))
+        CustomerTier.C -> stringResource(Res.string.route_tier_c) to listOf(Color(0xFF637181), Color(0xFF3E4D5C))
     }
     Box(
         modifier = Modifier

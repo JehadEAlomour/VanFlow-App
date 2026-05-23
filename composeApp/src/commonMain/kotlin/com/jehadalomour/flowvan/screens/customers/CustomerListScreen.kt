@@ -43,6 +43,7 @@ import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.domain.model.Customer
 import com.jehadalomour.flowvan.shared.domain.model.CustomerSegment
 import com.jehadalomour.flowvan.shared.domain.model.CustomerTier
@@ -91,7 +92,7 @@ fun CustomerListScreen(
                 }
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    "قائمة العملاء",
+                    stringResource(Res.string.customers_list_title),
                     color = Fv.TextHigh,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.ExtraBold,
@@ -124,7 +125,7 @@ fun CustomerListScreen(
                 OutlinedTextField(
                     value = state.searchQuery,
                     onValueChange = { viewModel.onEvent(CustomerListEvent.SearchChanged(it)) },
-                    placeholder = { Text("ابحث بالاسم أو الكود أو المنطقة…", color = Fv.TextMid, fontSize = 13.sp) },
+                    placeholder = { Text(stringResource(Res.string.customers_search_name_code_area_hint), color = Fv.TextMid, fontSize = 13.sp) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
@@ -148,11 +149,11 @@ fun CustomerListScreen(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    TierPill("الكل", state.tierFilter == null) {
+                    TierPill(stringResource(Res.string.chip_all), state.tierFilter == null) {
                         viewModel.onEvent(CustomerListEvent.TierFilter(null))
                     }
                     CustomerTier.entries.forEach { tier ->
-                        TierPill("فئة ${tier.name}", state.tierFilter == tier) {
+                        TierPill(stringResource(Res.string.customers_tier_prefix, tier.name), state.tierFilter == tier) {
                             viewModel.onEvent(CustomerListEvent.TierFilter(if (state.tierFilter == tier) null else tier))
                         }
                     }
@@ -166,7 +167,7 @@ fun CustomerListScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     SegmentPill(
-                        label = "الكل",
+                        label = stringResource(Res.string.chip_all),
                         active = state.segmentFilter == null,
                         activeBg = Fv.SurfaceTop,
                         activeFg = Fv.TextHigh,
@@ -183,12 +184,12 @@ fun CustomerListScreen(
                             CustomerSegment.REGULAR   -> Fv.SurfaceTop                 to Fv.TextMid
                         }
                         val label = when (seg) {
-                            CustomerSegment.CHAMPIONS -> "عميل مميز"
-                            CustomerSegment.LOYAL     -> "مخلصون"
-                            CustomerSegment.AT_RISK   -> "عرضة للفقدان"
-                            CustomerSegment.PROMISING -> "واعدون"
-                            CustomerSegment.DORMANT   -> "نائم"
-                            CustomerSegment.REGULAR   -> "عادي"
+                            CustomerSegment.CHAMPIONS -> stringResource(Res.string.customers_segment_champions)
+                            CustomerSegment.LOYAL     -> stringResource(Res.string.customers_segment_loyal)
+                            CustomerSegment.AT_RISK   -> stringResource(Res.string.customers_segment_at_risk)
+                            CustomerSegment.PROMISING -> stringResource(Res.string.customers_segment_promising)
+                            CustomerSegment.DORMANT   -> stringResource(Res.string.customers_segment_dormant)
+                            CustomerSegment.REGULAR   -> stringResource(Res.string.customers_segment_regular)
                         }
                         SegmentPill(
                             label = label,
@@ -220,7 +221,7 @@ fun CustomerListScreen(
             if (state.visible.isEmpty() && !state.isLoading) {
                 item {
                     Text(
-                        "لا توجد نتائج",
+                        stringResource(Res.string.customers_no_results),
                         color = Fv.TextMid,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(24.dp),
@@ -355,7 +356,7 @@ private fun CustomerCard(customer: Customer, onClick: () -> Unit, onNavigate: ((
                             bg = Fv.SurfaceTop,
                             fg = Fv.TextMid,
                             icon = painterResource(Res.drawable.ic_map),
-                            label = "خارج المسار",
+                            label = stringResource(Res.string.customers_off_route),
                         )
                     }
                     Spacer(Modifier.weight(1f))
@@ -364,7 +365,7 @@ private fun CustomerCard(customer: Customer, onClick: () -> Unit, onNavigate: ((
                             bg = Fv.Red.copy(alpha = 0.12f),
                             fg = Fv.Red,
                             icon = painterResource(Res.drawable.ic_warning),
-                            label = "متأخر ${customer.overdueAmount.formatJod(AppLanguage.AR)} د.أ",
+                            label = stringResource(Res.string.customers_overdue_amount, customer.overdueAmount.formatJod(AppLanguage.AR)),
                         )
                     }
                 }
@@ -407,9 +408,9 @@ private fun TierGradientBadge(tier: CustomerTier) {
         CustomerTier.C -> Brush.linearGradient(listOf(Color(0xFF637181), Color(0xFF3E4D5C)))
     }
     val label = when (tier) {
-        CustomerTier.A -> "فئة A"
-        CustomerTier.B -> "فئة B"
-        CustomerTier.C -> "فئة C"
+        CustomerTier.A -> stringResource(Res.string.customers_tier_prefix, "A")
+        CustomerTier.B -> stringResource(Res.string.customers_tier_prefix, "B")
+        CustomerTier.C -> stringResource(Res.string.customers_tier_prefix, "C")
     }
     Box(
         modifier = Modifier
@@ -464,27 +465,27 @@ private fun SegmentTag(segment: CustomerSegment) {
     val (bg, fg, icon, label) = when (segment) {
         CustomerSegment.CHAMPIONS -> Quad(
             Fv.Purple.copy(alpha = 0.14f), Fv.Purple,
-            Res.drawable.ic_ai_sparkle, "عميل مميز",
+            Res.drawable.ic_ai_sparkle, stringResource(Res.string.customers_segment_champions),
         )
         CustomerSegment.LOYAL -> Quad(
             Fv.Blue.copy(alpha = 0.12f), Fv.Blue,
-            Res.drawable.ic_check_circle, "مخلصون",
+            Res.drawable.ic_check_circle, stringResource(Res.string.customers_segment_loyal),
         )
         CustomerSegment.AT_RISK -> Quad(
             Fv.Red.copy(alpha = 0.12f), Fv.Red,
-            Res.drawable.ic_warning, "عرضة للفقدان",
+            Res.drawable.ic_warning, stringResource(Res.string.customers_segment_at_risk),
         )
         CustomerSegment.PROMISING -> Quad(
             Fv.Amber.copy(alpha = 0.14f), Fv.Amber,
-            Res.drawable.ic_alarm, "واعدون",
+            Res.drawable.ic_alarm, stringResource(Res.string.customers_segment_promising),
         )
         CustomerSegment.DORMANT -> Quad(
             Fv.SurfaceTop, Fv.TextMid,
-            Res.drawable.ic_radio_button_off, "نائم",
+            Res.drawable.ic_radio_button_off, stringResource(Res.string.customers_segment_dormant),
         )
         CustomerSegment.REGULAR -> Quad(
             Fv.SurfaceTop, Fv.TextMid,
-            Res.drawable.ic_check, "عادي",
+            Res.drawable.ic_check, stringResource(Res.string.customers_segment_regular),
         )
     }
     FooterTag(bg = bg, fg = fg, icon = painterResource(icon), label = label)

@@ -37,6 +37,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.data.local.entity.InvoiceEntity
 import com.jehadalomour.flowvan.shared.domain.model.InvoiceLine
 import com.jehadalomour.flowvan.shared.presentation.feature.voucherdetail.VoucherDetailViewModel
@@ -70,10 +71,10 @@ fun VoucherDetailScreen(
                 }
                 Text(
                     when (entity?.type) {
-                        "SALE" -> "فاتورة مبيعات"
-                        "RETURN" -> "فاتورة مرتجع"
-                        "REQUEST" -> "طلب توريد"
-                        else -> "سند"
+                        "SALE" -> stringResource(Res.string.voucher_detail_title_sale)
+                        "RETURN" -> stringResource(Res.string.voucher_detail_title_return)
+                        "REQUEST" -> stringResource(Res.string.voucher_detail_title_request)
+                        else -> stringResource(Res.string.voucher_detail_title_generic)
                     },
                     color = Fv.TextHigh,
                     fontSize = 17.sp,
@@ -86,7 +87,7 @@ fun VoucherDetailScreen(
                     CircularProgressIndicator(color = Fv.Blue)
                 }
                 entity == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("لم يتم العثور على السند", color = Fv.TextMid)
+                    Text(stringResource(Res.string.voucher_detail_not_found), color = Fv.TextMid)
                 }
                 else -> VoucherContent(entity, state.lines)
             }
@@ -97,16 +98,16 @@ fun VoucherDetailScreen(
 @Composable
 private fun VoucherContent(entity: InvoiceEntity, lines: List<InvoiceLine>) {
     val (typeLabel, typeColor) = when (entity.type) {
-        "SALE" -> "بيع" to Fv.Green
-        "RETURN" -> "مرتجع" to Fv.Red
-        "REQUEST" -> "طلب" to Fv.Teal
+        "SALE" -> stringResource(Res.string.voucher_type_sale) to Fv.Green
+        "RETURN" -> stringResource(Res.string.voucher_type_return) to Fv.Red
+        "REQUEST" -> stringResource(Res.string.voucher_type_request) to Fv.Teal
         else -> entity.type to Fv.TextMid
     }
     val (statusLabel, statusColor) = when (entity.status) {
-        "CONFIRMED" -> "مؤكدة" to Fv.Green
-        "CANCELLED" -> "ملغاة" to Fv.Red
-        "FULFILLED" -> "منفذة" to Fv.Blue
-        else -> "مسودة" to Fv.Amber
+        "CONFIRMED" -> stringResource(Res.string.voucher_status_confirmed) to Fv.Green
+        "CANCELLED" -> stringResource(Res.string.voucher_status_cancelled) to Fv.Red
+        "FULFILLED" -> stringResource(Res.string.voucher_status_fulfilled) to Fv.Blue
+        else -> stringResource(Res.string.voucher_status_draft) to Fv.Amber
     }
 
     LazyColumn(
@@ -129,16 +130,16 @@ private fun VoucherContent(entity: InvoiceEntity, lines: List<InvoiceLine>) {
                         Text(entity.number, color = Fv.TextHigh, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     }
                     HorizontalDivider(color = Fv.SurfaceHigh)
-                    LabelValueRow("التاريخ", entity.createdAt.toDateTimeString())
-                    entity.paymentMethod?.let { LabelValueRow("طريقة الدفع", paymentMethodLabel(it)) }
-                    entity.notes?.takeIf { it.isNotBlank() }?.let { LabelValueRow("ملاحظات", it) }
+                    LabelValueRow(stringResource(Res.string.voucher_detail_date), entity.createdAt.toDateTimeString())
+                    entity.paymentMethod?.let { LabelValueRow(stringResource(Res.string.sale_payment_method), paymentMethodLabel(it)) }
+                    entity.notes?.takeIf { it.isNotBlank() }?.let { LabelValueRow(stringResource(Res.string.collection_notes), it) }
                 }
             }
         }
 
         if (lines.isNotEmpty()) {
             item {
-                Text("البنود", color = Fv.TextMid, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(Res.string.voucher_detail_items), color = Fv.TextMid, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
             items(lines) { line -> LineRow(line) }
         }
@@ -150,15 +151,15 @@ private fun VoucherContent(entity: InvoiceEntity, lines: List<InvoiceLine>) {
                 colors = CardDefaults.cardColors(containerColor = Fv.Surface),
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("الإجماليات", color = Fv.TextMid, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.voucher_detail_totals), color = Fv.TextMid, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     HorizontalDivider(color = Fv.SurfaceHigh)
-                    TotalRow("المجموع الفرعي", entity.subtotal.formatJod(AppLanguage.AR))
+                    TotalRow(stringResource(Res.string.voucher_detail_subtotal), entity.subtotal.formatJod(AppLanguage.AR))
                     if (entity.discountAmount > 0)
-                        TotalRow("الخصم", "-${entity.discountAmount.formatJod(AppLanguage.AR)}", Fv.Red)
+                        TotalRow(stringResource(Res.string.voucher_detail_discount), "-${entity.discountAmount.formatJod(AppLanguage.AR)}", Fv.Red)
                     if (entity.taxAmount > 0)
-                        TotalRow("الضريبة", entity.taxAmount.formatJod(AppLanguage.AR))
+                        TotalRow(stringResource(Res.string.voucher_detail_tax), entity.taxAmount.formatJod(AppLanguage.AR))
                     HorizontalDivider(color = Fv.SurfaceHigh)
-                    TotalRow("الإجمالي", entity.total.formatJod(AppLanguage.AR), Fv.TextHigh, isBold = true)
+                    TotalRow(stringResource(Res.string.voucher_detail_total), entity.total.formatJod(AppLanguage.AR), Fv.TextHigh, isBold = true)
                 }
             }
         }
@@ -182,9 +183,9 @@ private fun LineRow(line: InvoiceLine) {
             }
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                SmallStat("الكمية", if (line.qty == line.qty.toLong().toDouble()) line.qty.toLong().toString() else "%.2f".format(line.qty))
-                SmallStat("سعر الوحدة", line.unitPrice.formatJod(AppLanguage.AR))
-                if (line.discountPct > 0) SmallStat("خصم", "%.0f%%".format(line.discountPct))
+                SmallStat(stringResource(Res.string.van_stock_qty), if (line.qty == line.qty.toLong().toDouble()) line.qty.toLong().toString() else "%.2f".format(line.qty))
+                SmallStat(stringResource(Res.string.voucher_detail_unit_price), line.unitPrice.formatJod(AppLanguage.AR))
+                if (line.discountPct > 0) SmallStat(stringResource(Res.string.voucher_detail_discount_short), "%.0f%%".format(line.discountPct))
             }
         }
     }
@@ -221,10 +222,11 @@ internal fun ColorBadge(label: String, color: Color, alpha: Float = 0.18f) {
     ) { Text(label, color = color, fontSize = 11.sp, fontWeight = FontWeight.SemiBold) }
 }
 
+@Composable
 private fun paymentMethodLabel(method: String) = when (method) {
-    "CASH" -> "نقداً"
-    "CHEQUE" -> "شيك"
-    "TRANSFER" -> "تحويل"
-    "CREDIT" -> "ذمم"
+    "CASH" -> stringResource(Res.string.voucher_payment_cash)
+    "CHEQUE" -> stringResource(Res.string.chip_cheque)
+    "TRANSFER" -> stringResource(Res.string.voucher_payment_transfer)
+    "CREDIT" -> stringResource(Res.string.payment_method_credit)
     else -> method
 }

@@ -35,6 +35,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.ItemSalesRow
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.ItemsSalesReportViewModel
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
@@ -66,7 +67,7 @@ fun ItemsSalesReportScreen(
                         )
                     }
                     Spacer(Modifier.width(4.dp))
-                    Text("مبيعات الأصناف", color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.items_sales_title), color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
             }
             item {
@@ -77,14 +78,14 @@ fun ItemsSalesReportScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SummaryPill(
-                        "إجمالي المبيعات",
+                        stringResource(Res.string.all_sales_total_sales),
                         state.grandTotalAmount.formatJod(AppLanguage.AR),
                         Fv.Blue,
                         Modifier.weight(1f),
                     )
                     SummaryPill(
-                        "إجمالي الكمية",
-                        "${state.grandTotalQty.roundToInt()} وحدة",
+                        stringResource(Res.string.items_sales_total_qty),
+                        stringResource(Res.string.items_sales_unit_count, state.grandTotalQty.roundToInt()),
                         Fv.Purple,
                         Modifier.weight(1f),
                     )
@@ -92,7 +93,7 @@ fun ItemsSalesReportScreen(
             }
             if (state.items.isEmpty()) {
                 item {
-                    Text("لا توجد مبيعات في هذه الفترة", color = Fv.TextMid, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp))
+                    Text(stringResource(Res.string.items_sales_empty), color = Fv.TextMid, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp))
                 }
             } else {
                 item {
@@ -101,9 +102,9 @@ fun ItemsSalesReportScreen(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
                     ) {
                         Text("#", color = Fv.TextMid, fontSize = 11.sp, modifier = Modifier.width(28.dp))
-                        Text("الصنف", color = Fv.TextMid, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                        Text("الكمية", color = Fv.TextMid, fontSize = 11.sp, modifier = Modifier.width(50.dp))
-                        Text("الإجمالي", color = Fv.TextMid, fontSize = 11.sp, modifier = Modifier.width(80.dp))
+                        Text(stringResource(Res.string.items_sales_col_item), color = Fv.TextMid, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                        Text(stringResource(Res.string.van_stock_qty), color = Fv.TextMid, fontSize = 11.sp, modifier = Modifier.width(50.dp))
+                        Text(stringResource(Res.string.total), color = Fv.TextMid, fontSize = 11.sp, modifier = Modifier.width(80.dp))
                     }
                 }
                 itemsIndexed(state.items, key = { _, item -> item.productId }) { index, item ->

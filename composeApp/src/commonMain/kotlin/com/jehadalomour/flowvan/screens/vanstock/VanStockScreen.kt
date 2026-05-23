@@ -49,6 +49,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.domain.model.Product
 import com.jehadalomour.flowvan.shared.presentation.feature.vanstock.StockStatus
 import com.jehadalomour.flowvan.shared.presentation.feature.vanstock.VanStockEvent
@@ -98,7 +99,7 @@ fun VanStockScreen(
                 }
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    "مخزون الفان",
+                    stringResource(Res.string.van_stock_title),
                     color = Fv.TextHigh,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.ExtraBold,
@@ -121,7 +122,7 @@ fun VanStockScreen(
                             tint = Color.White,
                             modifier = Modifier.size(16.dp),
                         )
-                        Text("طباعة", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(Res.string.van_stock_print), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -147,7 +148,7 @@ fun VanStockScreen(
                 OutlinedTextField(
                     value = state.searchQuery,
                     onValueChange = { viewModel.onEvent(VanStockEvent.SearchChanged(it)) },
-                    placeholder = { Text("ابحث (اسم، SKU، فئة…)", color = Fv.TextMid, fontSize = 13.sp) },
+                    placeholder = { Text(stringResource(Res.string.van_stock_search_full_hint), color = Fv.TextMid, fontSize = 13.sp) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
@@ -172,7 +173,7 @@ fun VanStockScreen(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        CategoryPill("الكل", state.selectedCategory == null) {
+                        CategoryPill(stringResource(Res.string.all), state.selectedCategory == null) {
                             viewModel.onEvent(VanStockEvent.CategorySelected(null))
                         }
                         state.categories.forEach { cat ->
@@ -194,7 +195,7 @@ fun VanStockScreen(
             if (state.visibleProducts.isEmpty() && !state.isLoading) {
                 item {
                     Text(
-                        "لا توجد نتائج",
+                        stringResource(Res.string.van_stock_no_results),
                         color = Fv.TextMid,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(24.dp),
@@ -237,17 +238,17 @@ private fun StatsHero(totalItems: Int, totalValue: Double, lowStockCount: Int) {
             modifier = Modifier.fillMaxWidth().padding(vertical = 18.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            ShStatColumn(value = "$totalItems", label = "الأصناف", valueColor = Color.White)
+            ShStatColumn(value = "$totalItems", label = stringResource(Res.string.van_stock_stat_items), valueColor = Color.White)
             Box(modifier = Modifier.width(0.5.dp).height(48.dp).background(Color.White.copy(alpha = 0.2f)))
             ShStatColumn(
                 value = totalValue.formatJod(AppLanguage.AR),
-                label = "القيمة الإجمالية د.أ",
+                label = stringResource(Res.string.van_stock_stat_total_value),
                 valueColor = Color(0xFF6EE7B7),
             )
             Box(modifier = Modifier.width(0.5.dp).height(48.dp).background(Color.White.copy(alpha = 0.2f)))
             ShStatColumn(
                 value = "$lowStockCount",
-                label = "منخفض المخزون",
+                label = stringResource(Res.string.van_stock_stat_low_stock),
                 valueColor = if (lowStockCount > 0) Color(0xFFFCD34D) else Color.White,
             )
         }
@@ -302,10 +303,10 @@ private fun StockCard(product: Product, nowMs: Long, onClick: () -> Unit) {
         StockStatus.OUT -> Fv.Red
     }
     val statusLabel = when (status) {
-        StockStatus.GOOD -> "متوفر"
-        StockStatus.LOW -> "منخفض"
-        StockStatus.EXPIRING -> "ينتهي قريباً"
-        StockStatus.OUT -> "نفد"
+        StockStatus.GOOD -> stringResource(Res.string.van_stock_in_stock)
+        StockStatus.LOW -> stringResource(Res.string.van_stock_low_stock)
+        StockStatus.EXPIRING -> stringResource(Res.string.van_stock_expiring_soon)
+        StockStatus.OUT -> stringResource(Res.string.van_stock_out_of_stock)
     }
     val statusIcon = when (status) {
         StockStatus.GOOD -> Res.drawable.ic_check
@@ -390,7 +391,7 @@ private fun StockCard(product: Product, nowMs: Long, onClick: () -> Unit) {
                         fontSize = 18.sp,
                         fontWeight = FontWeight.ExtraBold,
                     )
-                    Text("كمية / حد أدنى", color = Fv.TextLow, fontSize = 9.sp)
+                    Text(stringResource(Res.string.van_stock_qty_min_label), color = Fv.TextLow, fontSize = 9.sp)
                     // Status badge
                     Row(
                         modifier = Modifier
@@ -424,7 +425,7 @@ private fun StockCard(product: Product, nowMs: Long, onClick: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text("مستوى المخزون", color = Fv.TextMid, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                    Text(stringResource(Res.string.van_stock_level), color = Fv.TextMid, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                     Text("$pct%", color = Fv.TextMid, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.height(5.dp))
@@ -466,12 +467,12 @@ private fun ProductDetailSheet(product: Product, nowMs: Long) {
         Text(product.nameEn, color = Fv.TextMid, fontSize = 13.sp)
 
         DetailRow("SKU", product.sku)
-        DetailRow("الفئة", product.category)
-        DetailRow("الوحدة", product.unit)
-        DetailRow("الكمية الحالية", "${product.vanStock}")
-        DetailRow("الحد الأدنى", "${product.minStock}")
-        DetailRow("سعر البيع", product.salePrice.formatJod(AppLanguage.AR) + " د.أ")
-        DetailRow("سعر الشراء", product.costPrice.formatJod(AppLanguage.AR) + " د.أ")
+        DetailRow(stringResource(Res.string.van_stock_category), product.category)
+        DetailRow(stringResource(Res.string.van_stock_unit), product.unit)
+        DetailRow(stringResource(Res.string.van_stock_current_qty), "${product.vanStock}")
+        DetailRow(stringResource(Res.string.van_stock_min), "${product.minStock}")
+        DetailRow(stringResource(Res.string.van_stock_sale_price), product.salePrice.formatJod(AppLanguage.AR) + " " + stringResource(Res.string.currency_jod))
+        DetailRow(stringResource(Res.string.van_stock_cost_price), product.costPrice.formatJod(AppLanguage.AR) + " " + stringResource(Res.string.currency_jod))
 
         Row(
             modifier = Modifier
@@ -483,10 +484,10 @@ private fun ProductDetailSheet(product: Product, nowMs: Long) {
         ) {
             Text(
                 when (status) {
-                    StockStatus.GOOD -> "متوفر"
-                    StockStatus.LOW -> "⚠️ منخفض المخزون"
-                    StockStatus.EXPIRING -> "⏰ ينتهي قريباً"
-                    StockStatus.OUT -> "نفد المخزون"
+                    StockStatus.GOOD -> stringResource(Res.string.van_stock_in_stock)
+                    StockStatus.LOW -> stringResource(Res.string.van_stock_low_stock_full)
+                    StockStatus.EXPIRING -> stringResource(Res.string.van_stock_expiring_soon)
+                    StockStatus.OUT -> stringResource(Res.string.van_stock_out_of_stock_full)
                 },
                 color = statusColor,
                 fontSize = 13.sp,

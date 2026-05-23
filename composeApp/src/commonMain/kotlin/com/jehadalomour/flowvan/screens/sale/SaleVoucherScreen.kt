@@ -79,6 +79,7 @@ import com.jehadalomour.flowvan.shared.presentation.i18n.AppLanguage
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -131,7 +132,7 @@ fun SaleVoucherScreen(
                         )
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("فاتورة بيع", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(Res.string.sale_title), color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         state.customer?.let { Text(it.nameAr, color = Fv.TextMid, fontSize = 11.sp) }
                     }
                     CartToggle(state.view, state.cart.size) { viewModel.onEvent(SaleVoucherEvent.ToggleView) }
@@ -192,7 +193,7 @@ fun SaleVoucherScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                "حفظ الفاتورة",
+                                stringResource(Res.string.sale_save),
                                 color = if (canSave) Color.White else Fv.TextMid,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
@@ -238,11 +239,11 @@ fun SaleVoucherScreen(
     state.errorAr?.let { msg ->
         AlertDialog(
             onDismissRequest = { viewModel.onEvent(SaleVoucherEvent.DismissError) },
-            title = { Text("خطأ", color = Fv.TextHigh) },
+            title = { Text(stringResource(Res.string.dialog_error_title), color = Fv.TextHigh) },
             text = { Text(msg, color = Fv.TextHigh) },
             confirmButton = {
                 TextButton(onClick = { viewModel.onEvent(SaleVoucherEvent.DismissError) }) {
-                    Text("حسناً", color = Fv.Blue)
+                    Text(stringResource(Res.string.dialog_ok), color = Fv.Blue)
                 }
             },
             containerColor = Fv.Surface,
@@ -312,7 +313,7 @@ private fun ProductListPicker(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearch,
-            placeholder = { Text("ابحث عن منتج...", color = Fv.TextMid) },
+            placeholder = { Text(stringResource(Res.string.sale_search_product), color = Fv.TextMid) },
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
@@ -329,7 +330,7 @@ private fun ProductListPicker(
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                CategoryPill("الكل", selectedCategory == null) { onSelectCategory(null) }
+                CategoryPill(stringResource(Res.string.all), selectedCategory == null) { onSelectCategory(null) }
                 categories.forEach { cat ->
                     CategoryPill(cat, selectedCategory == cat) { onSelectCategory(cat) }
                 }
@@ -355,7 +356,7 @@ private fun ProductListPicker(
             if (products.isEmpty()) {
                 item {
                     Text(
-                        "لا توجد منتجات",
+                        stringResource(Res.string.sale_no_products),
                         color = Fv.TextMid,
                         fontSize = 13.sp,
                         modifier = Modifier.padding(24.dp),
@@ -432,9 +433,9 @@ private fun StockBadge(product: Product) {
     val low = !outOfStock && product.vanStock < product.minStock
     val chipColor = if (outOfStock) Fv.Red else if (low) Fv.Amber else Fv.Green
     val chipLabel = when {
-        outOfStock -> "نافد"
-        low -> "منخفض · ${product.vanStock}"
-        else -> "متوفر · ${product.vanStock}"
+        outOfStock -> stringResource(Res.string.van_stock_out_of_stock)
+        low -> "${stringResource(Res.string.van_stock_low_stock)} · ${product.vanStock}"
+        else -> "${stringResource(Res.string.van_stock_in_stock)} · ${product.vanStock}"
     }
     Box(
         modifier = Modifier
@@ -480,7 +481,7 @@ private fun PickerSummaryBar(itemCount: Int, total: Double) {
             fontWeight = FontWeight.Bold,
         )
         Text(
-            "$itemCount ${if (itemCount == 1) "صنف" else "أصناف"}",
+            "$itemCount ${if (itemCount == 1) stringResource(Res.string.item_singular) else stringResource(Res.string.items_plural)}",
             color = Color.White.copy(alpha = 0.75f),
             fontSize = 13.sp,
         )
@@ -510,7 +511,7 @@ private fun CartView(
         if (state.cart.isEmpty()) {
             item {
                 Text(
-                    "السلة فارغة — أضف منتجات من قسم المنتجات",
+                    stringResource(Res.string.sale_cart_empty_hint),
                     color = Fv.TextMid,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(24.dp),
@@ -521,7 +522,7 @@ private fun CartView(
             OutlinedTextField(
                 value = state.notes,
                 onValueChange = onNotesChange,
-                label = { Text("ملاحظات (اختياري)", color = Fv.TextMid, fontSize = 11.sp) },
+                label = { Text(stringResource(Res.string.notes_optional), color = Fv.TextMid, fontSize = 11.sp) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
                 colors = fvFieldColors(),
@@ -550,9 +551,9 @@ private fun CartSummaryCard(
         Column {
             AnimatedVisibility(visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
                 Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 4.dp)) {
-                    SummaryDetailRow("المجموع الفرعي", state.subtotal.formatJod(AppLanguage.AR), Fv.TextMid)
+                    SummaryDetailRow(stringResource(Res.string.voucher_detail_subtotal), state.subtotal.formatJod(AppLanguage.AR), Fv.TextMid)
                     if (state.lineDiscountTotal > 0)
-                        SummaryDetailRow("خصم السطور", "- ${state.lineDiscountTotal.formatJod(AppLanguage.AR)}", Fv.Red)
+                        SummaryDetailRow(stringResource(Res.string.sale_line_discounts), "- ${state.lineDiscountTotal.formatJod(AppLanguage.AR)}", Fv.Red)
                     Spacer(Modifier.height(8.dp))
                     VoucherDiscountSection(
                         type = state.voucherDiscountType,
@@ -563,7 +564,7 @@ private fun CartSummaryCard(
                     )
                     if (state.taxAmount > 0) {
                         Spacer(Modifier.height(6.dp))
-                        SummaryDetailRow("الضريبة", state.taxAmount.formatJod(AppLanguage.AR), Fv.TextMid)
+                        SummaryDetailRow(stringResource(Res.string.voucher_detail_tax), state.taxAmount.formatJod(AppLanguage.AR), Fv.TextMid)
                     }
                     Spacer(Modifier.height(12.dp))
                     Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(Fv.Border))
@@ -578,7 +579,7 @@ private fun CartSummaryCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("الإجمالي النهائي", color = Fv.TextMid, fontSize = 12.sp)
+                    Text(stringResource(Res.string.sale_final_total), color = Fv.TextMid, fontSize = 12.sp)
                     Text(
                         state.total.formatJod(AppLanguage.AR),
                         color = Fv.Blue,
@@ -621,7 +622,7 @@ private fun VoucherDiscountSection(
                 .background(Fv.SurfaceTop, RoundedCornerShape(20.dp))
                 .padding(2.dp),
         ) {
-            listOf(DiscountType.PERCENT to "%", DiscountType.VALUE to "قيمة").forEach { (t, label) ->
+            listOf(DiscountType.PERCENT to "%", DiscountType.VALUE to stringResource(Res.string.discount_type_value)).forEach { (t, label) ->
                 val active = t == type
                 Box(
                     modifier = Modifier
@@ -645,7 +646,7 @@ private fun VoucherDiscountSection(
             onValueChange = { v -> onInputChange(v.filter { it.isDigit() || it == '.' }.take(8)) },
             placeholder = {
                 Text(
-                    if (type == DiscountType.PERCENT) "خصم الفاتورة %" else "خصم الفاتورة د.أ",
+                    if (type == DiscountType.PERCENT) stringResource(Res.string.sale_voucher_discount_percent) else stringResource(Res.string.sale_voucher_discount_value),
                     color = Fv.TextMid,
                     fontSize = 11.sp,
                 )
@@ -654,7 +655,7 @@ private fun VoucherDiscountSection(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             suffix = {
                 Text(
-                    if (type == DiscountType.PERCENT) "%" else "د.أ",
+                    if (type == DiscountType.PERCENT) "%" else stringResource(Res.string.currency_jod),
                     color = Fv.TextMid,
                     fontSize = 11.sp,
                 )
@@ -831,7 +832,7 @@ private fun AddItemBottomSheet(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("العدد المطلوب", color = Color(0xFF5A7399), fontSize = 14.sp)
+                            Text(stringResource(Res.string.sale_required_qty), color = Color(0xFF5A7399), fontSize = 14.sp)
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -915,7 +916,7 @@ private fun AddItemBottomSheet(
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF185FA5),
                             )
-                            Text("· سعر الوحدة", fontSize = 13.sp, color = Color(0xFF5A7399))
+                            Text("· ${stringResource(Res.string.sale_unit_price)}", fontSize = 13.sp, color = Color(0xFF5A7399))
                         }
 
                         // Line discount
@@ -930,7 +931,7 @@ private fun AddItemBottomSheet(
                                         .clip(RoundedCornerShape(10.dp))
                                         .border(0.5.dp, Color(0xFFC8D8EC), RoundedCornerShape(10.dp)),
                                 ) {
-                                    listOf(DiscountType.PERCENT to "%", DiscountType.VALUE to "قيمة").forEach { (t, label) ->
+                                    listOf(DiscountType.PERCENT to "%", DiscountType.VALUE to stringResource(Res.string.discount_type_value)).forEach { (t, label) ->
                                         val active = t == lineDiscountType
                                         Box(
                                             modifier = Modifier
@@ -948,7 +949,7 @@ private fun AddItemBottomSheet(
                                         }
                                     }
                                 }
-                                Text("خصم السطر", color = Color(0xFF8A9AB0), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text(stringResource(Res.string.sale_line_discount), color = Color(0xFF8A9AB0), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                             OutlinedTextField(
                                 value = discountText,
@@ -958,7 +959,7 @@ private fun AddItemBottomSheet(
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 suffix = {
                                     Text(
-                                        if (lineDiscountType == DiscountType.PERCENT) "%" else "د.أ",
+                                        if (lineDiscountType == DiscountType.PERCENT) "%" else stringResource(Res.string.currency_jod),
                                         color = Color(0xFF185FA5),
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold,
@@ -986,7 +987,7 @@ private fun AddItemBottomSheet(
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                             )
-                            Text("إجمالي السعر", fontSize = 14.sp, color = Color.White.copy(alpha = 0.75f))
+                            Text(stringResource(Res.string.sale_total_price), fontSize = 14.sp, color = Color.White.copy(alpha = 0.75f))
                         }
                     }
 
@@ -1009,7 +1010,7 @@ private fun AddItemBottomSheet(
                                     .padding(horizontal = 16.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text("حذف", color = Color(0xFFE24B4A), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(Res.string.delete), color = Color(0xFFE24B4A), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                         Box(
@@ -1021,7 +1022,7 @@ private fun AddItemBottomSheet(
                                 .clickable { onDismiss() },
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text("إلغاء", color = Color(0xFF5A7399), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(Res.string.cancel), color = Color(0xFF5A7399), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                         }
                         Box(
                             modifier = Modifier
@@ -1048,7 +1049,7 @@ private fun AddItemBottomSheet(
                                     modifier = Modifier.size(19.dp),
                                 )
                                 Text(
-                                    if (currentLine == null) "إضافة للسلة" else "تحديث السطر",
+                                    if (currentLine == null) stringResource(Res.string.sale_add_to_cart) else stringResource(Res.string.sale_update_line),
                                     color = if (qty > 0) Color.White else Fv.TextMid,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
@@ -1078,12 +1079,12 @@ private fun PaymentMethodDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("طريقة الدفع", color = Fv.TextHigh) },
+        title = { Text(stringResource(Res.string.sale_payment_method), color = Fv.TextHigh) },
         text = {
             Column {
                 listOf(
-                    PaymentMethod.CASH to "نقداً",
-                    PaymentMethod.CREDIT to "ذمم",
+                    PaymentMethod.CASH to stringResource(Res.string.payment_method_cash),
+                    PaymentMethod.CREDIT to stringResource(Res.string.payment_method_credit),
                 ).forEach { (method, label) ->
                     val active = method == current
                     Box(
@@ -1103,8 +1104,8 @@ private fun PaymentMethodDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("تأكيد", color = Fv.Green) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء", color = Fv.TextMid) } },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(Res.string.confirm), color = Fv.Green) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel), color = Fv.TextMid) } },
         containerColor = Fv.Surface,
     )
 }

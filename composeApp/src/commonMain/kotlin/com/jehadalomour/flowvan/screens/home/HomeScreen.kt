@@ -52,6 +52,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.domain.model.Customer
 import com.jehadalomour.flowvan.shared.domain.model.CustomerTier
 import com.jehadalomour.flowvan.shared.presentation.feature.home.HomeEvent
@@ -133,7 +134,7 @@ fun HomeScreen(
             }
             item {
                 SectionHeader(
-                    title = "الوصول السريع",
+                    title = stringResource(Res.string.home_quick_access),
                     modifier = Modifier.padding(horizontal = 14.dp).padding(top = 18.dp, bottom = 10.dp),
                 )
             }
@@ -157,14 +158,14 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "مسار اليوم",
+                        stringResource(Res.string.route_title),
                         color = Fv.TextHigh,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.ExtraBold,
                         modifier = Modifier.weight(1f),
                     )
                     Text(
-                        "عرض الكل",
+                        stringResource(Res.string.view_all),
                         color = Fv.Blue,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
@@ -247,7 +248,7 @@ private fun HeroCard(
     ) {
         Column {
             Text(
-                "أهلاً، $name",
+                stringResource(Res.string.home_greeting_name, name),
                 color = Color.White,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.ExtraBold,
@@ -271,7 +272,7 @@ private fun HeroCard(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "الوردية نشطة — يتم تتبع الموقع",
+                        stringResource(Res.string.home_shift_active_tracking),
                         color = Color.White,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
@@ -293,7 +294,7 @@ private fun HeroCard(
                         modifier = Modifier.size(16.dp),
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("بدء اليوم", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.home_shift_start), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -314,17 +315,17 @@ private fun StatsGrid(
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             StatCard(
-                label = "المبيعات",
+                label = stringResource(Res.string.home_stat_sales),
                 value = sales.formatJod(AppLanguage.AR),
-                subLabel = "د.أ",
+                subLabel = stringResource(Res.string.currency_jod),
                 accent = Fv.Blue,
                 icon = painterResource(Res.drawable.ic_cart),
                 modifier = Modifier.weight(1f),
             )
             StatCard(
-                label = "التحصيلات",
+                label = stringResource(Res.string.home_stat_collections),
                 value = collections.formatJod(AppLanguage.AR),
-                subLabel = "د.أ",
+                subLabel = stringResource(Res.string.currency_jod),
                 accent = Fv.Green,
                 icon = painterResource(Res.drawable.ic_payment),
                 modifier = Modifier.weight(1f),
@@ -332,17 +333,17 @@ private fun StatsGrid(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             StatCard(
-                label = "المرتجعات",
+                label = stringResource(Res.string.home_stat_returns),
                 value = returns.formatJod(AppLanguage.AR),
-                subLabel = "د.أ",
+                subLabel = stringResource(Res.string.currency_jod),
                 accent = Fv.Red,
                 icon = painterResource(Res.drawable.ic_return_arrow),
                 modifier = Modifier.weight(1f),
             )
             StatCard(
-                label = "الزيارات",
+                label = stringResource(Res.string.home_stat_visits),
                 value = "$visited / $planned",
-                subLabel = "عميل اليوم",
+                subLabel = stringResource(Res.string.home_stat_customers_today),
                 accent = Fv.Amber,
                 icon = painterResource(Res.drawable.ic_map),
                 modifier = Modifier.weight(1f),
@@ -413,7 +414,7 @@ private fun VisitsProgressCard(visited: Int, planned: Int, modifier: Modifier = 
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "الزيارات اليوم",
+                    stringResource(Res.string.home_visits_today),
                     color = Fv.TextMid,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -440,8 +441,8 @@ private fun VisitsProgressCard(visited: Int, planned: Int, modifier: Modifier = 
             }
             Spacer(Modifier.height(6.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("$visited مكتملة", color = Fv.TextMid, fontSize = 10.sp, fontWeight = FontWeight.Medium)
-                Text("${(planned - visited).coerceAtLeast(0)} متبقية", color = Fv.TextMid, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                Text(stringResource(Res.string.home_visits_completed, visited), color = Fv.TextMid, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                Text(stringResource(Res.string.home_visits_remaining, (planned - visited).coerceAtLeast(0)), color = Fv.TextMid, fontSize = 10.sp, fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -468,16 +469,16 @@ private fun ActionGrid(
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ActionTile(painterResource(Res.drawable.ic_truck), "مسار اليوم", "خطة الزيارات", Fv.Blue, Modifier.weight(1f), onOpenRoute)
-            ActionTile(painterResource(Res.drawable.ic_customers), "قائمة العملاء", "دليل العملاء", Fv.Teal, Modifier.weight(1f), onOpenCustomers)
+            ActionTile(painterResource(Res.drawable.ic_truck), stringResource(Res.string.route_title), stringResource(Res.string.home_action_route_sub), Fv.Blue, Modifier.weight(1f), onOpenRoute)
+            ActionTile(painterResource(Res.drawable.ic_customers), stringResource(Res.string.home_action_customers), stringResource(Res.string.home_action_customers_sub), Fv.Teal, Modifier.weight(1f), onOpenCustomers)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ActionTile(painterResource(Res.drawable.ic_inventory), "مخزون الفان", "الأصناف المتاحة", Fv.Amber, Modifier.weight(1f), onOpenVanStock)
-            ActionTile(painterResource(Res.drawable.ic_moon), "نهاية اليوم", "تسوية الحسابات", Fv.Red, Modifier.weight(1f), onOpenEndOfDay)
+            ActionTile(painterResource(Res.drawable.ic_inventory), stringResource(Res.string.van_stock_title), stringResource(Res.string.home_action_van_stock_sub), Fv.Amber, Modifier.weight(1f), onOpenVanStock)
+            ActionTile(painterResource(Res.drawable.ic_moon), stringResource(Res.string.home_quick_end_of_day), stringResource(Res.string.home_action_end_of_day_sub), Fv.Red, Modifier.weight(1f), onOpenEndOfDay)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ActionTile(painterResource(Res.drawable.ic_bar_chart), "التقارير", "اليومية والشهرية", Fv.Green, Modifier.weight(1f), onOpenReports)
-            ActionTile(painterResource(Res.drawable.ic_ai_sparkle), "المساعد الذكي", "سؤال وجواب", Fv.Purple, Modifier.weight(1f), onOpenAi)
+            ActionTile(painterResource(Res.drawable.ic_bar_chart), stringResource(Res.string.reports_title), stringResource(Res.string.home_action_reports_sub), Fv.Green, Modifier.weight(1f), onOpenReports)
+            ActionTile(painterResource(Res.drawable.ic_ai_sparkle), stringResource(Res.string.ai_title), stringResource(Res.string.home_action_ai_sub), Fv.Purple, Modifier.weight(1f), onOpenAi)
         }
     }
 }
@@ -591,7 +592,7 @@ private fun RoutePreviewItem(customer: Customer, onClick: () -> Unit) {
                         modifier = Modifier.size(12.dp),
                     )
                     Text(
-                        "متأخر ${customer.overdueAmount.formatJod(AppLanguage.AR)} د.أ",
+                        "${stringResource(Res.string.receivables_overdue_label)} ${customer.overdueAmount.formatJod(AppLanguage.AR)} ${stringResource(Res.string.currency_jod)}",
                         color = Fv.Red,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -607,15 +608,15 @@ private fun TierCategoryBadge(tier: CustomerTier) {
     val (gradient, label) = when (tier) {
         CustomerTier.A -> Pair(
             Brush.linearGradient(listOf(Color(0xFF1D9E75), Color(0xFF0F6E56))),
-            "فئة A",
+            stringResource(Res.string.home_category_a),
         )
         CustomerTier.B -> Pair(
             Brush.linearGradient(listOf(Color(0xFFC97B1A), Color(0xFF9A5C10))),
-            "فئة B",
+            stringResource(Res.string.home_category_b),
         )
         CustomerTier.C -> Pair(
             Brush.linearGradient(listOf(Color(0xFF637181), Color(0xFF3E4D5C))),
-            "فئة C",
+            stringResource(Res.string.home_category_c),
         )
     }
     Box(

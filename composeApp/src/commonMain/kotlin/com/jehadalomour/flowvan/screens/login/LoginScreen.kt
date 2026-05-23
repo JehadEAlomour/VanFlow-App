@@ -50,6 +50,7 @@ import com.jehadalomour.flowvan.shared.presentation.feature.login.LoginViewModel
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -92,7 +93,7 @@ fun LoginScreen(
                 LogoBlock()
                 Spacer(Modifier.height(32.dp))
 
-                LabeledField(label = "رقم الهاتف / Phone Number") {
+                LabeledField(label = stringResource(Res.string.login_phone_label)) {
                     OutlinedTextField(
                         value = state.phone,
                         onValueChange = { viewModel.onEvent(LoginEvent.PhoneChanged(it)) },
@@ -107,7 +108,7 @@ fun LoginScreen(
 
                 Spacer(Modifier.height(20.dp))
 
-                LabeledField(label = "كلمة المرور / Password") {
+                LabeledField(label = stringResource(Res.string.login_password)) {
                     OutlinedTextField(
                         value = state.password,
                         onValueChange = { viewModel.onEvent(LoginEvent.PasswordChanged(it)) },
@@ -161,7 +162,7 @@ fun LoginScreen(
                         )
                     } else {
                         Text(
-                            text = "⇨  تسجيل الدخول / Login",
+                            text = stringResource(Res.string.login_button),
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp,
                         )
@@ -259,7 +260,7 @@ private fun DemoCredsCard() {
     ) {
         Column(modifier = Modifier.padding(PaddingValues(16.dp)), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = "بيانات تجريبية / Demo Credentials",
+                text = stringResource(Res.string.login_demo_credentials),
                 color = Color(0xFFEDF0FA),
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp,

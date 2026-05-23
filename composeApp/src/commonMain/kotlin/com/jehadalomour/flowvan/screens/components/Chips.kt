@@ -12,6 +12,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.shared.domain.model.CustomerSegment
 import com.jehadalomour.flowvan.shared.domain.model.CustomerTier
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun TierBadge(tier: CustomerTier, modifier: Modifier = Modifier) {
@@ -21,7 +24,7 @@ fun TierBadge(tier: CustomerTier, modifier: Modifier = Modifier) {
         CustomerTier.C -> Fv.SurfaceTop to Fv.TextHigh
     }
     Text(
-        text = "فئة ${tier.name}",
+        text = stringResource(Res.string.tier_badge_label, tier.name),
         modifier = modifier
             .background(bg, RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 3.dp),
@@ -54,19 +57,20 @@ fun SegmentChip(segment: CustomerSegment, churnRisk: Double, modifier: Modifier 
     )
 }
 
+@Composable
 fun segmentLabelAr(segment: CustomerSegment): String = when (segment) {
-    CustomerSegment.CHAMPIONS -> "أبطال"
-    CustomerSegment.LOYAL     -> "مخلصون"
-    CustomerSegment.AT_RISK   -> "عرضة"
-    CustomerSegment.PROMISING -> "واعدون"
-    CustomerSegment.DORMANT   -> "خاملون"
-    CustomerSegment.REGULAR   -> "عاديون"
+    CustomerSegment.CHAMPIONS -> stringResource(Res.string.segment_champions)
+    CustomerSegment.LOYAL     -> stringResource(Res.string.segment_loyal)
+    CustomerSegment.AT_RISK   -> stringResource(Res.string.segment_at_risk)
+    CustomerSegment.PROMISING -> stringResource(Res.string.segment_promising)
+    CustomerSegment.DORMANT   -> stringResource(Res.string.segment_dormant)
+    CustomerSegment.REGULAR   -> stringResource(Res.string.segment_regular)
 }
 
 @Composable
 fun OverdueChip(amountText: String, modifier: Modifier = Modifier) {
     Text(
-        text = "متأخر $amountText",
+        text = stringResource(Res.string.chip_overdue_amount, amountText),
         modifier = modifier
             .background(Color(0x33F04F4F), RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 3.dp),
@@ -80,7 +84,7 @@ fun OverdueChip(amountText: String, modifier: Modifier = Modifier) {
 fun ChurnChip(risk: Double, modifier: Modifier = Modifier) {
     val pct = (risk * 100).toInt()
     Text(
-        text = "خطر التسرب $pct%",
+        text = stringResource(Res.string.chip_churn_risk, pct),
         modifier = modifier
             .background(Color(0x33F04F4F), RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 3.dp),
@@ -93,7 +97,7 @@ fun ChurnChip(risk: Double, modifier: Modifier = Modifier) {
 @Composable
 fun OffRoutePill(modifier: Modifier = Modifier) {
     Text(
-        text = "خارج المسار",
+        text = stringResource(Res.string.chip_off_route),
         modifier = modifier
             .background(Fv.SurfaceTop, RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 3.dp),

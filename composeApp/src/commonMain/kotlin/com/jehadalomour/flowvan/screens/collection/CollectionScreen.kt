@@ -75,7 +75,9 @@ import flowvan.composeapp.generated.resources.ic_warning
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -108,7 +110,7 @@ fun CollectionScreen(
                     )
                 }
                 Text(
-                    "سند تحصيل",
+                    stringResource(Res.string.collection_voucher_title),
                     color = Fv.TextHigh,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
@@ -191,7 +193,7 @@ fun CollectionScreen(
                         OutlinedTextField(
                             value = state.transferRef,
                             onValueChange = { viewModel.onEvent(CollectionEvent.TransferRefChanged(it)) },
-                            label = { Text("رقم الحوالة", color = Fv.TextMid, fontSize = 11.sp) },
+                            label = { Text(stringResource(Res.string.collection_transfer_ref), color = Fv.TextMid, fontSize = 11.sp) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp),
@@ -205,7 +207,7 @@ fun CollectionScreen(
                     OutlinedTextField(
                         value = state.notes,
                         onValueChange = { viewModel.onEvent(CollectionEvent.NotesChanged(it)) },
-                        label = { Text("ملاحظات (اختياري)", color = Fv.TextMid, fontSize = 11.sp) },
+                        label = { Text(stringResource(Res.string.collection_notes_optional), color = Fv.TextMid, fontSize = 11.sp) },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 2,
                         shape = RoundedCornerShape(10.dp),
@@ -240,11 +242,11 @@ fun CollectionScreen(
     state.errorAr?.let { msg ->
         AlertDialog(
             onDismissRequest = { viewModel.onEvent(CollectionEvent.DismissError) },
-            title = { Text("خطأ", color = Fv.TextHigh) },
+            title = { Text(stringResource(Res.string.error_title), color = Fv.TextHigh) },
             text = { Text(msg, color = Fv.TextHigh) },
             confirmButton = {
                 TextButton(onClick = { viewModel.onEvent(CollectionEvent.DismissError) }) {
-                    Text("حسناً", color = Fv.Blue)
+                    Text(stringResource(Res.string.ok), color = Fv.Blue)
                 }
             },
             containerColor = Fv.Surface,
@@ -282,13 +284,13 @@ private fun CustomerHeroCard(customer: com.jehadalomour.flowvan.shared.domain.mo
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 BalanceChip(
-                    label = "الرصيد",
+                    label = stringResource(Res.string.balance_label),
                     value = balance.formatJod(AppLanguage.AR),
                     valueColor = Color.White,
                 )
                 if (overdue > 0) {
                     BalanceChip(
-                        label = "المتأخر",
+                        label = stringResource(Res.string.overdue_label),
                         value = overdue.formatJod(AppLanguage.AR),
                         valueColor = Color(0xFFFFCDD2),
                     )
@@ -324,7 +326,7 @@ private fun AmountBox(
             OutlinedTextField(
                 value = amountText,
                 onValueChange = onAmountChange,
-                label = { Text("المبلغ (د.أ)", color = Fv.TextMid, fontSize = 11.sp) },
+                label = { Text(stringResource(Res.string.collection_amount_jod), color = Fv.TextMid, fontSize = 11.sp) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
@@ -341,7 +343,7 @@ private fun AmountBox(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(25.0, 50.0, 100.0, 200.0).forEach { amt ->
                     QuickFillChip(
-                        label = "${amt.toInt()} د.أ",
+                        label = stringResource(Res.string.amount_jod_format, amt.toInt()),
                         modifier = Modifier.weight(1f),
                         onClick = { onQuickFill(amt) },
                     )
@@ -385,7 +387,7 @@ private fun AdvanceWarningBanner() {
             modifier = Modifier.size(18.dp),
         )
         Text(
-            "المبلغ أكبر من الرصيد — سيتم تسجيله كدفعة مقدمة",
+            stringResource(Res.string.collection_advance_warning_short),
             color = Fv.Amber,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
@@ -399,9 +401,9 @@ private fun AdvanceWarningBanner() {
 private fun MethodPicker(current: PaymentMethod, onSelect: (PaymentMethod) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(
-            Triple(PaymentMethod.CASH, Res.drawable.ic_payment, "نقداً"),
-            Triple(PaymentMethod.CHEQUE, Res.drawable.ic_receipt, "شيك"),
-            Triple(PaymentMethod.TRANSFER, Res.drawable.ic_payment, "تحويل"),
+            Triple(PaymentMethod.CASH, Res.drawable.ic_payment, stringResource(Res.string.collection_method_cash)),
+            Triple(PaymentMethod.CHEQUE, Res.drawable.ic_receipt, stringResource(Res.string.collection_method_cheque)),
+            Triple(PaymentMethod.TRANSFER, Res.drawable.ic_payment, stringResource(Res.string.chip_transfer)),
         ).forEach { (method, iconRes, label) ->
             val active = method == current
             Box(
@@ -488,7 +490,7 @@ private fun ChequeCard(
                         )
                     }
                     Text(
-                        "شيك ${index + 1}",
+                        stringResource(Res.string.cheque_number_format, index + 1),
                         color = Fv.TextHigh,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -498,7 +500,7 @@ private fun ChequeCard(
                     IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
                         Icon(
                             painter = painterResource(Res.drawable.ic_cancel),
-                            contentDescription = "حذف",
+                            contentDescription = stringResource(Res.string.delete),
                             tint = Fv.Red,
                             modifier = Modifier.size(18.dp),
                         )
@@ -510,7 +512,7 @@ private fun ChequeCard(
             OutlinedTextField(
                 value = cheque.amountText,
                 onValueChange = onAmountChange,
-                label = { Text("المبلغ (د.أ)", color = Fv.TextMid, fontSize = 11.sp) },
+                label = { Text(stringResource(Res.string.collection_amount_jod), color = Fv.TextMid, fontSize = 11.sp) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
@@ -522,7 +524,7 @@ private fun ChequeCard(
             OutlinedTextField(
                 value = cheque.number,
                 onValueChange = onNumberChange,
-                label = { Text("رقم الشيك", color = Fv.TextMid, fontSize = 11.sp) },
+                label = { Text(stringResource(Res.string.collection_cheque_number), color = Fv.TextMid, fontSize = 11.sp) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
@@ -548,10 +550,10 @@ private fun ChequeCard(
                 TextButton(onClick = {
                     onDateChange(pickerState.selectedDateMillis)
                     showDatePicker = false
-                }) { Text("تأكيد", color = Fv.Blue) }
+                }) { Text(stringResource(Res.string.confirm), color = Fv.Blue) }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("إلغاء", color = Fv.TextMid) }
+                TextButton(onClick = { showDatePicker = false }) { Text(stringResource(Res.string.cancel), color = Fv.TextMid) }
             },
         ) { DatePicker(state = pickerState) }
     }
@@ -585,7 +587,7 @@ private fun BankTriggerField(bank: JordanBank?, onClick: () -> Unit) {
                 Text(bank.nameAr, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             }
         } else {
-            Text("اختر البنك", color = Fv.TextMid, fontSize = 13.sp)
+            Text(stringResource(Res.string.collection_select_bank), color = Fv.TextMid, fontSize = 13.sp)
         }
     }
 }
@@ -595,7 +597,7 @@ private fun DateTriggerField(dateMillis: Long?, onClick: () -> Unit) {
     val label = dateMillis?.let { millis ->
         val dt = Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault())
         "${dt.dayOfMonth.toString().padStart(2, '0')}/${dt.monthNumber.toString().padStart(2, '0')}/${dt.year}"
-    } ?: "تاريخ الشيك (اختياري)"
+    } ?: stringResource(Res.string.collection_cheque_date_optional)
 
     Box(
         modifier = Modifier
@@ -639,7 +641,7 @@ private fun AddChequeButton(onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            "+ أضف شيكاً آخر",
+            stringResource(Res.string.collection_add_cheque),
             color = Fv.Blue,
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
@@ -658,7 +660,7 @@ private fun ChequeTotalRow(total: Double, advanceWarning: Boolean) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("إجمالي الشيكات", color = Fv.TextMid, fontSize = 13.sp)
+        Text(stringResource(Res.string.collection_cheques_total), color = Fv.TextMid, fontSize = 13.sp)
         Text(
             total.formatJod(AppLanguage.AR),
             color = if (advanceWarning) Fv.Amber else Fv.Green,
@@ -689,11 +691,11 @@ private fun BankBottomSheet(
             modifier = Modifier.padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("اختر البنك", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(Res.string.collection_select_bank), color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             OutlinedTextField(
                 value = query,
                 onValueChange = onQueryChange,
-                placeholder = { Text("ابحث عن البنك...", color = Fv.TextLow) },
+                placeholder = { Text(stringResource(Res.string.collection_search_bank), color = Fv.TextLow) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
@@ -767,21 +769,21 @@ private fun TaxCalculatorCard(amount: Double, inclusive: Boolean, onToggle: (Boo
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("حاسبة الضريبة 16%", color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(Res.string.collection_tax_calculator), color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(Fv.BgDeepest)
                         .padding(2.dp),
                 ) {
-                    TaxToggleChip(label = "شامل", selected = inclusive, onClick = { onToggle(true) })
-                    TaxToggleChip(label = "بدون", selected = !inclusive, onClick = { onToggle(false) })
+                    TaxToggleChip(label = stringResource(Res.string.collection_tax_inclusive), selected = inclusive, onClick = { onToggle(true) })
+                    TaxToggleChip(label = stringResource(Res.string.collection_tax_exclusive), selected = !inclusive, onClick = { onToggle(false) })
                 }
             }
-            TaxRow(label = "المبلغ قبل الضريبة", value = base.formatJod(AppLanguage.AR), valueColor = Fv.TextHigh)
-            TaxRow(label = "ضريبة المبيعات 16%", value = tax.formatJod(AppLanguage.AR), valueColor = Fv.Amber)
+            TaxRow(label = stringResource(Res.string.collection_amount_before_tax), value = base.formatJod(AppLanguage.AR), valueColor = Fv.TextHigh)
+            TaxRow(label = stringResource(Res.string.collection_sales_tax), value = tax.formatJod(AppLanguage.AR), valueColor = Fv.Amber)
             Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Fv.Border))
-            TaxRow(label = "الإجمالي شامل الضريبة", value = total.formatJod(AppLanguage.AR), valueColor = Fv.Green, bold = true)
+            TaxRow(label = stringResource(Res.string.collection_total_with_tax), value = total.formatJod(AppLanguage.AR), valueColor = Fv.Green, bold = true)
         }
     }
 }
@@ -849,7 +851,7 @@ private fun SaveButton(enabled: Boolean, saving: Boolean, onClick: () -> Unit) {
             )
         } else {
             Text(
-                "حفظ التحصيل",
+                stringResource(Res.string.collection_save_button),
                 color = if (enabled) Color.White else Fv.TextMid,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,

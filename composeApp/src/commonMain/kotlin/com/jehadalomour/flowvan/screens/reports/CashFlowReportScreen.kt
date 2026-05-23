@@ -33,6 +33,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.CashEntry
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.CashFlowReportViewModel
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
@@ -65,7 +66,7 @@ fun CashFlowReportScreen(
                         )
                     }
                     Spacer(Modifier.width(4.dp))
-                    Text("الكشف اليومي", color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.cash_flow_title), color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
             }
             item {
@@ -81,19 +82,19 @@ fun CashFlowReportScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SummaryPill("مبيعات", state.salesTotal.formatJod(AppLanguage.AR), Fv.Blue, Modifier.weight(1f))
-                            SummaryPill("مرتجعات", state.returnsTotal.formatJod(AppLanguage.AR), Fv.Red, Modifier.weight(1f))
+                            SummaryPill(stringResource(Res.string.all_sales_filter_sales), state.salesTotal.formatJod(AppLanguage.AR), Fv.Blue, Modifier.weight(1f))
+                            SummaryPill(stringResource(Res.string.all_sales_filter_returns), state.returnsTotal.formatJod(AppLanguage.AR), Fv.Red, Modifier.weight(1f))
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SummaryPill("تحصيلات", state.collectionsTotal.formatJod(AppLanguage.AR), Fv.Green, Modifier.weight(1f))
-                            SummaryPill("صافي النقد", state.netCash.formatJod(AppLanguage.AR),
+                            SummaryPill(stringResource(Res.string.cash_flow_pill_collections), state.collectionsTotal.formatJod(AppLanguage.AR), Fv.Green, Modifier.weight(1f))
+                            SummaryPill(stringResource(Res.string.cash_flow_net), state.netCash.formatJod(AppLanguage.AR),
                                 if (state.netCash >= 0) Fv.Amber else Fv.Red, Modifier.weight(1f))
                         }
                     }
                 }
             }
             if (state.entries.isEmpty()) {
-                item { Text("لا توجد حركات في هذه الفترة", color = Fv.TextMid, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp)) }
+                item { Text(stringResource(Res.string.cash_flow_empty), color = Fv.TextMid, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp)) }
             } else {
                 items(state.entries, key = { entry ->
                     when (entry) {
@@ -126,9 +127,9 @@ private fun CashEntryRow(entry: CashEntry, onClick: () -> Unit) {
     val color: androidx.compose.ui.graphics.Color
     val iconRes: androidx.compose.ui.graphics.painter.Painter
     when (entry) {
-        is CashEntry.Sale -> { iconRes = painterResource(Res.drawable.ic_receipt); label = "بيع"; ref = entry.invoice.number; amount = entry.invoice.total; color = Fv.Blue }
-        is CashEntry.Return -> { iconRes = painterResource(Res.drawable.ic_return_arrow); label = "مرتجع"; ref = entry.invoice.number; amount = entry.invoice.total; color = Fv.Red }
-        is CashEntry.Collection -> { iconRes = painterResource(Res.drawable.ic_payment); label = "تحصيل"; ref = entry.payment.number; amount = entry.payment.amount; color = Fv.Green }
+        is CashEntry.Sale -> { iconRes = painterResource(Res.drawable.ic_receipt); label = stringResource(Res.string.chip_sale); ref = entry.invoice.number; amount = entry.invoice.total; color = Fv.Blue }
+        is CashEntry.Return -> { iconRes = painterResource(Res.drawable.ic_return_arrow); label = stringResource(Res.string.chip_return); ref = entry.invoice.number; amount = entry.invoice.total; color = Fv.Red }
+        is CashEntry.Collection -> { iconRes = painterResource(Res.drawable.ic_payment); label = stringResource(Res.string.customer_action_collection); ref = entry.payment.number; amount = entry.payment.amount; color = Fv.Green }
     }
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),

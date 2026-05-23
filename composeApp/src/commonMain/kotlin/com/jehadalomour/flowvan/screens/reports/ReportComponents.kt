@@ -31,6 +31,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.screens.components.Fv
+import flowvan.composeapp.generated.resources.Res
+import flowvan.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -50,13 +53,13 @@ fun DateRangeBar(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         DateButton(
-            label = "من",
+            label = stringResource(Res.string.from_date),
             millis = fromMillis,
             modifier = Modifier.weight(1f),
             onClick = { showFromPicker = true },
         )
         DateButton(
-            label = "إلى",
+            label = stringResource(Res.string.to_date),
             millis = toMillis,
             modifier = Modifier.weight(1f),
             onClick = { showToPicker = true },
@@ -72,9 +75,9 @@ fun DateRangeBar(
                     showFromPicker = false
                     val selected = pickerState.selectedDateMillis ?: fromMillis
                     onRangeSelected(selected, maxOf(toMillis, selected + 86_400_000L - 1))
-                }) { Text("تأكيد") }
+                }) { Text(stringResource(Res.string.confirm)) }
             },
-            dismissButton = { TextButton(onClick = { showFromPicker = false }) { Text("إلغاء") } },
+            dismissButton = { TextButton(onClick = { showFromPicker = false }) { Text(stringResource(Res.string.cancel)) } },
         ) { DatePicker(state = pickerState) }
     }
 
@@ -87,9 +90,9 @@ fun DateRangeBar(
                     showToPicker = false
                     val selected = pickerState.selectedDateMillis ?: toMillis
                     onRangeSelected(minOf(fromMillis, selected), selected + 86_400_000L - 1)
-                }) { Text("تأكيد") }
+                }) { Text(stringResource(Res.string.confirm)) }
             },
-            dismissButton = { TextButton(onClick = { showToPicker = false }) { Text("إلغاء") } },
+            dismissButton = { TextButton(onClick = { showToPicker = false }) { Text(stringResource(Res.string.cancel)) } },
         ) { DatePicker(state = pickerState) }
     }
 }

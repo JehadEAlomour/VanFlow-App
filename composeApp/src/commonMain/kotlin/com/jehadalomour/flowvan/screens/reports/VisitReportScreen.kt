@@ -35,6 +35,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.VisitReportViewModel
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.VisitedCustomer
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
@@ -65,7 +66,7 @@ fun VisitReportScreen(
                         )
                     }
                     Spacer(Modifier.width(4.dp))
-                    Text("تقرير الزيارات", color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.visits_title), color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
             }
             item {
@@ -81,14 +82,14 @@ fun VisitReportScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SummaryPill("المزارون", "${state.visitedCount}", Fv.Green, Modifier.weight(1f))
-                            SummaryPill("المتبقون", "${state.plannedCount - state.visitedCount}", Fv.Red, Modifier.weight(1f))
-                            SummaryPill("الإجمالي", "${state.plannedCount}", Fv.Blue, Modifier.weight(1f))
+                            SummaryPill(stringResource(Res.string.visits_pill_visited), "${state.visitedCount}", Fv.Green, Modifier.weight(1f))
+                            SummaryPill(stringResource(Res.string.visits_pill_remaining), "${state.plannedCount - state.visitedCount}", Fv.Red, Modifier.weight(1f))
+                            SummaryPill(stringResource(Res.string.total), "${state.plannedCount}", Fv.Blue, Modifier.weight(1f))
                         }
                         Spacer(Modifier.height(10.dp))
                         val rate = (state.visitRate * 100).toInt()
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text("نسبة الزيارة:", color = Fv.TextMid, fontSize = 12.sp)
+                            Text(stringResource(Res.string.visits_rate_label), color = Fv.TextMid, fontSize = 12.sp)
                             Spacer(Modifier.width(8.dp))
                             Box(
                                 modifier = Modifier
@@ -107,7 +108,7 @@ fun VisitReportScreen(
                             Text("$rate%", color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
                         Spacer(Modifier.height(6.dp))
-                        Text("إجمالي المبيعات: ${state.totalSales.formatJod(AppLanguage.AR)}", color = Fv.TextMid, fontSize = 12.sp)
+                        Text(stringResource(Res.string.visits_total_sales_value, state.totalSales.formatJod(AppLanguage.AR)), color = Fv.TextMid, fontSize = 12.sp)
                     }
                 }
             }
@@ -147,10 +148,10 @@ private fun VisitedCustomerRow(vc: VisitedCustomer) {
             if (vc.visited) {
                 Column(horizontalAlignment = Alignment.End) {
                     Text(vc.salesTotal.formatJod(AppLanguage.AR), color = Fv.Green, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    Text("${vc.invoiceCount} فاتورة", color = Fv.TextMid, fontSize = 10.sp)
+                    Text(stringResource(Res.string.visits_invoice_count, vc.invoiceCount), color = Fv.TextMid, fontSize = 10.sp)
                 }
             } else {
-                Text("لم تتم الزيارة", color = Fv.Red, fontSize = 11.sp)
+                Text(stringResource(Res.string.visits_not_visited), color = Fv.Red, fontSize = 11.sp)
             }
         }
     }

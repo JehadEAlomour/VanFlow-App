@@ -32,6 +32,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.domain.model.Customer
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.ReceivablesReportViewModel
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
@@ -62,7 +63,7 @@ fun ReceivablesReportScreen(
                         )
                     }
                     Spacer(Modifier.width(4.dp))
-                    Text("تقرير ذمم العملاء", color = Fv.TextHigh, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.receivables_title), color = Fv.TextHigh, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -70,13 +71,13 @@ fun ReceivablesReportScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     SummaryPill(
                         modifier = Modifier.weight(1f),
-                        label = "إجمالي الذمم",
+                        label = stringResource(Res.string.receivables_total_balance),
                         value = state.totalBalance.formatJod(AppLanguage.AR),
                         accent = Fv.Red,
                     )
                     SummaryPill(
                         modifier = Modifier.weight(1f),
-                        label = "متأخرات",
+                        label = stringResource(Res.string.receivables_total_overdue),
                         value = state.totalOverdue.formatJod(AppLanguage.AR),
                         accent = Fv.Amber,
                     )
@@ -85,7 +86,7 @@ fun ReceivablesReportScreen(
 
             item {
                 Text(
-                    "${state.count} عميل لديه ذمم مستحقة",
+                    stringResource(Res.string.receivables_customers_count, state.count),
                     color = Fv.TextMid,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(vertical = 4.dp),
@@ -99,7 +100,7 @@ fun ReceivablesReportScreen(
             if (state.customers.isEmpty()) {
                 item {
                     Text(
-                        "لا توجد ذمم مستحقة على العملاء",
+                        stringResource(Res.string.receivables_empty),
                         color = Fv.Green,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(vertical = 24.dp),
@@ -126,7 +127,7 @@ private fun ReceivableRow(customer: Customer) {
                 Spacer(Modifier.height(2.dp))
                 if (customer.overdueAmount > 0.0) {
                     Text(
-                        "متأخر: ${customer.overdueAmount.formatJod(AppLanguage.AR)}",
+                        stringResource(Res.string.receivables_overdue_value, customer.overdueAmount.formatJod(AppLanguage.AR)),
                         color = Fv.Red,
                         fontSize = 12.sp,
                     )

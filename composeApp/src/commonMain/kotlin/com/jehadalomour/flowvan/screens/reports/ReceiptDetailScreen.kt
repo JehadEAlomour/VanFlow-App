@@ -34,6 +34,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.data.local.entity.PaymentEntity
 import com.jehadalomour.flowvan.shared.presentation.feature.receiptdetail.ReceiptDetailViewModel
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
@@ -64,7 +65,7 @@ fun ReceiptDetailScreen(
                         modifier = Modifier.size(22.dp),
                     )
                 }
-                Text("سند قبض", color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(Res.string.receipt_voucher_title), color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
             }
 
             when {
@@ -72,7 +73,7 @@ fun ReceiptDetailScreen(
                     CircularProgressIndicator(color = Fv.Blue)
                 }
                 entity == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("لم يتم العثور على السند", color = Fv.TextMid)
+                    Text(stringResource(Res.string.receipt_detail_not_found), color = Fv.TextMid)
                 }
                 else -> ReceiptContent(entity)
             }
@@ -83,15 +84,15 @@ fun ReceiptDetailScreen(
 @Composable
 private fun ReceiptContent(entity: PaymentEntity) {
     val (methodLabel, methodColor) = when (entity.method) {
-        "CASH" -> "نقداً" to Fv.Green
-        "CHEQUE" -> "شيك" to Fv.Amber
-        "TRANSFER" -> "تحويل" to Fv.Blue
+        "CASH" -> stringResource(Res.string.method_cash_label) to Fv.Green
+        "CHEQUE" -> stringResource(Res.string.method_cheque_label) to Fv.Amber
+        "TRANSFER" -> stringResource(Res.string.method_transfer_label) to Fv.Blue
         else -> entity.method to Fv.TextMid
     }
     val (statusLabel, statusColor) = when (entity.status) {
-        "CONFIRMED" -> "مؤكد" to Fv.Green
-        "BOUNCED" -> "مرتجع" to Fv.Red
-        else -> "معلق" to Fv.Amber
+        "CONFIRMED" -> stringResource(Res.string.receipt_status_confirmed) to Fv.Green
+        "BOUNCED" -> stringResource(Res.string.receipt_status_bounced) to Fv.Red
+        else -> stringResource(Res.string.payment_status_pending) to Fv.Amber
     }
 
     LazyColumn(
@@ -114,7 +115,7 @@ private fun ReceiptContent(entity: PaymentEntity) {
                         Text(entity.number, color = Fv.TextHigh, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                     }
                     HorizontalDivider(color = Fv.SurfaceHigh)
-                    ReceiptRow("التاريخ", entity.createdAt.toDateTimeString())
+                    ReceiptRow(stringResource(Res.string.receipt_detail_date), entity.createdAt.toDateTimeString())
                 }
             }
         }
@@ -126,7 +127,7 @@ private fun ReceiptContent(entity: PaymentEntity) {
                 colors = CardDefaults.cardColors(containerColor = Fv.Surface),
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("المبلغ المحصّل", color = Fv.TextMid, fontSize = 11.sp)
+                    Text(stringResource(Res.string.receipt_detail_amount), color = Fv.TextMid, fontSize = 11.sp)
                     Spacer(Modifier.height(6.dp))
                     Text(entity.amount.formatJod(AppLanguage.AR), color = Fv.Green, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                     Text(methodLabel, color = methodColor, fontSize = 13.sp)
@@ -142,11 +143,11 @@ private fun ReceiptContent(entity: PaymentEntity) {
                     colors = CardDefaults.cardColors(containerColor = Fv.Surface),
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("تفاصيل الشيك", color = Fv.TextMid, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(Res.string.receipt_detail_cheque_info), color = Fv.TextMid, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         HorizontalDivider(color = Fv.SurfaceHigh)
-                        entity.chequeNumber?.let { ReceiptRow("رقم الشيك", it) }
-                        entity.chequeBank?.let { ReceiptRow("البنك", it) }
-                        entity.chequeDate?.let { ReceiptRow("تاريخ الشيك", it.toDateString()) }
+                        entity.chequeNumber?.let { ReceiptRow(stringResource(Res.string.collection_cheque_number), it) }
+                        entity.chequeBank?.let { ReceiptRow(stringResource(Res.string.collection_bank), it) }
+                        entity.chequeDate?.let { ReceiptRow(stringResource(Res.string.collection_cheque_date), it.toDateString()) }
                     }
                 }
             }
@@ -161,9 +162,9 @@ private fun ReceiptContent(entity: PaymentEntity) {
                     colors = CardDefaults.cardColors(containerColor = Fv.Surface),
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("تفاصيل التحويل", color = Fv.TextMid, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(Res.string.receipt_detail_transfer_info), color = Fv.TextMid, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         HorizontalDivider(color = Fv.SurfaceHigh)
-                        ReceiptRow("رقم المرجع", transferRef)
+                        ReceiptRow(stringResource(Res.string.receipt_detail_ref_number), transferRef)
                     }
                 }
             }
@@ -178,7 +179,7 @@ private fun ReceiptContent(entity: PaymentEntity) {
                     colors = CardDefaults.cardColors(containerColor = Fv.Surface),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("ملاحظات", color = Fv.TextMid, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(Res.string.receipt_detail_notes), color = Fv.TextMid, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                         Spacer(Modifier.height(6.dp))
                         Text(notes, color = Fv.TextHigh, fontSize = 13.sp)
                     }

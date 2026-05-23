@@ -37,6 +37,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.presentation.feature.map.MapNavigationViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -95,7 +96,7 @@ fun MapNavigationScreen(
                 Spacer(Modifier.width(6.dp))
                 Column {
                     Text(
-                        customer?.nameAr ?: "الملاحة",
+                        customer?.nameAr ?: stringResource(Res.string.map_navigation_fallback),
                         color = Fv.TextHigh,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -117,7 +118,7 @@ fun MapNavigationScreen(
                                 )
                                 Spacer(Modifier.height(12.dp))
                                 Text(
-                                    "لا تتوفر إحداثيات لهذا العميل",
+                                    stringResource(Res.string.map_no_location),
                                     color = Fv.TextMid,
                                     fontSize = 14.sp,
                                 )
@@ -181,7 +182,7 @@ fun MapNavigationScreen(
                             }
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "الخطوة ${currentStepIndex + 1} من ${navSteps.size}",
+                                stringResource(Res.string.map_step_of, currentStepIndex + 1, navSteps.size),
                                 color = Fv.TextMid,
                                 fontSize = 10.sp,
                             )
@@ -252,7 +253,7 @@ fun MapNavigationScreen(
                                         strokeWidth = 2.dp,
                                     )
                                     Spacer(Modifier.width(8.dp))
-                                    Text("جارٍ تحديد موقعك...", color = Fv.TextMid, fontSize = 12.sp)
+                                    Text(stringResource(Res.string.map_locating), color = Fv.TextMid, fontSize = 12.sp)
                                 }
                             } else {
                                 Button(
@@ -272,7 +273,7 @@ fun MapNavigationScreen(
                                     ),
                                 ) {
                                     if (isNavigating) {
-                                        Text("إيقاف الملاحة", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                        Text(stringResource(Res.string.map_stop_navigation), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                     } else {
                                         Icon(
                                             painter = painterResource(Res.drawable.ic_directions_car),
@@ -280,7 +281,7 @@ fun MapNavigationScreen(
                                             modifier = Modifier.size(18.dp),
                                         )
                                         Spacer(Modifier.width(6.dp))
-                                        Text("ابدأ الملاحة", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                        Text(stringResource(Res.string.map_start_navigation), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                                     }
                                 }
                             }

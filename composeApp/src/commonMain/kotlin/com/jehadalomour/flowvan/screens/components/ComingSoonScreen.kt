@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ComingSoonScreen(titleAr: String, titleEn: String, phaseLabel: String, onBack: () -> Unit) {
@@ -52,7 +53,7 @@ fun ComingSoonScreen(titleAr: String, titleEn: String, phaseLabel: String, onBac
                 Text(titleAr, color = Fv.TextHigh, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Text(titleEn, color = Fv.TextMid, fontSize = 13.sp)
                 Spacer(Modifier.height(8.dp))
-                Text("قادم في $phaseLabel", color = Fv.Blue, fontSize = 12.sp)
+                Text(stringResource(Res.string.coming_soon_label, phaseLabel), color = Fv.Blue, fontSize = 12.sp)
             }
         }
     }

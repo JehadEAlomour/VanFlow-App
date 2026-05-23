@@ -33,6 +33,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.data.local.entity.PaymentEntity
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.AllPaymentMethodFilter
 import com.jehadalomour.flowvan.shared.presentation.feature.reports.AllPaymentsReportViewModel
@@ -65,7 +66,7 @@ fun AllPaymentsReportScreen(
                         )
                     }
                     Spacer(Modifier.width(4.dp))
-                    Text("تقرير التحصيلات", color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.all_payments_title), color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
                 }
             }
             item {
@@ -74,15 +75,19 @@ fun AllPaymentsReportScreen(
                 }
             }
             item {
+                val allLabel = stringResource(Res.string.chip_all)
+                val cashLabel = stringResource(Res.string.chip_cash)
+                val chequeLabel = stringResource(Res.string.chip_cheque)
+                val transferLabel = stringResource(Res.string.chip_transfer)
                 FilterChipRow(
                     filters = AllPaymentMethodFilter.entries,
                     selected = state.methodFilter,
                     label = {
                         when (it) {
-                            AllPaymentMethodFilter.ALL -> "الكل"
-                            AllPaymentMethodFilter.CASH -> "نقد"
-                            AllPaymentMethodFilter.CHEQUE -> "شيك"
-                            AllPaymentMethodFilter.TRANSFER -> "حوالة"
+                            AllPaymentMethodFilter.ALL -> allLabel
+                            AllPaymentMethodFilter.CASH -> cashLabel
+                            AllPaymentMethodFilter.CHEQUE -> chequeLabel
+                            AllPaymentMethodFilter.TRANSFER -> transferLabel
                         }
                     },
                     onSelect = { viewModel.setMethodFilter(it) },
@@ -90,16 +95,16 @@ fun AllPaymentsReportScreen(
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SummaryPill("نقد", state.cashTotal.formatJod(AppLanguage.AR), Fv.Green, Modifier.weight(1f))
-                    SummaryPill("شيك", state.chequeTotal.formatJod(AppLanguage.AR), Fv.Blue, Modifier.weight(1f))
-                    SummaryPill("حوالة", state.transferTotal.formatJod(AppLanguage.AR), Fv.Purple, Modifier.weight(1f))
+                    SummaryPill(stringResource(Res.string.chip_cash), state.cashTotal.formatJod(AppLanguage.AR), Fv.Green, Modifier.weight(1f))
+                    SummaryPill(stringResource(Res.string.chip_cheque), state.chequeTotal.formatJod(AppLanguage.AR), Fv.Blue, Modifier.weight(1f))
+                    SummaryPill(stringResource(Res.string.chip_transfer), state.transferTotal.formatJod(AppLanguage.AR), Fv.Purple, Modifier.weight(1f))
                 }
             }
             item {
-                SummaryPill("الإجمالي", state.total.formatJod(AppLanguage.AR), Fv.Amber, Modifier.fillMaxWidth())
+                SummaryPill(stringResource(Res.string.total), state.total.formatJod(AppLanguage.AR), Fv.Amber, Modifier.fillMaxWidth())
             }
             if (state.payments.isEmpty()) {
-                item { Text("لا توجد تحصيلات في هذه الفترة", color = Fv.TextMid, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp)) }
+                item { Text(stringResource(Res.string.all_payments_empty), color = Fv.TextMid, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp)) }
             } else {
                 items(state.payments, key = { it.id }) { pay ->
                     PaymentRow(pay, onClick = { onOpenReceipt(pay.id) })
@@ -118,9 +123,9 @@ private fun PaymentRow(pay: PaymentEntity, onClick: () -> Unit) {
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             val methodLabel = when (pay.method) {
-                "CASH" -> "نقد"
-                "CHEQUE" -> "شيك"
-                "TRANSFER" -> "حوالة"
+                "CASH" -> stringResource(Res.string.chip_cash)
+                "CHEQUE" -> stringResource(Res.string.chip_cheque)
+                "TRANSFER" -> stringResource(Res.string.chip_transfer)
                 else -> pay.method
             }
             val methodColor = when (pay.method) {

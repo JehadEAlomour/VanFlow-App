@@ -35,6 +35,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.data.local.entity.InvoiceEntity
 import com.jehadalomour.flowvan.shared.presentation.feature.transactionreport.TransactionReportEvent
 import com.jehadalomour.flowvan.shared.presentation.feature.transactionreport.TransactionReportViewModel
@@ -67,7 +68,7 @@ fun TransactionReportScreen(
                     )
                 }
                 Text(
-                    "تقرير المعاملات",
+                    stringResource(Res.string.txn_report_title),
                     color = Fv.TextHigh,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -90,15 +91,19 @@ fun TransactionReportScreen(
                 }
 
                 item {
+                    val labelAll = stringResource(Res.string.all_sales_filter_all)
+                    val labelSales = stringResource(Res.string.all_sales_filter_sales)
+                    val labelReturns = stringResource(Res.string.all_sales_filter_returns)
+                    val labelRequests = stringResource(Res.string.all_sales_filter_requests)
                     FilterChipRow(
                         filters = TxnTypeFilter.entries,
                         selected = state.typeFilter,
                         label = { filter ->
                             when (filter) {
-                                TxnTypeFilter.ALL -> "الكل"
-                                TxnTypeFilter.SALE -> "مبيعات"
-                                TxnTypeFilter.RETURN -> "مرتجعات"
-                                TxnTypeFilter.REQUEST -> "طلبات"
+                                TxnTypeFilter.ALL -> labelAll
+                                TxnTypeFilter.SALE -> labelSales
+                                TxnTypeFilter.RETURN -> labelReturns
+                                TxnTypeFilter.REQUEST -> labelRequests
                             }
                         },
                         onSelect = { viewModel.onEvent(TransactionReportEvent.TypeFilterChanged(it)) },
@@ -108,13 +113,13 @@ fun TransactionReportScreen(
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SummaryPill(
-                            label = "إجمالي المبيعات",
+                            label = stringResource(Res.string.all_sales_total_sales),
                             value = state.salesTotal.formatJod(AppLanguage.AR),
                             accent = Fv.Green,
                             modifier = Modifier.weight(1f),
                         )
                         SummaryPill(
-                            label = "إجمالي المرتجعات",
+                            label = stringResource(Res.string.all_sales_total_returns),
                             value = state.returnsTotal.formatJod(AppLanguage.AR),
                             accent = Fv.Red,
                             modifier = Modifier.weight(1f),
@@ -131,7 +136,7 @@ fun TransactionReportScreen(
                 } else if (state.invoices.isEmpty()) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text("لا توجد معاملات في هذه الفترة", color = Fv.TextMid, fontSize = 13.sp)
+                            Text(stringResource(Res.string.txn_report_empty), color = Fv.TextMid, fontSize = 13.sp)
                         }
                     }
                 } else {
@@ -147,9 +152,9 @@ fun TransactionReportScreen(
 @Composable
 private fun TxnInvoiceRow(invoice: InvoiceEntity) {
     val (typeLabel, typeColor) = when (invoice.type) {
-        "SALE" -> "بيع" to Fv.Green
-        "RETURN" -> "مرتجع" to Fv.Red
-        "REQUEST" -> "طلب" to Fv.Teal
+        "SALE" -> stringResource(Res.string.chip_sale) to Fv.Green
+        "RETURN" -> stringResource(Res.string.chip_return) to Fv.Red
+        "REQUEST" -> stringResource(Res.string.chip_request) to Fv.Teal
         else -> invoice.type to Fv.TextMid
     }
     Card(

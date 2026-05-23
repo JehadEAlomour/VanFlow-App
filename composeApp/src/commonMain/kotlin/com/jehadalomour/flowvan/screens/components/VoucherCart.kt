@@ -29,6 +29,7 @@ import androidx.compose.material3.TextFieldDefaults
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,7 +63,7 @@ fun ProductPickerColumn(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearch,
-            placeholder = { Text("ابحث عن منتج", color = Fv.TextMid) },
+            placeholder = { Text(stringResource(Res.string.sale_search_product), color = Fv.TextMid) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
             shape = RoundedCornerShape(12.dp),
@@ -84,7 +85,7 @@ fun ProductPickerColumn(
             if (products.isEmpty()) {
                 item {
                     Text(
-                        "لا منتجات",
+                        stringResource(Res.string.cart_no_products),
                         color = Fv.TextMid,
                         fontSize = 13.sp,
                         modifier = Modifier.padding(24.dp),
@@ -136,9 +137,9 @@ private fun ProductRow(
                     val low = !outOfStock && product.vanStock < product.minStock
                     val chipColor = if (outOfStock) Fv.Red else if (low) Fv.Amber else Fv.Green
                     val chipLabel = when {
-                        outOfStock -> "نفد"
-                        low -> "منخفض · ${product.vanStock}"
-                        else -> "متوفر · ${product.vanStock}"
+                        outOfStock -> stringResource(Res.string.van_stock_out_of_stock)
+                        low -> stringResource(Res.string.cart_stock_low, product.vanStock)
+                        else -> stringResource(Res.string.cart_stock_available, product.vanStock)
                     }
                     Box(
                         modifier = Modifier
@@ -242,7 +243,7 @@ fun CartLineRow(
                                 .padding(horizontal = 5.dp, vertical = 1.dp),
                         ) {
                             Text(
-                                "خصم ${(line.discountPct * 100).toInt()}%",
+                                stringResource(Res.string.cart_discount_pct, (line.discountPct * 100).toInt()),
                                 color = Fv.Red,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -317,7 +318,7 @@ fun CartItemCard(line: CartLine, onTap: () -> Unit) {
                         .background(Color(0xFFE6F1FB))
                         .padding(horizontal = 10.dp, vertical = 5.dp),
                 ) {
-                    Text("تعديل", color = Fv.Blue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(Res.string.edit), color = Fv.Blue, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
             // Divider
@@ -345,7 +346,7 @@ fun CartItemCard(line: CartLine, onTap: () -> Unit) {
                         )
                         if (line.discountPct > 0) {
                             Text(
-                                "خصم ${(line.discountPct * 100).toInt()}%",
+                                stringResource(Res.string.cart_discount_pct, (line.discountPct * 100).toInt()),
                                 color = Fv.Green,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
@@ -415,21 +416,21 @@ fun TotalsStrip(
         colors = CardDefaults.cardColors(containerColor = Fv.SurfaceHigh),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            TotalsRow("المجموع الفرعي", subtotal.formatJod(AppLanguage.AR), Fv.TextMid)
+            TotalsRow(stringResource(Res.string.voucher_detail_subtotal), subtotal.formatJod(AppLanguage.AR), Fv.TextMid)
             // Split display when called with separate line/voucher discounts
             if (lineDiscount != null || voucherDiscount != null) {
                 if (lineDiscount != null && lineDiscount > 0)
-                    TotalsRow("خصم السطور", "- ${lineDiscount.formatJod(AppLanguage.AR)}", Fv.Red)
+                    TotalsRow(stringResource(Res.string.cart_line_discount), "- ${lineDiscount.formatJod(AppLanguage.AR)}", Fv.Red)
                 if (voucherDiscount != null && voucherDiscount > 0)
-                    TotalsRow("خصم الفاتورة", "- ${voucherDiscount.formatJod(AppLanguage.AR)}", Fv.Red)
+                    TotalsRow(stringResource(Res.string.cart_voucher_discount), "- ${voucherDiscount.formatJod(AppLanguage.AR)}", Fv.Red)
             } else if (discount != null && discount > 0) {
-                TotalsRow("الخصم", "- ${discount.formatJod(AppLanguage.AR)}", Fv.Red)
+                TotalsRow(stringResource(Res.string.voucher_detail_discount), "- ${discount.formatJod(AppLanguage.AR)}", Fv.Red)
             }
             if (tax > 0) {
-                TotalsRow("الضريبة", tax.formatJod(AppLanguage.AR), Fv.TextMid)
+                TotalsRow(stringResource(Res.string.voucher_detail_tax), tax.formatJod(AppLanguage.AR), Fv.TextMid)
             }
             Spacer(Modifier.height(6.dp))
-            TotalsRow("الإجمالي", total.formatJod(AppLanguage.AR), Fv.Green, bold = true, fontSize = 14.sp)
+            TotalsRow(stringResource(Res.string.voucher_detail_total), total.formatJod(AppLanguage.AR), Fv.Green, bold = true, fontSize = 14.sp)
         }
     }
 }

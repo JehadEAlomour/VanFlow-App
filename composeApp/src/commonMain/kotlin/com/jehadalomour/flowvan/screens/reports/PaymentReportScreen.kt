@@ -36,6 +36,7 @@ import com.jehadalomour.flowvan.screens.components.Fv
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.shared.data.local.entity.PaymentEntity
 import com.jehadalomour.flowvan.shared.presentation.feature.paymentreport.PaymentMethodFilter
 import com.jehadalomour.flowvan.shared.presentation.feature.paymentreport.PaymentReportEvent
@@ -69,7 +70,7 @@ fun PaymentReportScreen(
                     )
                 }
                 Text(
-                    "تقرير المدفوعات",
+                    stringResource(Res.string.payment_report_payments_title),
                     color = Fv.TextHigh,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -92,15 +93,19 @@ fun PaymentReportScreen(
                 }
 
                 item {
+                    val allLabel = stringResource(Res.string.chip_all)
+                    val cashLabel = stringResource(Res.string.method_cash_label)
+                    val chequeLabel = stringResource(Res.string.method_cheque_label)
+                    val transferLabel = stringResource(Res.string.method_transfer_label)
                     FilterChipRow(
                         filters = PaymentMethodFilter.entries,
                         selected = state.methodFilter,
                         label = { filter ->
                             when (filter) {
-                                PaymentMethodFilter.ALL -> "الكل"
-                                PaymentMethodFilter.CASH -> "نقداً"
-                                PaymentMethodFilter.CHEQUE -> "شيك"
-                                PaymentMethodFilter.TRANSFER -> "تحويل"
+                                PaymentMethodFilter.ALL -> allLabel
+                                PaymentMethodFilter.CASH -> cashLabel
+                                PaymentMethodFilter.CHEQUE -> chequeLabel
+                                PaymentMethodFilter.TRANSFER -> transferLabel
                             }
                         },
                         onSelect = { viewModel.onEvent(PaymentReportEvent.MethodFilterChanged(it)) },
@@ -110,13 +115,13 @@ fun PaymentReportScreen(
                 item {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SummaryPill(
-                            label = "الإجمالي",
+                            label = stringResource(Res.string.total),
                             value = state.total.formatJod(AppLanguage.AR),
                             accent = Fv.Blue,
                             modifier = Modifier.weight(1f),
                         )
                         SummaryPill(
-                            label = "المؤكدة",
+                            label = stringResource(Res.string.payment_report_confirmed),
                             value = state.confirmedTotal.formatJod(AppLanguage.AR),
                             accent = Fv.Green,
                             modifier = Modifier.weight(1f),
@@ -133,7 +138,7 @@ fun PaymentReportScreen(
                 } else if (state.payments.isEmpty()) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text("لا توجد مدفوعات في هذه الفترة", color = Fv.TextMid, fontSize = 13.sp)
+                            Text(stringResource(Res.string.payment_report_empty), color = Fv.TextMid, fontSize = 13.sp)
                         }
                     }
                 } else {
@@ -149,9 +154,9 @@ fun PaymentReportScreen(
 @Composable
 private fun PayReportRow(p: PaymentEntity, onClick: () -> Unit) {
     val (methodLabel, methodColor) = when (p.method) {
-        "CASH" -> "نقداً" to Fv.Green
-        "CHEQUE" -> "شيك" to Fv.Amber
-        "TRANSFER" -> "تحويل" to Fv.Blue
+        "CASH" -> stringResource(Res.string.method_cash_label) to Fv.Green
+        "CHEQUE" -> stringResource(Res.string.method_cheque_label) to Fv.Amber
+        "TRANSFER" -> stringResource(Res.string.method_transfer_label) to Fv.Blue
         else -> p.method to Fv.TextMid
     }
     val statusColor = when (p.status) {
@@ -160,9 +165,9 @@ private fun PayReportRow(p: PaymentEntity, onClick: () -> Unit) {
         else -> Fv.Green
     }
     val statusLabel = when (p.status) {
-        "BOUNCED" -> "مرتجع"
-        "PENDING" -> "معلق"
-        else -> "مؤكد"
+        "BOUNCED" -> stringResource(Res.string.receipt_status_bounced)
+        "PENDING" -> stringResource(Res.string.payment_status_pending)
+        else -> stringResource(Res.string.receipt_status_confirmed)
     }
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
@@ -191,11 +196,11 @@ private fun PayReportRow(p: PaymentEntity, onClick: () -> Unit) {
             }
             if (p.method == "CHEQUE" && (p.chequeNumber != null || p.chequeBank != null)) {
                 Spacer(Modifier.height(6.dp))
-                Text("شيك ${p.chequeNumber ?: "-"} · ${p.chequeBank ?: "-"}", color = Fv.TextMid, fontSize = 10.sp)
+                Text(stringResource(Res.string.payment_cheque_line, p.chequeNumber ?: "-", p.chequeBank ?: "-"), color = Fv.TextMid, fontSize = 10.sp)
             }
             if (p.method == "TRANSFER" && p.transferRef != null) {
                 Spacer(Modifier.height(4.dp))
-                Text("مرجع: ${p.transferRef}", color = Fv.TextMid, fontSize = 10.sp)
+                Text(stringResource(Res.string.payment_ref_line, p.transferRef ?: "-"), color = Fv.TextMid, fontSize = 10.sp)
             }
         }
     }
