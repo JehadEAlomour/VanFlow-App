@@ -26,6 +26,8 @@ class CreateReturnVoucherUseCase(
         cart: List<CartLine>,
         reason: String,
         extraNotes: String?,
+        referenceInvoiceId: String? = null,
+        referenceNumber: String? = null,
     ): Result<InvoiceEntity> = runCatching {
         if (cart.isEmpty()) throw EmptyCartException()
         require(reason.isNotBlank()) { "reason required" }
@@ -70,6 +72,8 @@ class CreateReturnVoucherUseCase(
             paymentMethod  = null,
             notes          = "سبب: $reason${extraNotes?.let { " — $it" } ?: ""}",
             syncedAt       = null,
+            referenceInvoiceId = referenceInvoiceId,
+            referenceNumber    = referenceNumber,
         )
 
         invoices.save(entity)

@@ -23,9 +23,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.horizontalScroll
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -44,7 +48,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.platform.rememberPdfShareHelper
+import com.jehadalomour.flowvan.platform.printer.PrinterConnectDialog
+import com.jehadalomour.flowvan.platform.printer.toPngBytes
 import com.jehadalomour.flowvan.shared.domain.model.InvoiceLine
+import com.jehadalomour.flowvan.shared.domain.printer.PrinterState
+import com.jehadalomour.flowvan.shared.presentation.feature.print.VoucherPrintEvent
 import com.jehadalomour.flowvan.shared.presentation.feature.print.VoucherPrintState
 import com.jehadalomour.flowvan.shared.presentation.feature.print.VoucherPrintViewModel
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
@@ -87,6 +95,21 @@ fun VoucherPrintScreen(
     val scope = rememberCoroutineScope()
     val pdfHelper = rememberPdfShareHelper()
 
+    // Capture the on-screen receipt and send it to the ViewModel as PNG bytes.
+    // Bitmap capture is the one piece that must live in the UI; all logic stays in the VM.
+    suspend fun captureAndPrint() {
+        val bitmap = graphicsLayer.toImageBitmap()
+        val png = withContext(Dispatchers.Default) { bitmap.toPngBytes() }
+        viewModel.onEvent(VoucherPrintEvent.Print(png))
+    }
+
+    // Auto-print once a connection is established from the dialog.
+    LaunchedEffect(state.pendingPrint, state.printerState) {
+        if (state.pendingPrint && state.printerState is PrinterState.Connected) {
+            captureAndPrint()
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().background(ScreenBg),
     ) {
@@ -112,13 +135,28 @@ fun VoucherPrintScreen(
 
         // Action bar
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ActionButton(
-                label = stringResource(Res.string.print_action_print),
+                label = stringResource(Res.string.printer_thermal_print),
                 filled = true,
+                onClick = {
+                    if (state.printerState is PrinterState.Connected) {
+                        scope.launch { captureAndPrint() }
+                    } else {
+                        viewModel.onEvent(VoucherPrintEvent.RequestConnectThenPrint)
+                    }
+                },
+            )
+            Spacer(Modifier.size(10.dp))
+            ActionButton(
+                label = stringResource(Res.string.print_action_print),
+                filled = false,
                 onClick = {
                     scope.launch {
                         val bmp = graphicsLayer.toImageBitmap()
@@ -136,6 +174,39 @@ fun VoucherPrintScreen(
                         pdfHelper.shareAsPdf(bmp, state.number)
                     }
                 },
+            )
+        }
+
+        // Printer status + last action feedback
+        val statusMessage = when {
+            state.isPrinting -> stringResource(Res.string.printer_printing)
+            state.printMessageAr != null -> state.printMessageAr!!
+            else -> printerStatusLabel(state.printerState)
+        }
+        Text(
+            text = statusMessage,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 4.dp),
+            textAlign = TextAlign.Center,
+            fontSize = 11.sp,
+            color = if (state.printerState is PrinterState.Connected) Green else SubText,
+        )
+
+        if (state.showConnectDialog) {
+            PrinterConnectDialog(
+                printerState = state.printerState,
+                connectType = state.connectType,
+                connectAddress = state.connectAddress,
+                discoveredDevices = state.discoveredDevices,
+                onTypeSelected = { viewModel.onEvent(VoucherPrintEvent.ConnectTypeSelected(it)) },
+                onAddressChanged = { viewModel.onEvent(VoucherPrintEvent.ConnectAddressChanged(it)) },
+                onDeviceSelected = { viewModel.onEvent(VoucherPrintEvent.DeviceSelected(it)) },
+                onRefresh = { viewModel.onEvent(VoucherPrintEvent.RefreshDevices) },
+                onConnect = { viewModel.onEvent(VoucherPrintEvent.Connect) },
+                onDisconnect = { viewModel.onEvent(VoucherPrintEvent.Disconnect) },
+                onDismiss = { viewModel.onEvent(VoucherPrintEvent.DismissConnectDialog) },
             )
         }
 
@@ -558,6 +629,14 @@ private fun SignatureBox(label: String) {
 }
 
 // ── Pure helpers ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun printerStatusLabel(state: PrinterState): String = when (state) {
+    is PrinterState.Connected -> stringResource(Res.string.printer_status_connected, state.target.name)
+    is PrinterState.Connecting -> stringResource(Res.string.printer_status_connecting)
+    is PrinterState.Error -> stringResource(Res.string.printer_status_error)
+    PrinterState.Disconnected -> stringResource(Res.string.printer_status_disconnected)
+}
 
 @Composable
 private fun typeLabel(type: String) = when (type) {

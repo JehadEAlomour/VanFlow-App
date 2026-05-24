@@ -605,6 +605,36 @@
     <string name="voucher_status_fulfilled">منفّذ</string>
     <string name="voucher_stock_available_count">متوفر: %1$d</string>
     <string name="voucher_stock_low_count">منخفض: %1$d</string>
+    <string name="voucher_stock_required_units">المطلوب: %1$s وحدة</string>
+    <string name="voucher_stock_exceeds_warning">الكمية المطلوبة تتجاوز المتوفر في الفان</string>
+    <string name="return_source_pick">اختر فاتورة البيع للإرجاع</string>
+    <string name="return_source_title">فواتير البيع</string>
+    <string name="return_source_empty">لا توجد فواتير بيع لهذا العميل</string>
+    <string name="return_reference_label">مرجع الفاتورة: #%1$s</string>
+    <string name="return_change">تغيير</string>
     <string name="voucher_unit_price">سعر الوحدة</string>
     <string name="voucher_update_line">تحديث السطر</string>
+
+    <!-- Thermal printer -->
+    <string name="printer_thermal_print">طباعة حرارية</string>
+    <string name="printer_connect_title">توصيل الطابعة</string>
+    <string name="printer_connect">اتصال</string>
+    <string name="printer_disconnect">قطع الاتصال</string>
+    <string name="printer_cancel">إلغاء</string>
+    <string name="printer_refresh">تحديث</string>
+    <string name="printer_devices">الأجهزة المتاحة</string>
+    <string name="printer_no_devices">لا توجد أجهزة</string>
+    <string name="printer_type_usb">USB</string>
+    <string name="printer_type_bluetooth">بلوتوث</string>
+    <string name="printer_type_serial">منفذ تسلسلي</string>
+    <string name="printer_type_network">شبكة</string>
+    <string name="printer_address_bluetooth_hint">عنوان البلوتوث (MAC)</string>
+    <string name="printer_address_network_hint">عنوان الـ IP</string>
+    <string name="printer_status_connected">متصلة: %1$s</string>
+    <string name="printer_status_disconnected">الطابعة غير متصلة</string>
+    <string name="printer_status_connecting">جارٍ الاتصال…</string>
+    <string name="printer_status_error">خطأ في الاتصال بالطابعة</string>
+    <string name="printer_printing">جارٍ الطباعة…</string>
+    <string name="printer_print_success">تمت الطباعة بنجاح</string>
+    <string name="printer_print_failed">فشلت الطباعة</string>
 </resources>

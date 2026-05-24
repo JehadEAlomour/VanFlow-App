@@ -1,5 +1,6 @@
 package com.jehadalomour.flowvan.shared.presentation.feature.voucher
 
+import com.jehadalomour.flowvan.shared.data.local.entity.InvoiceEntity
 import com.jehadalomour.flowvan.shared.domain.model.CartLine
 import com.jehadalomour.flowvan.shared.domain.model.Customer
 import com.jehadalomour.flowvan.shared.domain.model.InvoiceDiscountInput
@@ -34,6 +35,15 @@ data class VoucherState(
     val errorAr: String? = null,
     /** Driven from AppSettings — stamps each new CartLine at add-time. */
     val taxType: LineTaxType = LineTaxType.TAXABLE,
+
+    // ── RETURN: source sale invoice this return is issued against ──────────────
+    /** The customer's confirmed SALE invoices, offered as return sources. */
+    val sourceInvoices: List<InvoiceEntity> = emptyList(),
+    val referenceInvoiceId: String? = null,
+    val referenceNumber: String? = null,
+    val showSourcePicker: Boolean = false,
+    /** Max returnable qty per product (base units) = what was sold on the source invoice. */
+    val soldQtyByProduct: Map<String, Double> = emptyMap(),
 ) {
     /** Full invoice calculation via the tax calculator (pure, no side effects). */
     val summary: VoucherSummary get() = InvoiceTaxCalculator.calculateInvoice(
@@ -61,7 +71,10 @@ data class VoucherState(
     }
 
     val canSave: Boolean get() = cart.isNotEmpty() && !isSaving &&
-        (type != VoucherType.RETURN || reason != null)
+        (type != VoucherType.RETURN || (reason != null && referenceInvoiceId != null))
+
+    /** RETURN must be issued against a real sale invoice of the same customer. */
+    val requiresSourceInvoice: Boolean get() = type == VoucherType.RETURN
 
     // ── UI helpers — screen reads these, no when(type) logic in the screen ──
     val titleAr: String get() = when (type) {
@@ -111,4 +124,9 @@ sealed interface VoucherEvent {
     data object DismissSaveSheet : VoucherEvent
     data class ReasonSelected(val reason: ReturnReason) : VoucherEvent
     data object DismissError : VoucherEvent
+
+    // RETURN: choosing the source sale invoice
+    data object OpenSourcePicker : VoucherEvent
+    data object DismissSourcePicker : VoucherEvent
+    data class SelectSourceInvoice(val invoiceId: String) : VoucherEvent
 }

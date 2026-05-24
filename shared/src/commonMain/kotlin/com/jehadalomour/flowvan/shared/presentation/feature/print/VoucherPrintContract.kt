@@ -1,6 +1,9 @@
 package com.jehadalomour.flowvan.shared.presentation.feature.print
 
 import com.jehadalomour.flowvan.shared.domain.model.InvoiceLine
+import com.jehadalomour.flowvan.shared.domain.printer.PrinterState
+import com.jehadalomour.flowvan.shared.domain.printer.PrinterTarget
+import com.jehadalomour.flowvan.shared.domain.printer.PrinterType
 
 data class VoucherPrintState(
     val isLoading: Boolean = true,
@@ -20,4 +23,35 @@ data class VoucherPrintState(
     val total: Double = 0.0,
     val notes: String? = null,
     val branch: String = "",
+
+    // ── Thermal printer ──────────────────────────────────────────────────────
+    val printerState: PrinterState = PrinterState.Disconnected,
+    val isPrinting: Boolean = false,
+    val printMessageAr: String? = null,
+    val showConnectDialog: Boolean = false,
+    /** Print the receipt automatically once a connection is established. */
+    val pendingPrint: Boolean = false,
+    val connectType: PrinterType = PrinterType.BLUETOOTH,
+    val connectAddress: String = "",
+    val discoveredDevices: List<PrinterTarget> = emptyList(),
 )
+
+/** All user intents on the print screen. */
+sealed interface VoucherPrintEvent {
+    /** Tapped "thermal print" while disconnected — open the dialog and print once connected. */
+    data object RequestConnectThenPrint : VoucherPrintEvent
+    data object DismissConnectDialog : VoucherPrintEvent
+    data class ConnectTypeSelected(val type: PrinterType) : VoucherPrintEvent
+    data class ConnectAddressChanged(val address: String) : VoucherPrintEvent
+    data class DeviceSelected(val target: PrinterTarget) : VoucherPrintEvent
+    data object RefreshDevices : VoucherPrintEvent
+    data object Connect : VoucherPrintEvent
+    data object Disconnect : VoucherPrintEvent
+    /** UI captured the receipt as PNG bytes; send it to the printer. */
+    data class Print(val receiptPng: ByteArray) : VoucherPrintEvent {
+        override fun equals(other: Any?) =
+            this === other || (other is Print && receiptPng.contentEquals(other.receiptPng))
+        override fun hashCode() = receiptPng.contentHashCode()
+    }
+    data object DismissMessage : VoucherPrintEvent
+}

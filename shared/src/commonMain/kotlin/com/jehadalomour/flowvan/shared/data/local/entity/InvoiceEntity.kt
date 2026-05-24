@@ -20,4 +20,7 @@ data class InvoiceEntity(
     val paymentMethod: String?,
     val notes: String?,
     val syncedAt: Long?,
+    /** For RETURN vouchers: the original SALE invoice this return is issued against. */
+    val referenceInvoiceId: String? = null,
+    val referenceNumber: String? = null,
 )

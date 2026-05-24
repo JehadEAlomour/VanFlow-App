@@ -9,6 +9,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -78,11 +79,13 @@ import com.jehadalomour.flowvan.shared.domain.model.ProductUnit
 import com.jehadalomour.flowvan.shared.presentation.feature.returns.ReturnReason
 import com.jehadalomour.flowvan.shared.presentation.feature.sale.DiscountType
 import com.jehadalomour.flowvan.shared.presentation.feature.sale.VoucherView
+import com.jehadalomour.flowvan.shared.data.local.entity.InvoiceEntity
 import com.jehadalomour.flowvan.shared.presentation.feature.voucher.VoucherEvent
 import com.jehadalomour.flowvan.shared.presentation.feature.voucher.VoucherState
 import com.jehadalomour.flowvan.shared.presentation.feature.voucher.VoucherType
 import com.jehadalomour.flowvan.shared.presentation.feature.voucher.VoucherViewModel
 import com.jehadalomour.flowvan.shared.presentation.format.formatJod
+import kotlin.math.floor
 import com.jehadalomour.flowvan.shared.presentation.i18n.AppLanguage
 import flowvan.composeapp.generated.resources.Res
 import flowvan.composeapp.generated.resources.*
@@ -160,6 +163,14 @@ fun VoucherScreen(
                 }
             }
 
+            // ── RETURN: reference to the original sale invoice ─────────────────
+            if (state.type == VoucherType.RETURN) {
+                ReturnReferenceBanner(
+                    referenceNumber = state.referenceNumber,
+                    onPick = { viewModel.onEvent(VoucherEvent.OpenSourcePicker) },
+                )
+            }
+
             // ── Views ─────────────────────────────────────────────────────────
             when (state.view) {
                 VoucherView.PICKER -> {
@@ -235,6 +246,7 @@ fun VoucherScreen(
             product = product,
             currentLine = currentLine,
             dbUnits = state.productUnits[product.id] ?: emptyList(),
+            enforceStock = state.showStockBadge,
             onConfirm = { qty, unit, unitPrice, unitConversionQty, discountPct ->
                 viewModel.onEvent(
                     VoucherEvent.ConfirmItemDialog(product, qty, unit, unitPrice, unitConversionQty, discountPct),
@@ -245,6 +257,15 @@ fun VoucherScreen(
                 { viewModel.onEvent(VoucherEvent.RemoveLine(currentLine.productId)); dialogProduct = null }
             } else null,
             onDismiss = { dialogProduct = null },
+        )
+    }
+
+    // ── RETURN: source sale-invoice picker ─────────────────────────────────────
+    if (state.showSourcePicker) {
+        SourceInvoicePickerDialog(
+            invoices = state.sourceInvoices,
+            onSelect = { viewModel.onEvent(VoucherEvent.SelectSourceInvoice(it)) },
+            onDismiss = { viewModel.onEvent(VoucherEvent.DismissSourcePicker) },
         )
     }
 
@@ -726,6 +747,7 @@ private fun AddItemBottomSheet(
     product: Product,
     currentLine: CartLine?,
     dbUnits: List<ProductUnit>,
+    enforceStock: Boolean,
     onConfirm: (qty: Double, unit: String, unitPrice: Double, unitConversionQty: Double, discountPct: Double) -> Unit,
     onDelete: (() -> Unit)? = null,
     onDismiss: () -> Unit,
@@ -758,6 +780,16 @@ private fun AddItemBottomSheet(
         DiscountType.VALUE -> if (gross > 0) (discountText.toDoubleOrNull() ?: 0.0).coerceIn(0.0, gross) / gross else 0.0
     }
     val lineTotal = gross * (1.0 - discountPct)
+
+    // Stock check (SALE only): the requested quantity is converted to base units via the
+    // selected unit's pack size, then validated against what's available in the van.
+    val availableBase = product.vanStock.toDouble()
+    val requestedBase = qty * selectedUnit.conversionQty
+    val maxQtyForUnit = if (selectedUnit.conversionQty > 0.0)
+        floor(availableBase / selectedUnit.conversionQty).toInt() else 0
+    val exceedsStock = enforceStock && requestedBase > availableBase
+    val canIncrement = !enforceStock || qty < maxQtyForUnit
+    val canConfirm = qty > 0 && !exceedsStock
 
     val blueGradient = Brush.linearGradient(listOf(Color(0xFF185FA5), Color(0xFF0C447C)))
     val greenGradient = Brush.linearGradient(listOf(Color(0xFF1D9E75), Color(0xFF0F6E56)))
@@ -831,7 +863,9 @@ private fun AddItemBottomSheet(
                                 ) { Text("−", color = Color(0xFF185FA5), fontSize = 22.sp, fontWeight = FontWeight.Medium) }
                                 Text(qty.toInt().toString(), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A2A3A))
                                 Box(
-                                    modifier = Modifier.size(38.dp).clip(CircleShape).background(blueGradient).clickable { qty += 1 },
+                                    modifier = Modifier.size(38.dp).clip(CircleShape)
+                                        .background(if (canIncrement) blueGradient else Brush.linearGradient(listOf(Color(0xFFC8D8EC), Color(0xFFC8D8EC))))
+                                        .clickable(enabled = canIncrement) { qty += 1 },
                                     contentAlignment = Alignment.Center,
                                 ) { Text("+", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                             }
@@ -858,6 +892,42 @@ private fun AddItemBottomSheet(
                         }
 
                         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFDDE8F5)))
+
+                        // Stock check (SALE) — available van stock vs. requested base units
+                        if (enforceStock) {
+                            val warn = exceedsStock
+                            val accent = if (warn) Color(0xFFE24B4A) else Color(0xFF1D9E75)
+                            val bg = if (warn) Color(0xFFFFF0F0) else Color(0xFFEAF7F1)
+                            val border = if (warn) Color(0xFFF7C1C1) else Color(0xFFBFE6D5)
+                            val requestedLabel = if (requestedBase % 1.0 == 0.0)
+                                requestedBase.toInt().toString() else requestedBase.toString()
+                            Column(
+                                modifier = Modifier.fillMaxWidth().background(bg, RoundedCornerShape(14.dp))
+                                    .border(0.5.dp, border, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        stringResource(Res.string.voucher_stock_available_count, product.vanStock),
+                                        fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = accent,
+                                    )
+                                    Text(
+                                        stringResource(Res.string.voucher_stock_required_units, requestedLabel),
+                                        fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF5A7399),
+                                    )
+                                }
+                                if (warn) {
+                                    Text(
+                                        stringResource(Res.string.voucher_stock_exceeds_warning),
+                                        fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE24B4A),
+                                    )
+                                }
+                            }
+                        }
 
                         // Unit price display
                         Row(
@@ -923,8 +993,8 @@ private fun AddItemBottomSheet(
                         ) { Text(stringResource(Res.string.cancel), color = Color(0xFF5A7399), fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }
                         Box(
                             modifier = Modifier.weight(if (onDelete != null) 1.8f else 2f).height(52.dp).clip(RoundedCornerShape(16.dp))
-                                .then(if (qty > 0) Modifier.background(greenGradient) else Modifier.background(Fv.SurfaceTop))
-                                .clickable(enabled = qty > 0) {
+                                .then(if (canConfirm) Modifier.background(greenGradient) else Modifier.background(Fv.SurfaceTop))
+                                .clickable(enabled = canConfirm) {
                                     onConfirm(qty, selectedUnit.name, selectedUnit.price, selectedUnit.conversionQty, discountPct)
                                 },
                             contentAlignment = Alignment.Center,
@@ -933,12 +1003,12 @@ private fun AddItemBottomSheet(
                                 Icon(
                                     painter = painterResource(Res.drawable.ic_cart),
                                     contentDescription = null,
-                                    tint = if (qty > 0) Color.White else Fv.TextMid,
+                                    tint = if (canConfirm) Color.White else Fv.TextMid,
                                     modifier = Modifier.size(19.dp),
                                 )
                                 Text(
                                     if (currentLine == null) stringResource(Res.string.voucher_add_to_cart) else stringResource(Res.string.voucher_update_line),
-                                    color = if (qty > 0) Color.White else Fv.TextMid,
+                                    color = if (canConfirm) Color.White else Fv.TextMid,
                                     fontSize = 15.sp, fontWeight = FontWeight.Bold,
                                 )
                             }
@@ -984,4 +1054,80 @@ private fun PaymentMethodDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel), color = Fv.TextMid) } },
         containerColor = Fv.Surface,
     )
+}
+
+// ── RETURN: reference to original sale invoice ────────────────────────────────
+
+@Composable
+private fun ReturnReferenceBanner(referenceNumber: String?, onPick: () -> Unit) {
+    val hasRef = referenceNumber != null
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(if (hasRef) Color(0xFFEFF6FF) else Color(0xFFFFF4E5))
+            .clickable(onClick = onPick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (hasRef) {
+            Text(
+                stringResource(Res.string.return_reference_label, referenceNumber!!),
+                color = Fv.Blue, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+            )
+            Text(stringResource(Res.string.return_change), color = Fv.Blue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        } else {
+            Text(stringResource(Res.string.return_source_pick), color = Fv.Amber, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text("+", color = Fv.Amber, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun SourceInvoicePickerDialog(
+    invoices: List<InvoiceEntity>,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.return_source_title), color = Fv.TextHigh) },
+        text = {
+            if (invoices.isEmpty()) {
+                Text(stringResource(Res.string.return_source_empty), color = Fv.TextMid)
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(invoices) { inv ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Fv.SurfaceTop)
+                                .clickable { onSelect(inv.id) }
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("#${inv.number}", color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text(inv.total.formatJod(AppLanguage.AR), color = Fv.Green, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Text(formatInvoiceDate(inv.createdAt), color = Fv.TextMid, fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel), color = Fv.TextMid) } },
+        containerColor = Fv.Surface,
+    )
+}
+
+private fun formatInvoiceDate(millis: Long): String {
+    val dt = Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.currentSystemDefault())
+    return "${dt.dayOfMonth.toString().padStart(2, '0')}/" +
+        "${dt.monthNumber.toString().padStart(2, '0')}/${dt.year}"
 }

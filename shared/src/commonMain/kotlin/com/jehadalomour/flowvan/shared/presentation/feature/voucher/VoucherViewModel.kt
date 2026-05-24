@@ -2,15 +2,19 @@ package com.jehadalomour.flowvan.shared.presentation.feature.voucher
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jehadalomour.flowvan.shared.data.local.dao.InvoiceDao
 import com.jehadalomour.flowvan.shared.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.shared.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.shared.data.repository.ProductRepository
 import com.jehadalomour.flowvan.shared.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.shared.data.settings.SessionStore
 import com.jehadalomour.flowvan.shared.domain.model.CartLine
+import com.jehadalomour.flowvan.shared.domain.model.InvoiceLine
 import com.jehadalomour.flowvan.shared.domain.model.LineTaxType
 import com.jehadalomour.flowvan.shared.domain.model.Product
 import com.jehadalomour.flowvan.shared.domain.model.TaxType
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import com.jehadalomour.flowvan.shared.domain.usecase.CreateRequestVoucherUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.CreateReturnVoucherUseCase
 import com.jehadalomour.flowvan.shared.domain.usecase.CreateSaleVoucherUseCase
@@ -37,9 +41,13 @@ class VoucherViewModel(
     private val createReturn: CreateReturnVoucherUseCase,
     private val createRequest: CreateRequestVoucherUseCase,
     private val appSettings: AppSettingsRepository,
+    private val invoiceDao: InvoiceDao,
+    private val json: Json,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(VoucherState(type = type))
+    private val _state = MutableStateFlow(
+        VoucherState(type = type, showSourcePicker = type == VoucherType.RETURN),
+    )
     val state: StateFlow<VoucherState> = _state.asStateFlow()
 
     init {
@@ -69,6 +77,15 @@ class VoucherViewModel(
                 }
             }
             .launchIn(viewModelScope)
+
+        // RETURN: offer the customer's confirmed sale invoices as return sources.
+        if (type == VoucherType.RETURN) {
+            invoiceDao.observeByCustomerAndType(customerId, "SALE")
+                .onEach { sales ->
+                    _state.update { it.copy(sourceInvoices = sales.filter { inv -> inv.status != "CANCELLED" }) }
+                }
+                .launchIn(viewModelScope)
+        }
     }
 
     fun onEvent(event: VoucherEvent) {
@@ -99,6 +116,8 @@ class VoucherViewModel(
             VoucherEvent.Save -> {
                 val s = _state.value
                 when {
+                    type == VoucherType.RETURN && s.referenceInvoiceId == null ->
+                        _state.update { it.copy(errorAr = "اختر فاتورة البيع المرجعية أولاً", showSourcePicker = true) }
                     s.cart.isEmpty() -> _state.update { it.copy(errorAr = "السلة فارغة") }
                     type == VoucherType.RETURN && s.reason == null ->
                         _state.update { it.copy(errorAr = "اختر سبب الإرجاع") }
@@ -108,7 +127,57 @@ class VoucherViewModel(
             VoucherEvent.ConfirmSave -> save()
             VoucherEvent.DismissSaveSheet -> _state.update { it.copy(showSaveSheet = false) }
             VoucherEvent.DismissError -> _state.update { it.copy(errorAr = null) }
+
+            VoucherEvent.OpenSourcePicker -> _state.update { it.copy(showSourcePicker = true) }
+            VoucherEvent.DismissSourcePicker -> _state.update { it.copy(showSourcePicker = false) }
+            is VoucherEvent.SelectSourceInvoice -> selectSourceInvoice(event.invoiceId)
         }
+    }
+
+    /** Pre-fill the return cart from a chosen sale invoice — same items and quantities. */
+    private fun selectSourceInvoice(invoiceId: String) {
+        _state.update { s ->
+            val invoice = s.sourceInvoices.firstOrNull { it.id == invoiceId } ?: return@update s
+            val lines = runCatching {
+                json.decodeFromString<List<InvoiceLine>>(invoice.linesJson)
+            }.getOrDefault(emptyList())
+
+            fun conversionFor(line: InvoiceLine): Double =
+                s.productUnits[line.productId]?.firstOrNull { it.name == line.unit }?.conversionQty ?: 1.0
+
+            val cart = lines.map { line ->
+                CartLine(
+                    productId = line.productId,
+                    sku = line.sku,
+                    nameAr = line.nameAr,
+                    unitPrice = line.unitPrice,
+                    qty = line.qty,
+                    discountPct = line.discountPct,
+                    unit = line.unit,
+                    unitConversionQty = conversionFor(line),
+                    taxRate = line.taxRate,
+                    lineTaxType = runCatching { LineTaxType.valueOf(line.taxType) }.getOrDefault(s.taxType),
+                )
+            }
+            val sold = lines.associate { it.productId to it.qty * conversionFor(it) }
+
+            s.copy(
+                cart = cart,
+                referenceInvoiceId = invoice.id,
+                referenceNumber = invoice.number,
+                soldQtyByProduct = sold,
+                showSourcePicker = false,
+                view = VoucherView.CART,
+            )
+        }
+    }
+
+    /** RETURN can't exceed what was sold on the source invoice (compared in base units). */
+    private fun capReturnQty(state: VoucherState, productId: String, unitConversionQty: Double, qty: Double): Double {
+        if (!state.requiresSourceInvoice) return qty
+        val soldBase = state.soldQtyByProduct[productId] ?: return qty
+        if (unitConversionQty <= 0.0) return qty
+        return qty.coerceAtMost(soldBase / unitConversionQty)
     }
 
     private fun applySearch() {
@@ -150,15 +219,16 @@ class VoucherViewModel(
 
     private fun confirmDialog(event: VoucherEvent.ConfirmItemDialog) {
         _state.update { s ->
+            val qty = capReturnQty(s, event.product.id, event.unitConversionQty, event.qty)
             val existing = s.cart.firstOrNull { it.productId == event.product.id }
             val newCart = when {
-                event.qty <= 0 -> s.cart.filterNot { it.productId == event.product.id }
+                qty <= 0 -> s.cart.filterNot { it.productId == event.product.id }
                 existing == null -> s.cart + CartLine(
                     productId = event.product.id,
                     sku = event.product.sku,
                     nameAr = event.product.nameAr,
                     unitPrice = event.unitPrice,
-                    qty = event.qty,
+                    qty = qty,
                     unit = event.unit,
                     unitConversionQty = event.unitConversionQty,
                     discountPct = event.discountPct,
@@ -168,7 +238,7 @@ class VoucherViewModel(
                 else -> s.cart.map {
                     if (it.productId == event.product.id)
                         it.copy(
-                            qty = event.qty,
+                            qty = qty,
                             unit = event.unit,
                             unitPrice = event.unitPrice,
                             unitConversionQty = event.unitConversionQty,
@@ -210,6 +280,8 @@ class VoucherViewModel(
                     cart = s.cart,
                     reason = s.reason!!.labelAr,
                     extraNotes = s.notes.takeIf { it.isNotBlank() },
+                    referenceInvoiceId = s.referenceInvoiceId,
+                    referenceNumber = s.referenceNumber,
                 )
                 VoucherType.ORDER -> createRequest(
                     customerId = customerId,

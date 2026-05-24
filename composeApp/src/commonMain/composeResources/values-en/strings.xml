@@ -605,6 +605,36 @@
     <string name="voucher_status_fulfilled">Fulfilled</string>
     <string name="voucher_stock_available_count">Available: %1$d</string>
     <string name="voucher_stock_low_count">Low: %1$d</string>
+    <string name="voucher_stock_required_units">Required: %1$s units</string>
+    <string name="voucher_stock_exceeds_warning">Requested quantity exceeds van stock</string>
+    <string name="return_source_pick">Pick the sale invoice to return against</string>
+    <string name="return_source_title">Sale invoices</string>
+    <string name="return_source_empty">No sale invoices for this customer</string>
+    <string name="return_reference_label">Reference: #%1$s</string>
+    <string name="return_change">Change</string>
     <string name="voucher_unit_price">Unit Price</string>
     <string name="voucher_update_line">Update Line</string>
+
+    <!-- Thermal printer -->
+    <string name="printer_thermal_print">Thermal Print</string>
+    <string name="printer_connect_title">Connect Printer</string>
+    <string name="printer_connect">Connect</string>
+    <string name="printer_disconnect">Disconnect</string>
+    <string name="printer_cancel">Cancel</string>
+    <string name="printer_refresh">Refresh</string>
+    <string name="printer_devices">Available devices</string>
+    <string name="printer_no_devices">No devices</string>
+    <string name="printer_type_usb">USB</string>
+    <string name="printer_type_bluetooth">Bluetooth</string>
+    <string name="printer_type_serial">Serial</string>
+    <string name="printer_type_network">Network</string>
+    <string name="printer_address_bluetooth_hint">Bluetooth address (MAC)</string>
+    <string name="printer_address_network_hint">IP address</string>
+    <string name="printer_status_connected">Connected: %1$s</string>
+    <string name="printer_status_disconnected">Printer not connected</string>
+    <string name="printer_status_connecting">Connecting…</string>
+    <string name="printer_status_error">Printer connection error</string>
+    <string name="printer_printing">Printing…</string>
+    <string name="printer_print_success">Printed successfully</string>
+    <string name="printer_print_failed">Print failed</string>
 </resources>
