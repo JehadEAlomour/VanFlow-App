@@ -1,6 +1,6 @@
-package com.jehadalomour.flowvan.shared.presentation.format
+package com.jehadalomour.flowvan.core.common.format
 
-import com.jehadalomour.flowvan.shared.presentation.i18n.AppLanguage
+import com.jehadalomour.flowvan.core.common.i18n.AppLanguage
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month

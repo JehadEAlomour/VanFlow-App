@@ -196,3 +196,157 @@ Tracks every completed phase. Updated at phase sign-off (BUILD SUCCESSFUL verifi
 - تقرير الطلبات · تقرير الذمم المتأخرة · تقرير المرتجعات · تقرير أداء العملاء
 
 **Build sign-off:** ✅ `BUILD SUCCESSFUL` (assembleDebug)
+
+---
+
+## ✅ P7 — VanFlow Backend API Integration (Complete)
+
+**Goal:** wire the live VanFlow NestJS backend (`.claude/FLOW-API.md`) into the offline-first
+app. Plan: `.claude/API-INTEGRATION-PLAN.md`. Stays offline-first — network refills Room, UI
+reads Room. Money mapped fils→JOD at the mapper boundary.
+
+### Networking foundation (`data/remote/network/`)
+- `ApiConfig` — base URL in Settings (`API_BASE_URL`), `isEnabled`, `urlFor(path)`
+- `ApiEnvelope<T>` + `OffsetPage<T>` + `KeysetPage<T>` + `ApiErrorEnvelope`
+- `Money.kt` — `Int/Long.filsToJod()`, `Double.jodToFils()`, `String.numericStringToDouble()`
+- `FlowVanApiClient` — bearer-auth, envelope unwrap, reified `getData/postData/postEmpty/patchData/deleteUnit`; HTTP errors → `CashFlowError.Network.*`
+- `CashFlowError.Network` family added (NotConfigured/Unreachable/Unauthorized/Forbidden/NotFound/Server/Validation)
+- Dedicated request-encoding `Json` (`explicitNulls=false`, `encodeDefaults=false`) so optional fields aren't sent as `null`
+
+### DTOs + mappers (`data/remote/dto/`, `data/remote/mapper/`)
+- Auth, Customer, Product, Invoice, Collection, Rep DTOs + request bodies
+- `RemoteMappers.kt` — DTO → domain `User` / `CustomerEntity` / `ProductEntity` / `Invoice` / `Payment` / `DailyKpi` (role + status + fils→JOD mapping)
+
+### API services (`data/remote/api/`)
+- `AuthApi` (login, me) · `CustomerApi` (list, getById, create, logVisit) · `ProductApi` (list, getById, quote) · `InvoiceApi` (list, getById, returnable, create, confirm) · `CollectionApi` (list, summary, create, confirm) · `RepApi` (kpis, vanStock, postLocation)
+
+### Repositories + use cases
+- `CustomerRepository.cacheAll()`, `ProductRepository.cacheAll()`, `UserRepository.cache()` — offline-first cache refill
+- `BackendLoginUseCase` (userNumber/password, persists JWT + caches user)
+- `RefreshCatalogUseCase` (customers + products in parallel)
+- `SubmitInvoiceUseCase` (create + confirm), `SubmitCollectionUseCase`
+
+### Wiring
+- All registered in `sharedModule()` (single APIs + factory use cases)
+- `SettingsViewModel` + `SettingsScreen` — "خادم النظام" card: API base URL field + "تحديث العملاء والأصناف من الخادم" button calling `RefreshCatalogUseCase`
+
+**Deferred (foundation makes each a one-file add):** Vouchers, Cheques, Credit Notes, Routes,
+Regions, Tax, Audit, Notification Rules, JoFotara, WebSocket realtime.
+
+**Build sign-off:** ✅ `:shared:compileDebugKotlinAndroid` + `:shared:compileKotlinIosSimulatorArm64` + `:composeApp:compileDebugKotlinAndroid` → `BUILD SUCCESSFUL`
+
+### P7.1 — Live validation against running backend
+Tested against a live VanFlow tunnel (`/docs-json`, 116 paths). Verified via curl: health,
+`auth/login` (admin/admin1234), `customers`, `products`, invoice **create+confirm**, collection create.
+Findings folded in:
+- **`repId` ≠ user `id`** — login payload carries a separate `repId` (and customers have their own).
+  Invoice/collection endpoints require `repId`. Now captured at login → `SessionStore.currentRepId`
+  (new `CURRENT_REP_ID` key); `ApiUserDto`/`MeDto` gained `repId`.
+- Invoice line `quantity` comes back as a **quoted number** (`"2.000"`) — relies on the client's
+  lenient Json to coerce to Double. Covered by `RemoteDtoTest`.
+- `ApiConfig.DEFAULT_BASE_URL` pre-filled to the dev tunnel so the app talks to the backend out of the box.
+- `LoginViewModel` now backend-aware: when `ApiConfig.isEnabled` it logs in by `userNumber` via
+  `BackendLoginUseCase` (input filter relaxed to alphanumeric); offline → demo phone login.
+- `RemoteDtoTest` (4 tests, commonTest) decodes captured login/customers/products/invoice payloads
+  through the real DTOs+mappers → **all pass** (`:shared:testDebugUnitTest`).
+
+### P7.2 — Removed demo data (backend is now source of truth)
+- Deleted `DemoSeeder.kt` (4 users / 15 customers / 30 products / units / invoices / payments / shift) and its DI + seed call.
+- `seeder.seedIfNeeded()` in `FlowVanNavHost` replaced with `PurgeDemoDataUseCase()` — a one-time
+  local wipe (guarded by `DEMO_PURGED`) of previously-seeded tables so existing installs come up clean;
+  app settings / AI messages / route stops / location points are preserved.
+- Added `deleteAll()` to 7 DAOs (users, customers, products, product_units, invoices, payments, shifts).
+- Removed the demo-credentials card from `LoginScreen`.
+- Catalog now populated via `RefreshCatalogUseCase` from the backend; sales/collections via the API.
+
+**Build sign-off:** ✅ `:shared` (Android + iOS) + `:composeApp` (Android) → `BUILD SUCCESSFUL`
+
+---
+
+## ✅ P8 — Offline-first sync (write-through + auto-refresh)
+
+**Goal:** always refresh data from the API on login/home, write transactions through to the
+server while saving locally, flag anything not yet uploaded, and retry on reconnect.
+
+### Read path — auto-refresh
+- `HomeViewModel` runs `RefreshCatalogUseCase` on init and on every Home (re)entry — non-blocking
+  (local data shows immediately, KPIs recompute after the pull). Covers "on login" (login → Home)
+  and "return to home".
+
+### Write path — write-through + flag
+- Each create use case (`CreateSaleVoucherUseCase`, `CreateReturnVoucherUseCase`,
+  `CreateRequestVoucherUseCase`, `RecordCollectionUseCase`) saves locally with `syncedAt = null`
+  then calls `SyncScheduler.syncNow()` — immediate push, but the row stays flagged if offline.
+- `SyncRepository` rewritten to push via the **real VanFlow API** (replaced the placeholder
+  `SyncApi` batch endpoints, now deleted): SALE invoices → `InvoiceApi.create + confirm`,
+  collections → `CollectionApi.create`, GPS trail → `RepApi.postLocationBulk`. Uses
+  `session.currentRepId`; money JOD→fils via `LocalSyncMappers`. Per-record try/catch — a failure
+  leaves `syncedAt = null` for the next attempt. RETURN/REQUEST vouchers stay flagged (no backend
+  endpoint yet — logged, never lost).
+
+### Retry on reconnect
+- `ConnectivityObserver` (expect/actual) — Android `ConnectivityManager.registerDefaultNetworkCallback`
+  emits on `onAvailable`; iOS stub (relies on poll). Added `ACCESS_NETWORK_STATE` permission.
+- `SyncScheduler` now: 60s poll **+** reconnect trigger **+** `syncNow()` one-shot. Started in
+  `HomeViewModel.init` regardless of shift (decoupled from the shift lifecycle).
+
+**Build sign-off:** ✅ `:shared` (Android + iOS) + `:composeApp` (Android) → `BUILD SUCCESSFUL`
+
+---
+
+## ✅ P9 — Van stock server sync
+
+The `/products` list carries no per-rep quantity, so after the demo removal van stock was always 0.
+Verified live that confirming a sale does **not** auto-decrement server van stock → must push explicitly.
+
+- **Pull (server-first, on login/home):** `RefreshCatalogUseCase` refreshes products, then overlays
+  `GET /reps/{repId}/van-stock` via `ProductRepository.setStock(id, qty)` (`RepApi.vanStock` + new
+  `ProductDao.setStock`). Runs after the products upsert (which zeroes stock).
+- **Push (on every voucher):** `VanStockSyncer` (fire-and-forget) — sale → `RepApi.returnVanStock`
+  (subtract), customer-return → `RepApi.loadVanStock` (add). Called from the sale/return use cases
+  after local `adjustStock`. Local + server both updated; offline pushes reconcile on next pull.
+- Verified live: `van-stock/return` 100→98, `van-stock/load` 98→103.
+
+**Build sign-off:** ✅ `:shared` (Android + iOS) + `:composeApp` (Android) → `BUILD SUCCESSFUL`
+
+---
+
+## ✅ P10 — Vouchers: all three types via POST /vouchers
+
+Replaced the per-type push (SALE→/invoices, RETURN/ORDER skipped) with the **unified
+`POST /vouchers`** endpoint using `transKind`:
+- SALE → `SALE`, RETURN → `RETURN`, REQUEST → `ORDER`.
+- Server had `SALE` but not `RETURN`/`ORDER` → `SyncRepository.ensureVoucherKinds()` creates them once
+  via `POST /vouchers/kinds` (SALE -1, RETURN +1, ORDER 0). Verified live.
+- `VoucherApi.create` + `InvoiceEntity.toVoucherRequest(userCode, customerNumber, json)`: builds
+  `transactions` (itemNumber=sku, qty/unitPrice as 3-dec strings via `toAmountString`, tax/discount via
+  `toPercentString`) and a CASH/CREDIT `payment` for SALE; `isPosted=true` posts on create.
+  `voucherNumber = local id` → a retried push hits `409` which is mapped to `CashFlowError.Network.Conflict`
+  and treated as already-synced (no duplicates).
+- Needs `userCode` → added `SessionStore.currentUserCode` (`= user.userNumber`, set at backend login) and
+  `customerNumber` looked up from `CustomerDao.findById(customerId).code`.
+- **All three voucher types now upload** (previously RETURN/REQUEST were local-only). Collections still
+  post to `/collections`; van-stock push unchanged.
+
+**Build sign-off:** ✅ `:shared` (Android + iOS) + `:composeApp` (Android) → `BUILD SUCCESSFUL`
+
+---
+
+## ✅ F12 — Salesman GPS Tracking (field-quality + status UX)
+
+Spec: `.claude/F12-mobile-salesman-tracking.md`. The streaming pipeline (FusedLocation tracker →
+Room `location_points` queue → `SyncRepository` bulk drain via `RepApi.postLocationBulk` → backend)
+already existed from P5/P8 — including START_STICKY foreground service, 100 m accuracy gate, device
+capture-time `recordedAt`, ≤500-point batches, delete-only-after-201, central 401 → `signalUnauthorized`
+with the queue kept. F12 closed the remaining field-quality + UX gaps:
+
+- **Queue cap (§4):** `LocationPointDao.trimQueueToCap(cap)` keeps the newest 5000 *pending* pings,
+  dropping the oldest beyond it; called from `LocationRepository.savePoint()` after each insert.
+- **Stationary de-dupe (§4):** `LocationTrackingCoordinator` now tracks the last-enqueued point and
+  skips a fix that is < 10 m from it *and* < 60 s newer (in-memory haversine), reset on `stop()`.
+- **Sync status surface (§7, AC2):** `LocationPointDao.observeUnsyncedCount(): Flow<Int>` +
+  `SyncScheduler.lastSyncAt: StateFlow<Long?>` (stamped on each successful non-skipped sync). Surfaced
+  in `HomeState` (`pendingPings`, `lastSyncAt`) and rendered on the active-shift hero card as a
+  `تمت المزامنة` / `N بانتظار المزامنة` chip plus `آخر مزامنة HH:mm` (new strings, AR + EN).
+
+**Build sign-off:** ✅ `:composeApp:compileDebugKotlinAndroid` + `:shared:compileKotlinIosSimulatorArm64` → `BUILD SUCCESSFUL`

@@ -1,10 +1,10 @@
-package com.jehadalomour.flowvan.shared.data.local.dao
+package com.jehadalomour.flowvan.core.database.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.jehadalomour.flowvan.shared.data.local.entity.ShiftEntity
+import com.jehadalomour.flowvan.core.database.entity.ShiftEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -26,4 +26,7 @@ interface ShiftDao {
 
     @Query("SELECT COUNT(*) FROM shifts")
     suspend fun count(): Int
+
+    @Query("DELETE FROM shifts")
+    suspend fun deleteAll()
 }

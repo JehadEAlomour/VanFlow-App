@@ -8,6 +8,10 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import com.jehadalomour.flowvan.core.datastore.SessionStore
+import com.jehadalomour.flowvan.core.domain.sync.SyncScheduler
+import com.jehadalomour.flowvan.core.domain.tracking.LocationTrackingCoordinator
+import org.koin.core.context.GlobalContext
 
 class TrackingForegroundService : Service() {
 
@@ -22,7 +26,19 @@ class TrackingForegroundService : Service() {
         }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // START_STICKY restarts this service after process death — re-arm the GPS
+        // pipeline and the upload scheduler so tracking is truly always-on. No-ops
+        // when called on a normal start (the coordinator is already tracking).
+        val koin = GlobalContext.getOrNull()
+        val userId = koin?.get<SessionStore>()?.currentUserId
+        if (koin != null && !userId.isNullOrBlank()) {
+            koin.get<LocationTrackingCoordinator>()
+                .start(LocationTrackingCoordinator.ALWAYS_ON_SHIFT_ID, userId)
+            koin.get<SyncScheduler>().start()
+        }
+        return START_STICKY
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -37,7 +53,7 @@ class TrackingForegroundService : Service() {
             "تتبع الموقع",
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "تتبع موقع الوردية النشطة"
+            description = "تتبع المسار أثناء العمل"
             setShowBadge(false)
         }
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
@@ -46,7 +62,7 @@ class TrackingForegroundService : Service() {
     private fun buildNotification(): Notification =
         Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("كاش فلو")
-            .setContentText("كاش فلو يتابع الموقع — الوردية نشطة")
+            .setContentText("كاش فلو يتابع المسار أثناء العمل")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setOngoing(true)
             .build()

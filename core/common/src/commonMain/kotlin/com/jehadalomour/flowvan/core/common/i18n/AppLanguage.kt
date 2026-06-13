@@ -1,4 +1,4 @@
-package com.jehadalomour.flowvan.shared.presentation.i18n
+package com.jehadalomour.flowvan.core.common.i18n
 
 enum class AppLanguage(val code: String) {
     AR("ar"),

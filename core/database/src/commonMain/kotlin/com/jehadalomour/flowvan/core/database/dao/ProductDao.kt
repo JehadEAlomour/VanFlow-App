@@ -1,10 +1,10 @@
-package com.jehadalomour.flowvan.shared.data.local.dao
+package com.jehadalomour.flowvan.core.database.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.jehadalomour.flowvan.shared.data.local.entity.ProductEntity
+import com.jehadalomour.flowvan.core.database.entity.ProductEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -26,4 +26,10 @@ interface ProductDao {
 
     @Query("UPDATE products SET vanStock = vanStock + :delta WHERE id = :id")
     suspend fun adjustStock(id: String, delta: Int)
+
+    @Query("UPDATE products SET vanStock = :qty WHERE id = :id")
+    suspend fun setStock(id: String, qty: Int)
+
+    @Query("DELETE FROM products")
+    suspend fun deleteAll()
 }

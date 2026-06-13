@@ -1,10 +1,10 @@
-package com.jehadalomour.flowvan.shared.data.local.dao
+package com.jehadalomour.flowvan.core.database.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.jehadalomour.flowvan.shared.data.local.entity.CustomerEntity
+import com.jehadalomour.flowvan.core.database.entity.CustomerEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -32,4 +32,7 @@ interface CustomerDao {
 
     @Query("UPDATE customers SET balance = balance + :delta WHERE id = :id")
     suspend fun adjustBalance(id: String, delta: Double)
+
+    @Query("DELETE FROM customers")
+    suspend fun deleteAll()
 }

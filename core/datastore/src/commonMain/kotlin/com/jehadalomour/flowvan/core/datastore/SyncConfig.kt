@@ -1,4 +1,4 @@
-package com.jehadalomour.flowvan.shared.data.settings
+package com.jehadalomour.flowvan.core.datastore
 
 import com.russhwolf.settings.Settings
 

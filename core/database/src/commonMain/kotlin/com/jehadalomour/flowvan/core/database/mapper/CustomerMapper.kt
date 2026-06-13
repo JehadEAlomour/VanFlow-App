@@ -1,9 +1,9 @@
-package com.jehadalomour.flowvan.shared.data.local.mapper
+package com.jehadalomour.flowvan.core.database.mapper
 
-import com.jehadalomour.flowvan.shared.data.local.entity.CustomerEntity
-import com.jehadalomour.flowvan.shared.domain.model.Customer
-import com.jehadalomour.flowvan.shared.domain.model.CustomerSegment
-import com.jehadalomour.flowvan.shared.domain.model.CustomerTier
+import com.jehadalomour.flowvan.core.database.entity.CustomerEntity
+import com.jehadalomour.flowvan.core.model.Customer
+import com.jehadalomour.flowvan.core.model.CustomerSegment
+import com.jehadalomour.flowvan.core.model.CustomerTier
 
 fun CustomerEntity.toDomain(): Customer = Customer(
     id = id,

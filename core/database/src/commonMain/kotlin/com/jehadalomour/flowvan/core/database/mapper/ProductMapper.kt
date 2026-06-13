@@ -1,7 +1,7 @@
-package com.jehadalomour.flowvan.shared.data.local.mapper
+package com.jehadalomour.flowvan.core.database.mapper
 
-import com.jehadalomour.flowvan.shared.data.local.entity.ProductEntity
-import com.jehadalomour.flowvan.shared.domain.model.Product
+import com.jehadalomour.flowvan.core.database.entity.ProductEntity
+import com.jehadalomour.flowvan.core.model.Product
 
 fun ProductEntity.toDomain(): Product = Product(
     id = id,

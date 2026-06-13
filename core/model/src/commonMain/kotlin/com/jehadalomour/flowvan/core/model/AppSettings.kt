@@ -1,6 +1,6 @@
-package com.jehadalomour.flowvan.shared.domain.model
+package com.jehadalomour.flowvan.core.model
 
-import com.jehadalomour.flowvan.shared.presentation.i18n.AppLanguage
+import com.jehadalomour.flowvan.core.common.i18n.AppLanguage
 
 enum class AppTheme { SYSTEM, LIGHT, DARK }
 enum class TaxType { INCLUDED_TAX, EXCLUDED_TAX }

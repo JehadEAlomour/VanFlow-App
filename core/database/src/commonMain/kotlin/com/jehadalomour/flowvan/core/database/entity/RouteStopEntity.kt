@@ -1,4 +1,4 @@
-package com.jehadalomour.flowvan.shared.data.local.entity
+package com.jehadalomour.flowvan.core.database.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

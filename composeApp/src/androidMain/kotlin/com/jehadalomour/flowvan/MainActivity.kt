@@ -27,6 +27,10 @@ class MainActivity : ComponentActivity() {
                 add(Manifest.permission.BLUETOOTH_CONNECT)
                 add(Manifest.permission.BLUETOOTH_SCAN)
             }
+            // Android 13+ needs runtime consent to show the tracking foreground notification.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
         locationPermissionLauncher.launch(permissions.toTypedArray())
 

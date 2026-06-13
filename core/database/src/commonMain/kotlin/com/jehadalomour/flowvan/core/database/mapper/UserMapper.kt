@@ -1,8 +1,8 @@
-package com.jehadalomour.flowvan.shared.data.local.mapper
+package com.jehadalomour.flowvan.core.database.mapper
 
-import com.jehadalomour.flowvan.shared.data.local.entity.UserEntity
-import com.jehadalomour.flowvan.shared.domain.model.User
-import com.jehadalomour.flowvan.shared.domain.model.UserRole
+import com.jehadalomour.flowvan.core.database.entity.UserEntity
+import com.jehadalomour.flowvan.core.model.User
+import com.jehadalomour.flowvan.core.model.UserRole
 
 fun UserEntity.toDomain(): User = User(
     id = id,

@@ -1,32 +1,32 @@
-package com.jehadalomour.flowvan.shared.data.local.db
+package com.jehadalomour.flowvan.core.database.db
 
 import androidx.room.AutoMigration
 import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
-import com.jehadalomour.flowvan.shared.data.local.dao.AiMessageDao
-import com.jehadalomour.flowvan.shared.data.local.dao.AppSettingsDao
-import com.jehadalomour.flowvan.shared.data.local.dao.CustomerDao
-import com.jehadalomour.flowvan.shared.data.local.dao.InvoiceDao
-import com.jehadalomour.flowvan.shared.data.local.dao.LocationPointDao
-import com.jehadalomour.flowvan.shared.data.local.dao.PaymentDao
-import com.jehadalomour.flowvan.shared.data.local.dao.ProductDao
-import com.jehadalomour.flowvan.shared.data.local.dao.ProductUnitDao
-import com.jehadalomour.flowvan.shared.data.local.dao.RouteStopDao
-import com.jehadalomour.flowvan.shared.data.local.dao.ShiftDao
-import com.jehadalomour.flowvan.shared.data.local.dao.UserDao
-import com.jehadalomour.flowvan.shared.data.local.entity.AiMessageEntity
-import com.jehadalomour.flowvan.shared.data.local.entity.AppSettingsEntity
-import com.jehadalomour.flowvan.shared.data.local.entity.CustomerEntity
-import com.jehadalomour.flowvan.shared.data.local.entity.InvoiceEntity
-import com.jehadalomour.flowvan.shared.data.local.entity.LocationPointEntity
-import com.jehadalomour.flowvan.shared.data.local.entity.PaymentEntity
-import com.jehadalomour.flowvan.shared.data.local.entity.ProductEntity
-import com.jehadalomour.flowvan.shared.data.local.entity.ProductUnitEntity
-import com.jehadalomour.flowvan.shared.data.local.entity.RouteStopEntity
-import com.jehadalomour.flowvan.shared.data.local.entity.ShiftEntity
-import com.jehadalomour.flowvan.shared.data.local.entity.UserEntity
+import com.jehadalomour.flowvan.core.database.dao.AiMessageDao
+import com.jehadalomour.flowvan.core.database.dao.AppSettingsDao
+import com.jehadalomour.flowvan.core.database.dao.CustomerDao
+import com.jehadalomour.flowvan.core.database.dao.InvoiceDao
+import com.jehadalomour.flowvan.core.database.dao.LocationPointDao
+import com.jehadalomour.flowvan.core.database.dao.PaymentDao
+import com.jehadalomour.flowvan.core.database.dao.ProductDao
+import com.jehadalomour.flowvan.core.database.dao.ProductUnitDao
+import com.jehadalomour.flowvan.core.database.dao.RouteStopDao
+import com.jehadalomour.flowvan.core.database.dao.ShiftDao
+import com.jehadalomour.flowvan.core.database.dao.UserDao
+import com.jehadalomour.flowvan.core.database.entity.AiMessageEntity
+import com.jehadalomour.flowvan.core.database.entity.AppSettingsEntity
+import com.jehadalomour.flowvan.core.database.entity.CustomerEntity
+import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
+import com.jehadalomour.flowvan.core.database.entity.LocationPointEntity
+import com.jehadalomour.flowvan.core.database.entity.PaymentEntity
+import com.jehadalomour.flowvan.core.database.entity.ProductEntity
+import com.jehadalomour.flowvan.core.database.entity.ProductUnitEntity
+import com.jehadalomour.flowvan.core.database.entity.RouteStopEntity
+import com.jehadalomour.flowvan.core.database.entity.ShiftEntity
+import com.jehadalomour.flowvan.core.database.entity.UserEntity
 
 @Database(
     entities = [

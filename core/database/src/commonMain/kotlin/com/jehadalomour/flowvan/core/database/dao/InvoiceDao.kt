@@ -1,10 +1,10 @@
-package com.jehadalomour.flowvan.shared.data.local.dao
+package com.jehadalomour.flowvan.core.database.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.jehadalomour.flowvan.shared.data.local.entity.InvoiceEntity
+import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -47,4 +47,11 @@ interface InvoiceDao {
 
     @Query("SELECT COUNT(*) FROM invoices")
     suspend fun count(): Int
+
+    /** Count of vouchers of a given [type] created within [fromMillis, toMillis) — drives the per-type yearly sequence. */
+    @Query("SELECT COUNT(*) FROM invoices WHERE type = :type AND createdAt >= :fromMillis AND createdAt < :toMillis")
+    suspend fun countByTypeInRange(type: String, fromMillis: Long, toMillis: Long): Int
+
+    @Query("DELETE FROM invoices")
+    suspend fun deleteAll()
 }

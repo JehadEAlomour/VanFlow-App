@@ -1,4 +1,4 @@
-package com.jehadalomour.flowvan.shared.data.local.db
+package com.jehadalomour.flowvan.core.database.db
 
 import android.content.Context
 import androidx.room.Room

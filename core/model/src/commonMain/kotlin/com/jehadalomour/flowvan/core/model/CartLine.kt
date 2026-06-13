@@ -1,4 +1,4 @@
-package com.jehadalomour.flowvan.shared.domain.model
+package com.jehadalomour.flowvan.core.model
 
 data class CartLine(
     val productId: String,

@@ -1,10 +1,10 @@
-package com.jehadalomour.flowvan.shared.data.local.mapper
+package com.jehadalomour.flowvan.core.database.mapper
 
-import com.jehadalomour.flowvan.shared.data.local.entity.AppSettingsEntity
-import com.jehadalomour.flowvan.shared.domain.model.AppSettings
-import com.jehadalomour.flowvan.shared.domain.model.AppTheme
-import com.jehadalomour.flowvan.shared.domain.model.TaxType
-import com.jehadalomour.flowvan.shared.presentation.i18n.AppLanguage
+import com.jehadalomour.flowvan.core.database.entity.AppSettingsEntity
+import com.jehadalomour.flowvan.core.model.AppSettings
+import com.jehadalomour.flowvan.core.model.AppTheme
+import com.jehadalomour.flowvan.core.model.TaxType
+import com.jehadalomour.flowvan.core.common.i18n.AppLanguage
 
 fun AppSettingsEntity.toDomain(): AppSettings = AppSettings(
     theme = runCatching { AppTheme.valueOf(theme) }.getOrDefault(AppTheme.SYSTEM),

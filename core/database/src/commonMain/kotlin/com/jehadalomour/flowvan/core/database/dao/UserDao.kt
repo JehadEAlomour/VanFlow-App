@@ -1,10 +1,10 @@
-package com.jehadalomour.flowvan.shared.data.local.dao
+package com.jehadalomour.flowvan.core.database.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.jehadalomour.flowvan.shared.data.local.entity.UserEntity
+import com.jehadalomour.flowvan.core.database.entity.UserEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -26,4 +26,7 @@ interface UserDao {
 
     @Query("SELECT COUNT(*) FROM users")
     suspend fun count(): Int
+
+    @Query("DELETE FROM users")
+    suspend fun deleteAll()
 }

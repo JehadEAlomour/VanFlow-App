@@ -1,10 +1,10 @@
-package com.jehadalomour.flowvan.shared.data.local.dao
+package com.jehadalomour.flowvan.core.database.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.jehadalomour.flowvan.shared.data.local.entity.ProductUnitEntity
+import com.jehadalomour.flowvan.core.database.entity.ProductUnitEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -27,4 +27,7 @@ interface ProductUnitDao {
 
     @Query("DELETE FROM product_units WHERE product_id = :productId")
     suspend fun deleteByProduct(productId: String)
+
+    @Query("DELETE FROM product_units")
+    suspend fun deleteAll()
 }

@@ -2,6 +2,7 @@ package com.jehadalomour.flowvan
 
 import android.app.Application
 import com.google.android.gms.maps.MapsInitializer
+import com.jehadalomour.flowvan.di.appFeatureModules
 import com.jehadalomour.flowvan.platform.printer.androidPrinterModule
 import com.jehadalomour.flowvan.shared.di.initKoin
 import org.koin.android.ext.koin.androidContext
@@ -17,6 +18,8 @@ class FlowVanApp : Application() {
             androidContext(this@FlowVanApp)
             // XPrinter-backed ReceiptPrinter lives in :composeApp (local .aar); bind it here.
             modules(androidPrinterModule())
+            // Feature ViewModels (one Koin module per :feature:*).
+            modules(appFeatureModules())
         }
     }
 }

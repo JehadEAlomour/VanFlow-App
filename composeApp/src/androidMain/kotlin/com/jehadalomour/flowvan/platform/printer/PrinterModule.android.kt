@@ -1,6 +1,6 @@
 package com.jehadalomour.flowvan.platform.printer
 
-import com.jehadalomour.flowvan.shared.domain.printer.ReceiptPrinter
+import com.jehadalomour.flowvan.core.domain.printer.ReceiptPrinter
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
 import org.koin.dsl.module

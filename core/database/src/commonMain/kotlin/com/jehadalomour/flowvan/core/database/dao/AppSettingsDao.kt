@@ -1,10 +1,10 @@
-package com.jehadalomour.flowvan.shared.data.local.dao
+package com.jehadalomour.flowvan.core.database.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.jehadalomour.flowvan.shared.data.local.entity.AppSettingsEntity
+import com.jehadalomour.flowvan.core.database.entity.AppSettingsEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
