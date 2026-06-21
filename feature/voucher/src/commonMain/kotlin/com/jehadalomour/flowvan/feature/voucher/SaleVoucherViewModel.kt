@@ -7,15 +7,21 @@ import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
 import com.jehadalomour.flowvan.core.model.CartLine
+import com.jehadalomour.flowvan.core.model.OfferEvaluation
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.ProductUnit
 import com.jehadalomour.flowvan.core.domain.usecase.CreateSaleVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.EmptyCartException
+import com.jehadalomour.flowvan.core.domain.usecase.EvaluateOffersUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.StockShortageException
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -27,12 +33,64 @@ class SaleVoucherViewModel(
     private val productUnits: ProductUnitRepository,
     private val session: SessionStore,
     private val createSale: CreateSaleVoucherUseCase,
+    private val evaluateOffers: EvaluateOffersUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SaleVoucherState())
     val state: StateFlow<SaleVoucherState> = _state.asStateFlow()
 
+    /** A cart fingerprint that changes only when offer-relevant cart data changes. */
+    private fun cartKey(s: SaleVoucherState): List<Pair<String, Double>> =
+        s.cart.map { it.sku to it.qty }
+
+    @OptIn(FlowPreview::class)
+    private fun observeCartForOffers() {
+        _state
+            .map { cartKey(it) }
+            .distinctUntilChanged()
+            .onEach { _state.update { s -> s.copy(isEvaluatingOffers = s.cart.isNotEmpty()) } }
+            .debounce(300)
+            .onEach { evaluateOffersNow() }
+            .launchIn(viewModelScope)
+    }
+
+    private suspend fun evaluateOffersNow() {
+        val s = _state.value
+        if (s.cart.isEmpty()) {
+            applyEvaluation(OfferEvaluation.EMPTY)
+            return
+        }
+        val result = evaluateOffers(
+            cart = s.cart,
+            customerNumber = s.customer?.code,
+            repId = session.currentUserId,
+            // The app has no per-customer store concept; the customer number identifies
+            // the buyer and the backend resolves the store. Pass null (optional field).
+            storeNumber = null,
+        )
+        result.fold(
+            onSuccess = { applyEvaluation(it) },
+            // Offline / failure: never break the sale — just clear the spinner and any stale offers.
+            onFailure = { applyEvaluation(OfferEvaluation.EMPTY) },
+        )
+    }
+
+    /** Merge an evaluation result into state; free lines are de-duplicated by itemNumber. */
+    private fun applyEvaluation(eval: OfferEvaluation) {
+        _state.update { s ->
+            s.copy(
+                appliedOffers = eval.appliedOffers,
+                freeLines = eval.freeLines,
+                offerInvoiceDiscount = eval.invoiceDiscountJod,
+                pendingChoices = eval.pendingChoices,
+                offerLineDiscounts = eval.adjustedLines.associate { it.itemNumber to it.discountJod },
+                isEvaluatingOffers = false,
+            )
+        }
+    }
+
     init {
+        observeCartForOffers()
         customers.observeById(customerId)
             .onEach { c -> _state.update { it.copy(customer = c) } }
             .launchIn(viewModelScope)
@@ -79,6 +137,39 @@ class SaleVoucherViewModel(
             SaleVoucherEvent.DismissSaveSheet -> _state.update { it.copy(showSaveSheet = false) }
             SaleVoucherEvent.ConfirmSave -> save()
             SaleVoucherEvent.DismissError -> _state.update { it.copy(errorAr = null) }
+            is SaleVoucherEvent.ChooseFreeItem -> chooseFreeItem(event.offerId, event.itemNumber)
+            SaleVoucherEvent.DismissFreeItemSheet -> _state.update { it.copy(pendingChoices = emptyList()) }
+        }
+    }
+
+    /**
+     * Record a free-item choice and add it to the cart as a normal line (qty 1). The
+     * server re-evaluates on the next debounce and treats the chosen item as free; we
+     * keep the device stateless (no `chosenFreeItems` field is sent — it's just a line).
+     */
+    private fun chooseFreeItem(offerId: String, itemNumber: String) {
+        _state.update { s ->
+            val product = s.products.firstOrNull { it.sku == itemNumber }
+            val newCart = if (product == null || s.cart.any { it.productId == product.id }) {
+                s.cart
+            } else {
+                val defaultUnit = s.productUnits[product.id]?.minByOrNull { it.conversionQty }
+                s.cart + CartLine(
+                    productId = product.id,
+                    sku = product.sku,
+                    nameAr = product.nameAr,
+                    unitPrice = defaultUnit?.price ?: product.salePrice,
+                    qty = 1.0,
+                    unit = defaultUnit?.name ?: product.unit,
+                    unitConversionQty = defaultUnit?.conversionQty ?: 1.0,
+                )
+            }
+            s.copy(
+                cart = newCart,
+                chosenFreeItems = s.chosenFreeItems + (offerId to itemNumber),
+                // Clear this choice from the pending list; re-eval refreshes the rest.
+                pendingChoices = s.pendingChoices.filterNot { it.offerId == offerId },
+            )
         }
     }
 

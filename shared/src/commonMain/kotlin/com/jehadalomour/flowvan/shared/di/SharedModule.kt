@@ -18,6 +18,7 @@ import com.jehadalomour.flowvan.core.network.api.CollectionApi
 import com.jehadalomour.flowvan.core.network.api.CustomerApi
 import com.jehadalomour.flowvan.core.network.api.InvoiceApi
 import com.jehadalomour.flowvan.core.network.api.MyRouteApi
+import com.jehadalomour.flowvan.core.network.api.OfferApi
 import com.jehadalomour.flowvan.core.network.api.ProductApi
 import com.jehadalomour.flowvan.core.network.api.RepApi
 import com.jehadalomour.flowvan.core.network.api.VoucherApi
@@ -35,6 +36,7 @@ import com.jehadalomour.flowvan.core.domain.usecase.CreateReturnVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetCustomerSalesUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateSaleVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.EndShiftUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.EvaluateOffersUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetCurrentUserUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetDailyKpiUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.LoginUseCase
@@ -116,6 +118,7 @@ fun sharedModule(): Module = module {
     single { RepApi(get()) }
     single { VoucherApi(get()) }
     single { MyRouteApi(get()) }
+    single { OfferApi(get()) }
 
     factory { LoginUseCase(get(), get()) }
     factory { GetCurrentUserUseCase(get(), get()) }
@@ -123,6 +126,7 @@ fun sharedModule(): Module = module {
     factory { GetDailyKpiUseCase(get(), get(), get()) }
     factory { VoucherNumberGenerator(get(), get()) }
     factory { CreateSaleVoucherUseCase(get(), get(), get(), get(), get(), get()) }
+    factory { EvaluateOffersUseCase(get()) }
     factory { CreateReturnVoucherUseCase(get(), get(), get(), get(), get(), get()) }
     factory { GetCustomerSalesUseCase(get()) }
     factory { CreateRequestVoucherUseCase(get(), get(), get(), get()) }

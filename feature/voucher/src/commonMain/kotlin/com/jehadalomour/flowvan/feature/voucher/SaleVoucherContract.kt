@@ -1,7 +1,10 @@
 package com.jehadalomour.flowvan.feature.voucher
 
+import com.jehadalomour.flowvan.core.model.AppliedOffer
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.Customer
+import com.jehadalomour.flowvan.core.model.FreeLine
+import com.jehadalomour.flowvan.core.model.OfferChoice
 import com.jehadalomour.flowvan.core.model.PaymentMethod
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.ProductUnit
@@ -25,10 +28,23 @@ data class SaleVoucherState(
     val errorAr: String? = null,
     val voucherDiscountType: DiscountType = DiscountType.PERCENT,
     val voucherDiscountInput: String = "",
+    // ── Offers (server-authoritative, display only) ───────────────────────────
+    val appliedOffers: List<AppliedOffer> = emptyList(),
+    val freeLines: List<FreeLine> = emptyList(),
+    val offerInvoiceDiscount: Double = 0.0,
+    val pendingChoices: List<OfferChoice> = emptyList(),
+    val isEvaluatingOffers: Boolean = false,
+    /** offerId → chosen itemNumber, for FREE_ITEM_CHOICE offers. */
+    val chosenFreeItems: Map<String, String> = emptyMap(),
+    /** itemNumber → offer line-discount amount (JOD), overlaid on matching cart lines. */
+    val offerLineDiscounts: Map<String, Double> = emptyMap(),
 ) {
     val subtotal: Double get() = cart.sumOf { it.grossLineTotal }
     val lineDiscountTotal: Double get() = cart.sumOf { it.lineDiscount }
     val taxAmount: Double get() = cart.sumOf { it.lineTax }
+
+    /** Server-driven per-line offer discounts (display overlay, on top of manual line discounts). */
+    val offerLineDiscountTotal: Double get() = offerLineDiscounts.values.sum()
 
     val voucherDiscountAmount: Double get() {
         val afterLines = subtotal - lineDiscountTotal
@@ -39,8 +55,14 @@ data class SaleVoucherState(
         }
     }
 
-    val totalDiscount: Double get() = lineDiscountTotal + voucherDiscountAmount
-    val total: Double get() = subtotal - totalDiscount + taxAmount
+    val totalDiscount: Double get() =
+        lineDiscountTotal + voucherDiscountAmount + offerLineDiscountTotal + offerInvoiceDiscount
+
+    /**
+     * Final total. Free lines net 0 (full price + 100% discount) so they don't move
+     * the total. Offer discounts are subtracted; never below 0.
+     */
+    val total: Double get() = (subtotal - totalDiscount + taxAmount).coerceAtLeast(0.0)
 }
 
 sealed interface SaleVoucherEvent {
@@ -65,4 +87,6 @@ sealed interface SaleVoucherEvent {
     data object DismissSaveSheet : SaleVoucherEvent
     data object ConfirmSave : SaleVoucherEvent
     data object DismissError : SaleVoucherEvent
+    data class ChooseFreeItem(val offerId: String, val itemNumber: String) : SaleVoucherEvent
+    data object DismissFreeItemSheet : SaleVoucherEvent
 }

@@ -65,7 +65,10 @@ import com.jehadalomour.flowvan.core.designsystem.components.Fv
 import com.jehadalomour.flowvan.core.designsystem.components.ProductAvatar
 import com.jehadalomour.flowvan.core.designsystem.components.fvFieldColors
 import com.jehadalomour.flowvan.core.designsystem.components.standardUnits
+import com.jehadalomour.flowvan.core.model.AppliedOffer
 import com.jehadalomour.flowvan.core.model.CartLine
+import com.jehadalomour.flowvan.core.model.FreeLine
+import com.jehadalomour.flowvan.core.model.OfferChoice
 import com.jehadalomour.flowvan.core.model.PaymentMethod
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.ProductUnit
@@ -224,6 +227,19 @@ fun SaleVoucherScreen(
                 }
             } else null,
             onDismiss = { dialogProduct = null },
+        )
+    }
+
+    if (state.pendingChoices.isNotEmpty()) {
+        ChooseFreeItemSheet(
+            choices = state.pendingChoices,
+            productNameFor = { itemNumber ->
+                state.products.firstOrNull { it.sku == itemNumber }?.nameAr ?: itemNumber
+            },
+            onPick = { offerId, itemNumber ->
+                viewModel.onEvent(SaleVoucherEvent.ChooseFreeItem(offerId, itemNumber))
+            },
+            onDismiss = { viewModel.onEvent(SaleVoucherEvent.DismissFreeItemSheet) },
         )
     }
 
@@ -502,13 +518,23 @@ private fun CartView(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(top = 10.dp, bottom = 16.dp),
     ) {
+        // ── Applied-offers banner ─────────────────────────────────────────────
+        if (state.appliedOffers.isNotEmpty()) {
+            item(key = "offers-banner") {
+                AppliedOffersBanner(offers = state.appliedOffers, evaluating = state.isEvaluatingOffers)
+            }
+        }
         items(state.cart, key = { it.productId }) { line ->
             CartItemCard(
                 line = line,
                 onTap = { onTapLine(line.productId) },
             )
         }
-        if (state.cart.isEmpty()) {
+        // ── FREE lines (read-only, net 0) ─────────────────────────────────────
+        items(state.freeLines, key = { "free-${it.itemNumber}-${it.offerId}" }) { free ->
+            FreeLineCard(free)
+        }
+        if (state.cart.isEmpty() && state.freeLines.isEmpty()) {
             item {
                 Text(
                     stringResource(Res.string.sale_cart_empty_hint),
@@ -527,6 +553,173 @@ private fun CartView(
                 shape = RoundedCornerShape(10.dp),
                 colors = fvFieldColors(),
             )
+        }
+    }
+}
+
+// ── Applied-offers banner ─────────────────────────────────────────────────────
+
+@Composable
+private fun AppliedOffersBanner(offers: List<AppliedOffer>, evaluating: Boolean) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Fv.Green.copy(alpha = 0.10f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(0.5.dp, Fv.Green.copy(alpha = 0.35f)),
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("🎁", fontSize = 13.sp)
+                Text("العروض المطبقة", color = Fv.Green, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                if (evaluating) {
+                    Spacer(Modifier.width(2.dp))
+                    Text("…", color = Fv.TextMid, fontSize = 13.sp)
+                }
+            }
+            offers.forEach { offer ->
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Fv.Green.copy(alpha = 0.16f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                ) {
+                    Column {
+                        Text(offer.name, color = Fv.Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        if (offer.summary.isNotBlank()) {
+                            Text(offer.summary, color = Fv.TextMid, fontSize = 10.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── FREE line card (read-only, net 0) ─────────────────────────────────────────
+
+@Composable
+private fun FreeLineCard(free: FreeLine) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Fv.Green.copy(alpha = 0.06f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(0.5.dp, Fv.Green.copy(alpha = 0.35f)),
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ProductAvatar(
+                seed = free.itemNumber,
+                letter = "🎁",
+                size = 50.dp,
+            )
+            Spacer(Modifier.size(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    free.itemNumber,
+                    color = Fv.TextHigh,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // Struck-through original price
+                    Text(
+                        free.unitPriceJod.formatJod(AppLanguage.AR),
+                        color = Fv.TextMid,
+                        fontSize = 11.sp,
+                        textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
+                    )
+                    Text("× ${free.qty.toInt()}", color = Fv.TextMid, fontSize = 11.sp)
+                }
+            }
+            Spacer(Modifier.size(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Fv.Green)
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+            ) {
+                Text("هدية / FREE", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+// ── Choose-free-item bottom sheet ─────────────────────────────────────────────
+
+@Composable
+private fun ChooseFreeItemSheet(
+    choices: List<OfferChoice>,
+    productNameFor: (String) -> String,
+    onPick: (offerId: String, itemNumber: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val choice = choices.firstOrNull() ?: return
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                color = Color.White,
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp).height(4.dp)
+                                .background(Color(0xFFDDE8F5), RoundedCornerShape(2.dp)),
+                        )
+                    }
+                    Text("اختر هديتك", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(12.dp))
+                    choice.choices.forEach { itemNumber ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Fv.Green.copy(alpha = 0.10f))
+                                .border(0.5.dp, Fv.Green.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                                .clickable { onPick(choice.offerId, itemNumber) }
+                                .padding(horizontal = 14.dp, vertical = 14.dp),
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("🎁", fontSize = 14.sp)
+                                Text(
+                                    productNameFor(itemNumber),
+                                    color = Fv.TextHigh,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .border(0.5.dp, Color(0xFFC8D8EC), RoundedCornerShape(14.dp))
+                            .clickable { onDismiss() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(stringResource(Res.string.cancel), color = Fv.TextMid, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
         }
     }
 }
@@ -554,6 +747,10 @@ private fun CartSummaryCard(
                     SummaryDetailRow(stringResource(Res.string.voucher_detail_subtotal), state.subtotal.formatJod(AppLanguage.AR), Fv.TextMid)
                     if (state.lineDiscountTotal > 0)
                         SummaryDetailRow(stringResource(Res.string.sale_line_discounts), "- ${state.lineDiscountTotal.formatJod(AppLanguage.AR)}", Fv.Red)
+                    // Offer discounts (server-driven): per-line + invoice-level.
+                    val offerDiscount = state.offerLineDiscountTotal + state.offerInvoiceDiscount
+                    if (offerDiscount > 0)
+                        SummaryDetailRow("العروض", "- ${offerDiscount.formatJod(AppLanguage.AR)}", Fv.Green)
                     Spacer(Modifier.height(8.dp))
                     VoucherDiscountSection(
                         type = state.voucherDiscountType,
