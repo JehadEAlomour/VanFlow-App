@@ -35,8 +35,7 @@ class ApiConfig(private val settings: Settings) {
     companion object {
         const val API_PREFIX = "api/v1"
 
-        //     dev backend (Cloudflare tunnel). Editable in Settings → خادم النظام.
-        const val DEFAULT_BASE_URL =
-            "https://cashvan-api-zcn4.onrender.com/api/v1"
+        //     local dev backend. Editable in Settings → خادم النظام.
+        const val DEFAULT_BASE_URL = "http://127.0.0.1:3100/api/v1"
     }
 }

@@ -264,6 +264,10 @@ fun VoucherScreen(
     if (state.showSourcePicker) {
         SourceInvoicePickerDialog(
             invoices = state.sourceInvoices,
+            lookupQuery = state.sourceLookupQuery,
+            isLookingUp = state.isLookingUp,
+            onLookupChange = { viewModel.onEvent(VoucherEvent.SourceLookupChanged(it)) },
+            onLookup = { viewModel.onEvent(VoucherEvent.LookupSource) },
             onSelect = { viewModel.onEvent(VoucherEvent.SelectSourceInvoice(it)) },
             onDismiss = { viewModel.onEvent(VoucherEvent.DismissSourcePicker) },
         )
@@ -1086,6 +1090,10 @@ private fun ReturnReferenceBanner(referenceNumber: String?, onPick: () -> Unit) 
 @Composable
 private fun SourceInvoicePickerDialog(
     invoices: List<InvoiceEntity>,
+    lookupQuery: String,
+    isLookingUp: Boolean,
+    onLookupChange: (String) -> Unit,
+    onLookup: () -> Unit,
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -1093,14 +1101,36 @@ private fun SourceInvoicePickerDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(Res.string.return_source_title), color = Fv.TextHigh) },
         text = {
-            if (invoices.isEmpty()) {
-                Text(stringResource(Res.string.return_source_empty), color = Fv.TextMid)
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // Manual lookup: find a sale by number on the server when it isn't local.
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    items(invoices) { inv ->
+                    OutlinedTextField(
+                        value = lookupQuery,
+                        onValueChange = onLookupChange,
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text("ابحث برقم فاتورة البيع", color = Fv.TextMid, fontSize = 13.sp) },
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(
+                        onClick = onLookup,
+                        enabled = !isLookingUp && lookupQuery.isNotBlank(),
+                    ) {
+                        Text(if (isLookingUp) "..." else "بحث", color = Fv.Blue, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                if (invoices.isEmpty()) {
+                    Text(stringResource(Res.string.return_source_empty), color = Fv.TextMid)
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(invoices) { inv ->
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1116,6 +1146,7 @@ private fun SourceInvoicePickerDialog(
                             }
                             Text(formatInvoiceDate(inv.createdAt), color = Fv.TextMid, fontSize = 11.sp)
                         }
+                    }
                     }
                 }
             }

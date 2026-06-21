@@ -60,12 +60,27 @@ fun InvoiceEntity.toVoucherRequest(userCode: String, customerNumber: String?, js
     } else {
         emptyList()
     }
+
+    // Invoice-level (header) discount. The server applies per-line discounts from
+    // `discountPercentage`, then subtracts `totalDiscountValue` from the tax-inclusive
+    // gross. So the header discount we send is the POST-TAX residual that brings the
+    // server's net total down to the grand total the app showed — this also folds in
+    // the tax saved by the app's pre-tax invoice discount, with no double-counting.
+    val backendGross = lines.sumOf { line ->
+        val net = line.qty * line.unitPrice * (1.0 - line.discountPct.coerceIn(0.0, 1.0))
+        net * (1.0 + line.taxRate)
+    }
+    val headerDiscount = (backendGross - total).coerceAtLeast(0.0)
+
     return CreateVoucherRequest(
-        voucherNumber = id,                 // local id → unique + lets a retry hit a 409 (treated as synced)
+        voucherNumber = id,                 // ignored by the inbox; the server assigns the real number
+        clientRef = id,                     // idempotency key → safe replays + server-assigned number
         transKind = kind,
         userCode = userCode,
         customerNumber = customerNumber,
+        referenceVoucherNumber = referenceNumber,
         isPosted = true,
+        totalDiscountValue = if (headerDiscount > 0.005) headerDiscount.toAmountString() else null,
         transactions = lines.map { line ->
             VoucherTxn(
                 itemNumber = line.sku,

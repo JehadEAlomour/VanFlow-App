@@ -35,7 +35,7 @@ import com.jehadalomour.flowvan.feature.customer.CustomerListScreen
 import com.jehadalomour.flowvan.feature.home.EndOfDayScreen
 import com.jehadalomour.flowvan.feature.home.HomeScreen
 import com.jehadalomour.flowvan.feature.auth.LoginScreen
-import com.jehadalomour.flowvan.feature.home.RouteScreen
+import com.jehadalomour.flowvan.feature.home.TodayRouteScreen
 import com.jehadalomour.flowvan.feature.print.VoucherPrintScreen
 import com.jehadalomour.flowvan.feature.voucher.VoucherScreen
 import com.jehadalomour.flowvan.feature.voucher.VoucherType
@@ -143,9 +143,8 @@ fun FlowVanNavHost(
             )
         }
         composable(Routes.ROUTE) {
-            RouteScreen(
+            TodayRouteScreen(
                 onBack = { navController.popBackStack() },
-                onOpenCustomers = { navController.navigate(Routes.CUSTOMERS) },
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
                 onNavigateTo = { id -> navController.navigate(Routes.map(id)) },
             )

@@ -19,6 +19,7 @@ import com.jehadalomour.flowvan.core.domain.usecase.CreateRequestVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateReturnVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateSaleVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.EmptyCartException
+import com.jehadalomour.flowvan.core.domain.usecase.GetCustomerSalesUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.StockShortageException
 import com.jehadalomour.flowvan.feature.voucher.DiscountType
 import com.jehadalomour.flowvan.feature.voucher.VoucherView
@@ -43,6 +44,7 @@ class VoucherViewModel(
     private val appSettings: AppSettingsRepository,
     private val invoiceDao: InvoiceDao,
     private val json: Json,
+    private val getCustomerSales: GetCustomerSalesUseCase,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -54,6 +56,17 @@ class VoucherViewModel(
         customers.observeById(customerId)
             .onEach { c -> _state.update { it.copy(customer = c) } }
             .launchIn(viewModelScope)
+
+        // RETURN: the customer's locally-saved sales are the return sources. Their
+        // numbers match the server (the server keeps the app's number on upload), so
+        // they're valid references. Sales made elsewhere use the lookup-by-number box.
+        if (type == VoucherType.RETURN) {
+            invoiceDao.observeByCustomerAndType(customerId, "SALE")
+                .onEach { sales ->
+                    _state.update { it.copy(sourceInvoices = sales.filter { inv -> inv.status != "CANCELLED" }) }
+                }
+                .launchIn(viewModelScope)
+        }
 
         products.observeAll()
             .onEach { list -> _state.update { it.copy(products = list) }; applySearch() }
@@ -78,14 +91,6 @@ class VoucherViewModel(
             }
             .launchIn(viewModelScope)
 
-        // RETURN: offer the customer's confirmed sale invoices as return sources.
-        if (type == VoucherType.RETURN) {
-            invoiceDao.observeByCustomerAndType(customerId, "SALE")
-                .onEach { sales ->
-                    _state.update { it.copy(sourceInvoices = sales.filter { inv -> inv.status != "CANCELLED" }) }
-                }
-                .launchIn(viewModelScope)
-        }
     }
 
     fun onEvent(event: VoucherEvent) {
@@ -131,10 +136,13 @@ class VoucherViewModel(
             VoucherEvent.OpenSourcePicker -> _state.update { it.copy(showSourcePicker = true) }
             VoucherEvent.DismissSourcePicker -> _state.update { it.copy(showSourcePicker = false) }
             is VoucherEvent.SelectSourceInvoice -> selectSourceInvoice(event.invoiceId)
+            is VoucherEvent.SourceLookupChanged ->
+                _state.update { it.copy(sourceLookupQuery = event.q) }
+            VoucherEvent.LookupSource -> lookupSourceByNumber()
         }
     }
 
-    /** Pre-fill the return cart from a chosen sale invoice — same items and quantities. */
+    /** Pre-fill the return cart from a locally-saved sale invoice — same items/quantities. */
     private fun selectSourceInvoice(invoiceId: String) {
         _state.update { s ->
             val invoice = s.sourceInvoices.firstOrNull { it.id == invoiceId } ?: return@update s
@@ -169,6 +177,58 @@ class VoucherViewModel(
                 showSourcePicker = false,
                 view = VoucherView.CART,
             )
+        }
+    }
+
+    /**
+     * Manual fallback when the sale isn't on this device: look the SALE up on the
+     * server by voucher number + customer, then pre-fill the return from its lines.
+     * `referenceNumber` is the server voucher number, so the backend validates it.
+     */
+    private fun lookupSourceByNumber() {
+        val number = _state.value.sourceLookupQuery.trim()
+        val customerNumber = _state.value.customer?.code
+        if (number.isBlank() || customerNumber.isNullOrBlank()) return
+        _state.update { it.copy(isLookingUp = true, errorAr = null) }
+        viewModelScope.launch {
+            val sale = runCatching { getCustomerSales.byNumber(number, customerNumber) }.getOrNull()
+            if (sale == null) {
+                _state.update { it.copy(isLookingUp = false, errorAr = "لم يتم العثور على فاتورة بيع بهذا الرقم لهذا العميل") }
+                return@launch
+            }
+            val lines = runCatching { getCustomerSales.lines(sale.id) }.getOrDefault(emptyList())
+            _state.update { s ->
+                val cart = lines.map { sl ->
+                    val product = s.products.firstOrNull { it.sku == sl.sku }
+                    val productId = product?.id ?: sl.sku
+                    val conversion = sl.unitBaseQty?.toDouble()
+                        ?: s.productUnits[productId]?.firstOrNull { it.name == sl.unitName }?.conversionQty
+                        ?: 1.0
+                    CartLine(
+                        productId = productId,
+                        sku = sl.sku,
+                        nameAr = product?.nameAr ?: sl.name,
+                        unitPrice = sl.unitPrice,
+                        qty = sl.qty,
+                        discountPct = sl.discountPct,
+                        unit = sl.unitName ?: product?.unit ?: "",
+                        unitConversionQty = conversion,
+                        taxRate = sl.taxRate,
+                        lineTaxType = s.taxType,
+                    )
+                }
+                val sold = cart.associate { it.productId to it.qty * it.unitConversionQty }
+                s.copy(
+                    cart = cart,
+                    referenceInvoiceId = sale.id,
+                    referenceNumber = sale.number,
+                    soldQtyByProduct = sold,
+                    isLookingUp = false,
+                    showSourcePicker = false,
+                    sourceLookupQuery = "",
+                    view = VoucherView.CART,
+                )
+            }
         }
     }
 

@@ -17,6 +17,7 @@ import com.jehadalomour.flowvan.core.network.api.AuthApi
 import com.jehadalomour.flowvan.core.network.api.CollectionApi
 import com.jehadalomour.flowvan.core.network.api.CustomerApi
 import com.jehadalomour.flowvan.core.network.api.InvoiceApi
+import com.jehadalomour.flowvan.core.network.api.MyRouteApi
 import com.jehadalomour.flowvan.core.network.api.ProductApi
 import com.jehadalomour.flowvan.core.network.api.RepApi
 import com.jehadalomour.flowvan.core.network.api.VoucherApi
@@ -31,6 +32,7 @@ import com.jehadalomour.flowvan.core.domain.sync.SyncScheduler
 import com.jehadalomour.flowvan.core.domain.tracking.LocationTrackingCoordinator
 import com.jehadalomour.flowvan.core.domain.usecase.CreateRequestVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateReturnVoucherUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.GetCustomerSalesUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateSaleVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.EndShiftUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetCurrentUserUseCase
@@ -113,6 +115,7 @@ fun sharedModule(): Module = module {
     single { CollectionApi(get()) }
     single { RepApi(get()) }
     single { VoucherApi(get()) }
+    single { MyRouteApi(get()) }
 
     factory { LoginUseCase(get(), get()) }
     factory { GetCurrentUserUseCase(get(), get()) }
@@ -121,6 +124,7 @@ fun sharedModule(): Module = module {
     factory { VoucherNumberGenerator(get(), get()) }
     factory { CreateSaleVoucherUseCase(get(), get(), get(), get(), get(), get()) }
     factory { CreateReturnVoucherUseCase(get(), get(), get(), get(), get(), get()) }
+    factory { GetCustomerSalesUseCase(get()) }
     factory { CreateRequestVoucherUseCase(get(), get(), get(), get()) }
     factory { RecordCollectionUseCase(get(), get(), get()) }
     factory { EndShiftUseCase(get()) }

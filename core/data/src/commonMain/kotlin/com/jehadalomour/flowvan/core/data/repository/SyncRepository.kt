@@ -42,7 +42,6 @@ class SyncRepository(
     private val json: Json,
 ) {
     private val log = Logger.withTag("SyncRepository")
-    private var kindsEnsured = false
 
     @OptIn(ExperimentalTime::class)
     suspend fun syncPending(): SyncResult {
@@ -62,8 +61,8 @@ class SyncRepository(
         var paymentsSynced = 0
         var pointsSynced = 0
 
-        // ── Vouchers: SALE / RETURN / ORDER via POST /vouchers ─────────
-        ensureVoucherKinds()
+        // ── Vouchers: SALE / RETURN / ORDER via POST /sync/vouchers ────
+        // (Transaction kinds are seeded server-side — no ensure step needed.)
         for (inv in invoiceDao.findUnsynced(50)) {
             try {
                 val customerNumber = customerDao.findById(inv.customerId)?.code
@@ -163,14 +162,6 @@ class SyncRepository(
             "-d '$bodyJson'"
     }
 
-    /** Make sure the SALE/RETURN/ORDER transaction kinds exist (once per app run). */
-    private suspend fun ensureVoucherKinds() {
-        if (kindsEnsured) return
-        voucherApi.ensureKind("SALE", "Sales invoice", -1)
-        voucherApi.ensureKind("RETURN", "Customer return", 1)
-        voucherApi.ensureKind("ORDER", "Sales order", 0)
-        kindsEnsured = true
-    }
 }
 
 data class SyncResult(

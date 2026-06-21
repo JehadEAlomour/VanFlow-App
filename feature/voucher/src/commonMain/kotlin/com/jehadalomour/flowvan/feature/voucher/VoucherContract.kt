@@ -42,6 +42,9 @@ data class VoucherState(
     val referenceInvoiceId: String? = null,
     val referenceNumber: String? = null,
     val showSourcePicker: Boolean = false,
+    /** Manual lookup box: find a sale by number on the server when it isn't local. */
+    val sourceLookupQuery: String = "",
+    val isLookingUp: Boolean = false,
     /** Max returnable qty per product (base units) = what was sold on the source invoice. */
     val soldQtyByProduct: Map<String, Double> = emptyMap(),
 ) {
@@ -129,4 +132,6 @@ sealed interface VoucherEvent {
     data object OpenSourcePicker : VoucherEvent
     data object DismissSourcePicker : VoucherEvent
     data class SelectSourceInvoice(val invoiceId: String) : VoucherEvent
+    data class SourceLookupChanged(val q: String) : VoucherEvent
+    data object LookupSource : VoucherEvent
 }

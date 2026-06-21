@@ -2,12 +2,19 @@ package com.jehadalomour.flowvan.core.network.dto
 
 import kotlinx.serialization.Serializable
 
-/** `POST /vouchers` body. Monetary/qty fields are numeric strings ("1.250", "2.000"). */
+/**
+ * `POST /sync/vouchers` body. Monetary/qty fields are numeric strings ("1.250").
+ * `clientRef` is the device's local id — the server dedupes replays by it and
+ * assigns the authoritative voucher number, so client numbers never collide.
+ */
 @Serializable
 data class CreateVoucherRequest(
     val voucherNumber: String,
     val transKind: String,                 // SALE | RETURN | ORDER
     val userCode: String,
+    val clientRef: String? = null,
+    /** RETURN: the original SALE voucher number this return is issued against. */
+    val referenceVoucherNumber: String? = null,
     val customerNumber: String? = null,
     val vendorNumber: String? = null,
     val inDate: String? = null,
@@ -16,6 +23,15 @@ data class CreateVoucherRequest(
     val isPosted: Boolean = true,
     val transactions: List<VoucherTxn>,
     val payments: List<VoucherPayment> = emptyList(),
+)
+
+/** `POST /sync/vouchers` response: server-assigned number + staging status. */
+@Serializable
+data class SyncVoucherResult(
+    val id: String = "",
+    val voucherNumber: String = "",
+    val status: String = "",               // pending | posted | failed
+    val error: String? = null,
 )
 
 @Serializable
@@ -46,6 +62,41 @@ data class VoucherDto(
     val voucherNumber: String = "",
     val transKind: String = "",
     val isPosted: Boolean = false,
+)
+
+/** A server voucher header in a list (used to pick a RETURN's source SALE). */
+@Serializable
+data class VoucherSummaryDto(
+    val id: String,
+    val voucherNumber: String = "",
+    val transKind: String = "",
+    val customerNumber: String? = null,
+    val inDate: String? = null,
+    val createdAt: String? = null,
+    val netTotal: String = "0",
+    val isPosted: Boolean = false,
+)
+
+/** A server voucher with its lines (to pre-fill a return from the original sale). */
+@Serializable
+data class VoucherDetailDto(
+    val id: String,
+    val voucherNumber: String = "",
+    val customerNumber: String? = null,
+    val transactions: List<VoucherDetailTxn> = emptyList(),
+)
+
+@Serializable
+data class VoucherDetailTxn(
+    val itemNumber: String = "",
+    val itemName: String = "",
+    val itemQty: String = "0",
+    val unitPrice: String = "0",
+    val taxPercentage: String = "0",
+    val discountPercentage: String = "0",
+    val unitName: String? = null,
+    val unitCode: String? = null,
+    val unitBaseQty: Int? = null,
 )
 
 @Serializable

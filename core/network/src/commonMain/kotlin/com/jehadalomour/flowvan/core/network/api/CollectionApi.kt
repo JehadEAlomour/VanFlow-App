@@ -37,7 +37,8 @@ class CollectionApi(private val client: FlowVanApiClient) {
     suspend fun summary(date: String? = null): CollectionSummaryDto =
         client.getData("collections/summary", mapOf("date" to date))
 
-    suspend fun create(body: CreateCollectionRequest): CollectionDto = client.postData("collections", body)
+    suspend fun create(body: CreateCollectionRequest): CollectionDto =
+        client.postData("collections", body)
 
     suspend fun confirm(id: String): CollectionDto = client.postEmpty("collections/$id/confirm")
 }
