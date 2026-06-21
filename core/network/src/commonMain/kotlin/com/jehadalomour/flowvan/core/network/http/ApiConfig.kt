@@ -35,7 +35,8 @@ class ApiConfig(private val settings: Settings) {
     companion object {
         const val API_PREFIX = "api/v1"
 
-        //     local dev backend. Editable in Settings → خادم النظام.
-        const val DEFAULT_BASE_URL = "http://127.0.0.1:3100/api/v1"
+        //     Deployed VanFlow backend on Render. (Local dev:
+        //     "http://10.0.2.2:3100/api/v1" for the Android emulator.)
+        const val DEFAULT_BASE_URL = "https://cashvan-api-9qrt.onrender.com/api/v1"
     }
 }
