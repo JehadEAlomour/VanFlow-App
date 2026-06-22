@@ -37,6 +37,7 @@ class CreateSaleVoucherUseCase(
         discountAmount: Double,
         paymentMethod: PaymentMethod,
         notes: String?,
+        chosenFreeItems: List<String> = emptyList(),
     ): Result<InvoiceEntity> = runCatching {
         if (cart.isEmpty()) throw EmptyCartException()
 
@@ -90,6 +91,10 @@ class CreateSaleVoucherUseCase(
             paymentMethod = paymentMethod.name,
             notes         = notes,
             syncedAt      = null,
+            chosenFreeItemsCsv = chosenFreeItems
+                .filter { it.isNotBlank() }
+                .takeIf { it.isNotEmpty() }
+                ?.joinToString(","),
         )
 
         invoices.save(entity)

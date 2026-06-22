@@ -50,13 +50,15 @@ on-screen preview must match the posted voucher.
 1. Add items until the basket reaches the threshold.
 2a. **Discount variant:** banner chip + **العروض** invoice discount row; total drops.
 2b. **Choice variant:** a **"اختر هديتك" bottom sheet** appears listing the choices.
-   - Tap a choice → the sheet closes, the chosen item is **added to the cart as a normal
-     line (qty 1)**, and a re-evaluation runs. The server treats the chosen item as free,
-     so after re-eval it shows as a FREE line / net 0.
-   - Cancel → sheet dismissed; you can re-trigger by editing the cart.
+   - Tap a choice → it is **selected** (✓, highlighted) and recorded as a gift pick. The
+     pick is sent to the server as `chosenFreeItems`; on the next re-eval the chosen item
+     comes back as a **FREE line / net 0**. It is **NOT** added as a normal cart line.
+   - Tap a selected choice again → it deselects.
+   - Cancel/Done → sheet dismissed; you can re-open by editing the cart.
 
-> Note: the device is **stateless** — picking a free item just adds a cart line. No
-> separate `chosenFreeItems` field is sent; the server re-evaluates from the cart lines.
+> Note: gift picks are tracked in state as a flat `chosenFreeItems` list and sent on both
+> evaluate and upload. The server validates them against the offer's gift pool and is the
+> final arbiter.
 
 ### 4. ITEM_SET_THRESHOLD — selected items X/Y/Z reach qty (any/all)
 1. Add the set items to the configured quantities.
@@ -69,6 +71,27 @@ on-screen preview must match the posted voucher.
 2. Add any qualifying cart.
 3. **Expect:** the banner shows the loyalty offer (invoice discount in the العروض row,
    or a FREE line). On a returning customer, nothing applies.
+
+### 6. ITEM_QTY_REWARD — "buy N of selected items → a GIFT you pick (or a % discount)"
+This offer has two reward variants:
+
+**GIFT variant (rep picks the gift):**
+1. Add the selected trigger item(s) to the configured qty **N**.
+2. **Expect:** the **"اختر هديتك" bottom sheet** opens listing the gift pool. If the offer
+   grants more than one gift, the header shows **"اختر K (picked/K)"** — pick up to **K**
+   items (multi-select). Selected items show a ✓ and a highlighted border; tapping a
+   selected item deselects it. Picking past the quota evicts your oldest pick for that offer.
+3. Each picked gift comes back from the server as a **FREE line / net 0** (green
+   "هدية / FREE" card), plus a banner chip. The trigger lines are charged normally.
+4. Reduce the trigger below N (or empty the pool) → the gift entitlement disappears and any
+   now-invalid picks are **auto-pruned**.
+5. **Sync:** the picks ride along on upload (see Save/sync) so the posted voucher carries
+   the same gifts the preview showed.
+
+**% discount variant:**
+1. Add the selected trigger item(s) to qty **N**.
+2. **Expect:** no gift sheet — instead the selected lines get a per-line discount that lands
+   in the **العروض** row (same rendering as type 1). No app-side gift handling needed.
 
 ---
 
@@ -90,7 +113,13 @@ on-screen preview must match the posted voucher.
 
 ## Save / sync
 
-- Save the voucher as usual. The cart (including any chosen free item line) is what posts;
-  the **server applies the offer** and returns the authoritative voucher. If an offer no
-  longer qualifies at post time, the posted voucher won't include it (the app reconciles on
-  the next catalog/voucher refresh).
+- Save the voucher as usual. The cart **plus the rep's gift picks** (`chosenFreeItems`) is
+  what posts; the **server applies the offer**, adds the free lines, records the redemption,
+  and returns the authoritative voucher. Gift picks are persisted locally on the invoice
+  (`invoices.chosenFreeItemsCsv`, DB v6) so they survive an offline save and ride the
+  `POST /sync/vouchers` body when connectivity returns.
+- If an offer no longer qualifies at post time, the posted voucher won't include it (the app
+  reconciles on the next catalog/voucher refresh).
+
+> **Verify a GIFT sale end-to-end:** pick a gift, save, then confirm on the server side that
+> the posted voucher contains the chosen item as a free line and a redemption was recorded.

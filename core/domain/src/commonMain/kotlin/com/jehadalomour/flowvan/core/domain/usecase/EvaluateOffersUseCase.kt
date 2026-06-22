@@ -9,8 +9,9 @@ import com.jehadalomour.flowvan.core.network.mapper.toOfferEvaluation
 
 /**
  * Evaluates the offers engine for the current SALE cart and maps the result into the
- * domain [OfferEvaluation]. Stateless: free-item choices are sent simply as extra cart
- * lines (the server re-evaluates and treats them as free). The server is authoritative.
+ * domain [OfferEvaluation]. The rep's GIFT picks ([chosenFreeItems], item numbers from an
+ * ITEM_QTY_REWARD gift pool) are sent so the server returns them as FREE lines. The server
+ * is authoritative — it validates the picks against each offer's gift pool.
  */
 class EvaluateOffersUseCase(
     private val offers: OfferApi,
@@ -21,6 +22,7 @@ class EvaluateOffersUseCase(
         repId: String?,
         storeNumber: String?,
         paymentMethod: String?,
+        chosenFreeItems: List<String> = emptyList(),
     ): Result<OfferEvaluation> = runCatching {
         if (cart.isEmpty()) return@runCatching OfferEvaluation.EMPTY
 
@@ -31,6 +33,7 @@ class EvaluateOffersUseCase(
             paymentMethod = paymentMethod,   // CASH/CREDIT condition for payment-method offers
             at = null,                       // null → server "now"
             lines = cart.map { EvaluateLine(itemNumber = it.sku, qty = it.qty) },
+            chosenFreeItems = chosenFreeItems,
         )
         offers.evaluate(request).toOfferEvaluation()
     }

@@ -23,6 +23,9 @@ data class EvaluateRequest(
     val paymentMethod: String? = null,
     val at: String? = null,                 // ISO-8601 instant; null → server "now"
     val lines: List<EvaluateLine> = emptyList(),
+    // Gifts the rep picked for ITEM_QTY_REWARD (GIFT) offers — item numbers chosen from
+    // the offer's gift pool. When present, the server returns the chosen items as freeLines.
+    val chosenFreeItems: List<String> = emptyList(),
 )
 
 @Serializable

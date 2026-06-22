@@ -23,6 +23,11 @@ data class CreateVoucherRequest(
     val isPosted: Boolean = true,
     val transactions: List<VoucherTxn>,
     val payments: List<VoucherPayment> = emptyList(),
+    /**
+     * GIFT picks for ITEM_QTY_REWARD offers (item numbers). The server validates them
+     * against the offer's gift pool, adds them as free lines, and records the redemption.
+     */
+    val chosenFreeItems: List<String> = emptyList(),
 )
 
 /** `POST /sync/vouchers` response: server-assigned number + staging status. */

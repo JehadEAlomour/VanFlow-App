@@ -92,6 +92,12 @@ fun InvoiceEntity.toVoucherRequest(userCode: String, customerNumber: String?, js
             )
         },
         payments = payments,
+        // GIFT picks for ITEM_QTY_REWARD offers — server adds the free lines + redemption.
+        chosenFreeItems = chosenFreeItemsCsv
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?: emptyList(),
     )
 }
 

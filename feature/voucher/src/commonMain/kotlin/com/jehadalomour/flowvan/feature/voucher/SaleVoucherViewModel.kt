@@ -46,9 +46,10 @@ class SaleVoucherViewModel(
     @OptIn(FlowPreview::class)
     private fun observeCartForOffers() {
         _state
-            // Re-evaluate when the cart OR the payment method changes (payment-method
-            // offers depend on Cash/Credit).
-            .map { it.paymentMethod to cartKey(it) }
+            // Re-evaluate when the cart, the payment method, OR the rep's gift picks change.
+            // Payment-method offers depend on Cash/Credit; gift picks drive the FREE lines
+            // the server returns for ITEM_QTY_REWARD offers.
+            .map { Triple(it.paymentMethod, cartKey(it), it.chosenFreeItems) }
             .distinctUntilChanged()
             .onEach { _state.update { s -> s.copy(isEvaluatingOffers = s.cart.isNotEmpty()) } }
             .debounce(300)
@@ -70,6 +71,7 @@ class SaleVoucherViewModel(
             // the buyer and the backend resolves the store. Pass null (optional field).
             storeNumber = null,
             paymentMethod = s.paymentMethod.name,   // CASH/CHEQUE/TRANSFER/CREDIT
+            chosenFreeItems = s.chosenFreeItems,    // rep's GIFT picks → server returns FREE lines
         )
         result.fold(
             onSuccess = { applyEvaluation(it) },
@@ -78,14 +80,21 @@ class SaleVoucherViewModel(
         )
     }
 
-    /** Merge an evaluation result into state; free lines are de-duplicated by itemNumber. */
+    /**
+     * Merge an evaluation result into state. [pendingChoices] is the server's GIFT
+     * entitlement (the pool + how many gifts the rep may pick). We prune the rep's picks
+     * down to items still offered by some pending choice, so a cart edit that drops the
+     * trigger doesn't leave a stale gift selected.
+     */
     private fun applyEvaluation(eval: OfferEvaluation) {
         _state.update { s ->
+            val validGiftPool = eval.pendingChoices.flatMap { it.choices }.toSet()
             s.copy(
                 appliedOffers = eval.appliedOffers,
                 freeLines = eval.freeLines,
                 offerInvoiceDiscount = eval.invoiceDiscountJod,
                 pendingChoices = eval.pendingChoices,
+                chosenFreeItems = s.chosenFreeItems.filter { it in validGiftPool },
                 offerLineDiscounts = eval.adjustedLines.associate { it.itemNumber to it.discountJod },
                 isEvaluatingOffers = false,
             )
@@ -146,33 +155,29 @@ class SaleVoucherViewModel(
     }
 
     /**
-     * Record a free-item choice and add it to the cart as a normal line (qty 1). The
-     * server re-evaluates on the next debounce and treats the chosen item as free; we
-     * keep the device stateless (no `chosenFreeItems` field is sent — it's just a line).
+     * Toggle a GIFT pick for an ITEM_QTY_REWARD offer. We DO NOT add a cart line — the
+     * server adds the free line from [SaleVoucherState.chosenFreeItems] on the next
+     * (debounced) re-evaluate and on upload. Picking is capped at the offer's `qty`
+     * (how many gifts the rep may choose); a fresh pick past the cap evicts the oldest
+     * pick for that offer. Tapping a selected item again removes it.
      */
     private fun chooseFreeItem(offerId: String, itemNumber: String) {
         _state.update { s ->
-            val product = s.products.firstOrNull { it.sku == itemNumber }
-            val newCart = if (product == null || s.cart.any { it.productId == product.id }) {
-                s.cart
-            } else {
-                val defaultUnit = s.productUnits[product.id]?.minByOrNull { it.conversionQty }
-                s.cart + CartLine(
-                    productId = product.id,
-                    sku = product.sku,
-                    nameAr = product.nameAr,
-                    unitPrice = defaultUnit?.price ?: product.salePrice,
-                    qty = 1.0,
-                    unit = defaultUnit?.name ?: product.unit,
-                    unitConversionQty = defaultUnit?.conversionQty ?: 1.0,
-                )
+            val choice = s.pendingChoices.firstOrNull { it.offerId == offerId } ?: return@update s
+            val poolForOffer = choice.choices.toSet()
+            // Already picked? Toggle off.
+            if (itemNumber in s.chosenFreeItems) {
+                return@update s.copy(chosenFreeItems = s.chosenFreeItems - itemNumber)
             }
-            s.copy(
-                cart = newCart,
-                chosenFreeItems = s.chosenFreeItems + (offerId to itemNumber),
-                // Clear this choice from the pending list; re-eval refreshes the rest.
-                pendingChoices = s.pendingChoices.filterNot { it.offerId == offerId },
-            )
+            // Picks belonging to this offer's pool, in pick order.
+            val picksForOffer = s.chosenFreeItems.filter { it in poolForOffer }
+            val capped = if (choice.qty in 1..picksForOffer.size) {
+                // At the cap — drop the oldest pick for this offer to make room.
+                s.chosenFreeItems - picksForOffer.first()
+            } else {
+                s.chosenFreeItems
+            }
+            s.copy(chosenFreeItems = capped + itemNumber)
         }
     }
 
@@ -265,6 +270,7 @@ class SaleVoucherViewModel(
                 discountAmount = s.voucherDiscountAmount,
                 paymentMethod = s.paymentMethod,
                 notes = s.notes.takeIf { it.isNotBlank() },
+                chosenFreeItems = s.chosenFreeItems,
             )
             result.fold(
                 onSuccess = { entity ->

@@ -233,6 +233,7 @@ fun SaleVoucherScreen(
     if (state.pendingChoices.isNotEmpty()) {
         ChooseFreeItemSheet(
             choices = state.pendingChoices,
+            selectedItems = state.chosenFreeItems,
             productNameFor = { itemNumber ->
                 state.products.firstOrNull { it.sku == itemNumber }?.nameAr ?: itemNumber
             },
@@ -656,11 +657,17 @@ private fun FreeLineCard(free: FreeLine) {
 @Composable
 private fun ChooseFreeItemSheet(
     choices: List<OfferChoice>,
+    selectedItems: List<String>,
     productNameFor: (String) -> String,
     onPick: (offerId: String, itemNumber: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val choice = choices.firstOrNull() ?: return
+    if (choices.isEmpty()) return
+    // Whether every pending choice has its full quota of gifts picked → enables "Done".
+    val allChosen = choices.all { choice ->
+        val picksForChoice = choice.choices.count { it in selectedItems }
+        choice.qty <= 0 || picksForChoice >= choice.qty
+    }
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -684,25 +691,54 @@ private fun ChooseFreeItemSheet(
                     }
                     Text("اختر هديتك", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(12.dp))
-                    choice.choices.forEach { itemNumber ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Fv.Green.copy(alpha = 0.10f))
-                                .border(0.5.dp, Fv.Green.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                                .clickable { onPick(choice.offerId, itemNumber) }
-                                .padding(horizontal = 14.dp, vertical = 14.dp),
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("🎁", fontSize = 14.sp)
-                                Text(
-                                    productNameFor(itemNumber),
-                                    color = Fv.TextHigh,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
+                    choices.forEach { choice ->
+                        val picksForChoice = choice.choices.count { it in selectedItems }
+                        if (choice.qty > 1) {
+                            Text(
+                                "اختر ${choice.qty} ($picksForChoice/${choice.qty})",
+                                color = Fv.TextMid,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(bottom = 4.dp, top = 2.dp),
+                            )
+                        }
+                        choice.choices.forEach { itemNumber ->
+                            val selected = itemNumber in selectedItems
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        if (selected) Fv.Green.copy(alpha = 0.22f)
+                                        else Fv.Green.copy(alpha = 0.10f)
+                                    )
+                                    .border(
+                                        if (selected) 1.5.dp else 0.5.dp,
+                                        Fv.Green.copy(alpha = if (selected) 0.7f else 0.35f),
+                                        RoundedCornerShape(12.dp),
+                                    )
+                                    .clickable { onPick(choice.offerId, itemNumber) }
+                                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text("🎁", fontSize = 14.sp)
+                                        Text(
+                                            productNameFor(itemNumber),
+                                            color = Fv.TextHigh,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                        )
+                                    }
+                                    if (selected) {
+                                        Text("✓", color = Fv.Green, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
                             }
                         }
                     }
@@ -712,11 +748,20 @@ private fun ChooseFreeItemSheet(
                             .fillMaxWidth()
                             .height(48.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .border(0.5.dp, Color(0xFFC8D8EC), RoundedCornerShape(14.dp))
+                            .then(
+                                if (allChosen)
+                                    Modifier.background(Brush.linearGradient(listOf(Color(0xFF1D9E75), Color(0xFF0F6E56))))
+                                else Modifier.border(0.5.dp, Color(0xFFC8D8EC), RoundedCornerShape(14.dp))
+                            )
                             .clickable { onDismiss() },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(stringResource(Res.string.cancel), color = Fv.TextMid, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            if (allChosen) stringResource(Res.string.confirm) else stringResource(Res.string.cancel),
+                            color = if (allChosen) Color.White else Fv.TextMid,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
                     }
                 }
             }

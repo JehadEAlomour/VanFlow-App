@@ -34,8 +34,12 @@ data class SaleVoucherState(
     val offerInvoiceDiscount: Double = 0.0,
     val pendingChoices: List<OfferChoice> = emptyList(),
     val isEvaluatingOffers: Boolean = false,
-    /** offerId → chosen itemNumber, for FREE_ITEM_CHOICE offers. */
-    val chosenFreeItems: Map<String, String> = emptyMap(),
+    /**
+     * Flat list of item numbers the rep picked as GIFTs for ITEM_QTY_REWARD offers.
+     * Sent to the server on both evaluate and sale-upload so it adds the free lines.
+     * A single offer can require N gifts, so the same offer may contribute N entries.
+     */
+    val chosenFreeItems: List<String> = emptyList(),
     /** itemNumber → offer line-discount amount (JOD), overlaid on matching cart lines. */
     val offerLineDiscounts: Map<String, Double> = emptyMap(),
 ) {
