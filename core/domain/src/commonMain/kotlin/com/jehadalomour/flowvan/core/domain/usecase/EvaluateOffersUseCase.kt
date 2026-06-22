@@ -20,6 +20,7 @@ class EvaluateOffersUseCase(
         customerNumber: String?,
         repId: String?,
         storeNumber: String?,
+        paymentMethod: String?,
     ): Result<OfferEvaluation> = runCatching {
         if (cart.isEmpty()) return@runCatching OfferEvaluation.EMPTY
 
@@ -27,6 +28,7 @@ class EvaluateOffersUseCase(
             customerNumber = customerNumber,
             repId = repId,
             storeNumber = storeNumber,
+            paymentMethod = paymentMethod,   // CASH/CREDIT condition for payment-method offers
             at = null,                       // null → server "now"
             lines = cart.map { EvaluateLine(itemNumber = it.sku, qty = it.qty) },
         )

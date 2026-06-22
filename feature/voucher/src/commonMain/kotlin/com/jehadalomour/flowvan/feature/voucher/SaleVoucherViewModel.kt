@@ -46,7 +46,9 @@ class SaleVoucherViewModel(
     @OptIn(FlowPreview::class)
     private fun observeCartForOffers() {
         _state
-            .map { cartKey(it) }
+            // Re-evaluate when the cart OR the payment method changes (payment-method
+            // offers depend on Cash/Credit).
+            .map { it.paymentMethod to cartKey(it) }
             .distinctUntilChanged()
             .onEach { _state.update { s -> s.copy(isEvaluatingOffers = s.cart.isNotEmpty()) } }
             .debounce(300)
@@ -67,6 +69,7 @@ class SaleVoucherViewModel(
             // The app has no per-customer store concept; the customer number identifies
             // the buyer and the backend resolves the store. Pass null (optional field).
             storeNumber = null,
+            paymentMethod = s.paymentMethod.name,   // CASH/CHEQUE/TRANSFER/CREDIT
         )
         result.fold(
             onSuccess = { applyEvaluation(it) },

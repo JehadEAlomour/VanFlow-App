@@ -19,6 +19,8 @@ data class EvaluateRequest(
     val customerNumber: String? = null,
     val repId: String? = null,
     val storeNumber: String? = null,
+    // Order payment method — drives PAYMENT_METHOD_DISCOUNT. "CASH"|"CHEQUE"|"TRANSFER"|"CREDIT".
+    val paymentMethod: String? = null,
     val at: String? = null,                 // ISO-8601 instant; null → server "now"
     val lines: List<EvaluateLine> = emptyList(),
 )
