@@ -4,12 +4,21 @@ import com.jehadalomour.flowvan.core.model.AppliedOffer
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.Customer
 import com.jehadalomour.flowvan.core.model.FreeLine
+import com.jehadalomour.flowvan.core.model.InvoiceTaxCalculator
 import com.jehadalomour.flowvan.core.model.OfferChoice
+import com.jehadalomour.flowvan.core.model.OfferTotals
 import com.jehadalomour.flowvan.core.model.PaymentMethod
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.ProductUnit
+import com.jehadalomour.flowvan.core.model.ServerLine
 
 enum class VoucherView { PICKER, CART }
+
+/**
+ * Percent vs fixed-value discount selector. The SALE flow no longer uses manual discounts
+ * (offers are server-authoritative), but the other voucher flows (RETURN, etc.) in this
+ * package still depend on this enum, so it stays defined here.
+ */
 enum class DiscountType { PERCENT, VALUE }
 
 data class SaleVoucherState(
@@ -21,17 +30,20 @@ data class SaleVoucherState(
     val view: VoucherView = VoucherView.PICKER,
     val searchQuery: String = "",
     val paymentMethod: PaymentMethod = PaymentMethod.CASH,
+    /**
+     * Whether the rep has chosen the payment method from the opening Cash/Credit chooser.
+     * Gates the item picker — no items can be added until this is true. Stays editable
+     * later via the small Cash/Credit toggle in the cart.
+     */
+    val paymentChosen: Boolean = false,
     val notes: String = "",
     val showSaveSheet: Boolean = false,
     val isSaving: Boolean = false,
     val savedNumber: String? = null,
     val errorAr: String? = null,
-    val voucherDiscountType: DiscountType = DiscountType.PERCENT,
-    val voucherDiscountInput: String = "",
     // ── Offers (server-authoritative, display only) ───────────────────────────
     val appliedOffers: List<AppliedOffer> = emptyList(),
     val freeLines: List<FreeLine> = emptyList(),
-    val offerInvoiceDiscount: Double = 0.0,
     val pendingChoices: List<OfferChoice> = emptyList(),
     val isEvaluatingOffers: Boolean = false,
     /**
@@ -40,33 +52,42 @@ data class SaleVoucherState(
      * A single offer can require N gifts, so the same offer may contribute N entries.
      */
     val chosenFreeItems: List<String> = emptyList(),
-    /** itemNumber → offer line-discount amount (JOD), overlaid on matching cart lines. */
-    val offerLineDiscounts: Map<String, Double> = emptyMap(),
+    // ── Server-fed cart (online) ──────────────────────────────────────────────
+    /**
+     * True when the displayed cart + totals come from the server's `/offers/evaluate`
+     * result (online). False → fall back to on-device [InvoiceTaxCalculator] (offline,
+     * no offers). Drives which numbers the UI shows.
+     */
+    val offersFromServer: Boolean = false,
+    /** The server's authoritative per-line result, keyed by itemNumber (= sku). */
+    val serverLines: List<ServerLine> = emptyList(),
+    /** The server's authoritative invoice totals. */
+    val serverTotals: OfferTotals = OfferTotals.ZERO,
 ) {
-    val subtotal: Double get() = cart.sumOf { it.grossLineTotal }
-    val lineDiscountTotal: Double get() = cart.sumOf { it.lineDiscount }
-    val taxAmount: Double get() = cart.sumOf { it.lineTax }
+    /** Offline = we have a non-empty cart but no fresh server result to display. */
+    val isOffline: Boolean get() = cart.isNotEmpty() && !offersFromServer
 
-    /** Server-driven per-line offer discounts (display overlay, on top of manual line discounts). */
-    val offerLineDiscountTotal: Double get() = offerLineDiscounts.values.sum()
+    /** On-device calculation used as the offline fallback (no offers). */
+    private val localSummary get() = InvoiceTaxCalculator.calculateInvoice(cart)
 
-    val voucherDiscountAmount: Double get() {
-        val afterLines = subtotal - lineDiscountTotal
-        val input = voucherDiscountInput.toDoubleOrNull() ?: 0.0
-        return when (voucherDiscountType) {
-            DiscountType.PERCENT -> (afterLines * (input / 100.0)).coerceIn(0.0, afterLines)
-            DiscountType.VALUE   -> input.coerceIn(0.0, afterLines)
-        }
-    }
+    val subtotal: Double get() =
+        if (offersFromServer) serverTotals.subtotalJod else cart.sumOf { it.grossLineTotal }
 
+    /** Total discount applied (line + invoice offer discounts). */
     val totalDiscount: Double get() =
-        lineDiscountTotal + voucherDiscountAmount + offerLineDiscountTotal + offerInvoiceDiscount
+        if (offersFromServer) serverTotals.totalDiscountJod
+        else localSummary.totalLineDiscounts + localSummary.invoiceDiscountAmount
+
+    val taxAmount: Double get() =
+        if (offersFromServer) serverTotals.taxJod else localSummary.totalTax
 
     /**
-     * Final total. Free lines net 0 (full price + 100% discount) so they don't move
-     * the total. Offer discounts are subtracted; never below 0.
+     * Final total. Server value when online; on-device calc when offline. Free lines net 0
+     * (full price + 100% discount) so they don't move the total. Never below 0.
      */
-    val total: Double get() = (subtotal - totalDiscount + taxAmount).coerceAtLeast(0.0)
+    val total: Double get() =
+        if (offersFromServer) serverTotals.grandTotalJod
+        else localSummary.grandTotal.coerceAtLeast(0.0)
 }
 
 sealed interface SaleVoucherEvent {
@@ -78,14 +99,14 @@ sealed interface SaleVoucherEvent {
         val unit: String,
         val unitPrice: Double,
         val unitConversionQty: Double,
-        val discountPct: Double,
     ) : SaleVoucherEvent
     data class ChangeQty(val productId: String, val qty: Double) : SaleVoucherEvent
     data class RemoveLine(val productId: String) : SaleVoucherEvent
+    /** From the opening Cash/Credit chooser (and the editable in-cart toggle). */
+    data class PaymentMethodChosen(val method: PaymentMethod) : SaleVoucherEvent
+    /** Change the payment method later without re-gating the picker. */
     data class PaymentMethodSelected(val method: PaymentMethod) : SaleVoucherEvent
     data class NotesChanged(val notes: String) : SaleVoucherEvent
-    data class VoucherDiscountInputChanged(val input: String) : SaleVoucherEvent
-    data object VoucherDiscountTypeToggled : SaleVoucherEvent
     data object ToggleView : SaleVoucherEvent
     data object OpenSaveSheet : SaleVoucherEvent
     data object DismissSaveSheet : SaleVoucherEvent

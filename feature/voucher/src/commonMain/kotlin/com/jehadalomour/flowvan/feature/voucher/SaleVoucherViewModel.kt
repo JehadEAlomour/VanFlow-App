@@ -8,6 +8,7 @@ import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.OfferEvaluation
+import com.jehadalomour.flowvan.core.model.OfferTotals
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.ProductUnit
 import com.jehadalomour.flowvan.core.domain.usecase.CreateSaleVoucherUseCase
@@ -75,8 +76,8 @@ class SaleVoucherViewModel(
         )
         result.fold(
             onSuccess = { applyEvaluation(it) },
-            // Offline / failure: never break the sale — just clear the spinner and any stale offers.
-            onFailure = { applyEvaluation(OfferEvaluation.EMPTY) },
+            // Offline / failure: never break the sale — fall back to on-device totals.
+            onFailure = { applyOffline() },
         )
     }
 
@@ -92,10 +93,30 @@ class SaleVoucherViewModel(
             s.copy(
                 appliedOffers = eval.appliedOffers,
                 freeLines = eval.freeLines,
-                offerInvoiceDiscount = eval.invoiceDiscountJod,
                 pendingChoices = eval.pendingChoices,
                 chosenFreeItems = s.chosenFreeItems.filter { it in validGiftPool },
-                offerLineDiscounts = eval.adjustedLines.associate { it.itemNumber to it.discountJod },
+                // Server-fed cart + totals.
+                serverLines = eval.serverLines,
+                serverTotals = eval.totals,
+                offersFromServer = true,
+                isEvaluatingOffers = false,
+            )
+        }
+    }
+
+    /**
+     * Evaluate failed (offline) — fall back to on-device totals. Clear stale offer
+     * overlays so the rep sees a clean local cart; the server re-applies on sync.
+     */
+    private fun applyOffline() {
+        _state.update { s ->
+            s.copy(
+                appliedOffers = emptyList(),
+                freeLines = emptyList(),
+                pendingChoices = emptyList(),
+                serverLines = emptyList(),
+                serverTotals = OfferTotals.ZERO,
+                offersFromServer = false,
                 isEvaluatingOffers = false,
             )
         }
@@ -133,15 +154,11 @@ class SaleVoucherViewModel(
             is SaleVoucherEvent.RemoveLine -> _state.update { s ->
                 s.copy(cart = s.cart.filterNot { it.productId == event.productId })
             }
+            is SaleVoucherEvent.PaymentMethodChosen -> _state.update {
+                it.copy(paymentMethod = event.method, paymentChosen = true)
+            }
             is SaleVoucherEvent.PaymentMethodSelected -> _state.update { it.copy(paymentMethod = event.method) }
             is SaleVoucherEvent.NotesChanged -> _state.update { it.copy(notes = event.notes) }
-            is SaleVoucherEvent.VoucherDiscountInputChanged -> _state.update { it.copy(voucherDiscountInput = event.input) }
-            SaleVoucherEvent.VoucherDiscountTypeToggled -> _state.update {
-                it.copy(
-                    voucherDiscountType = if (it.voucherDiscountType == DiscountType.PERCENT) DiscountType.VALUE else DiscountType.PERCENT,
-                    voucherDiscountInput = "",
-                )
-            }
             SaleVoucherEvent.ToggleView -> _state.update {
                 it.copy(view = if (it.view == VoucherView.PICKER) VoucherView.CART else VoucherView.PICKER)
             }
@@ -229,7 +246,6 @@ class SaleVoucherViewModel(
                     qty = event.qty,
                     unit = event.unit,
                     unitConversionQty = event.unitConversionQty,
-                    discountPct = event.discountPct,
                 )
                 else -> s.cart.map {
                     if (it.productId == event.product.id)
@@ -238,7 +254,6 @@ class SaleVoucherViewModel(
                             unit = event.unit,
                             unitPrice = event.unitPrice,
                             unitConversionQty = event.unitConversionQty,
-                            discountPct = event.discountPct,
                         )
                     else it
                 }
@@ -267,7 +282,8 @@ class SaleVoucherViewModel(
                 customerId = customerId,
                 salesmanId = session.currentUserId.orEmpty(),
                 cart = s.cart,
-                discountAmount = s.voucherDiscountAmount,
+                // No manual discounts: offers are applied server-side on upload (authoritative).
+                discountAmount = 0.0,
                 paymentMethod = s.paymentMethod,
                 notes = s.notes.takeIf { it.isNotBlank() },
                 chosenFreeItems = s.chosenFreeItems,

@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -52,7 +51,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,7 +70,7 @@ import com.jehadalomour.flowvan.core.model.OfferChoice
 import com.jehadalomour.flowvan.core.model.PaymentMethod
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.ProductUnit
-import com.jehadalomour.flowvan.feature.voucher.DiscountType
+import com.jehadalomour.flowvan.core.model.ServerLine
 import com.jehadalomour.flowvan.feature.voucher.SaleVoucherEvent
 import com.jehadalomour.flowvan.feature.voucher.SaleVoucherState
 import com.jehadalomour.flowvan.feature.voucher.SaleVoucherViewModel
@@ -167,12 +165,11 @@ fun SaleVoucherScreen(
                             dialogProduct = state.products.firstOrNull { it.id == productId }
                         },
                         onNotesChange = { viewModel.onEvent(SaleVoucherEvent.NotesChanged(it)) },
+                        onPaymentMethod = { viewModel.onEvent(SaleVoucherEvent.PaymentMethodSelected(it)) },
                         modifier = Modifier.weight(1f),
                     )
                     CartSummaryCard(
                         state = state,
-                        onDiscountInputChange = { viewModel.onEvent(SaleVoucherEvent.VoucherDiscountInputChanged(it)) },
-                        onDiscountTypeToggle = { viewModel.onEvent(SaleVoucherEvent.VoucherDiscountTypeToggled) },
                         modifier = Modifier.padding(horizontal = 16.dp).padding(top = 6.dp),
                     )
                     val canSave = state.cart.isNotEmpty() && !state.isSaving
@@ -208,15 +205,22 @@ fun SaleVoucherScreen(
         }
     }
 
+    // ── Opening Cash/Credit chooser — blocks the picker until chosen ──────────────
+    if (!state.paymentChosen) {
+        OpeningPaymentChooser(
+            onChoose = { viewModel.onEvent(SaleVoucherEvent.PaymentMethodChosen(it)) },
+        )
+    }
+
     dialogProduct?.let { product ->
         val currentLine = state.cart.firstOrNull { it.productId == product.id }
         AddItemBottomSheet(
             product = product,
             currentLine = currentLine,
             dbUnits = state.productUnits[product.id] ?: emptyList(),
-            onConfirm = { qty, unit, unitPrice, unitConversionQty, discountPct ->
+            onConfirm = { qty, unit, unitPrice, unitConversionQty ->
                 viewModel.onEvent(
-                    SaleVoucherEvent.ConfirmItemDialog(product, qty, unit, unitPrice, unitConversionQty, discountPct)
+                    SaleVoucherEvent.ConfirmItemDialog(product, qty, unit, unitPrice, unitConversionQty)
                 )
                 dialogProduct = null
             },
@@ -245,9 +249,11 @@ fun SaleVoucherScreen(
     }
 
     if (state.showSaveSheet) {
-        PaymentMethodDialog(
-            current = state.paymentMethod,
-            onSelect = { viewModel.onEvent(SaleVoucherEvent.PaymentMethodSelected(it)) },
+        // Payment method is already chosen up-front; confirm-save only. The method is
+        // shown for confirmation and remains editable via the in-cart toggle.
+        ConfirmSaveDialog(
+            paymentMethod = state.paymentMethod,
+            total = state.total,
             onConfirm = { viewModel.onEvent(SaleVoucherEvent.ConfirmSave) },
             onDismiss = { viewModel.onEvent(SaleVoucherEvent.DismissSaveSheet) },
         )
@@ -512,24 +518,51 @@ private fun CartView(
     state: SaleVoucherState,
     onTapLine: (String) -> Unit,
     onNotesChange: (String) -> Unit,
+    onPaymentMethod: (PaymentMethod) -> Unit,
     modifier: Modifier,
 ) {
+    // Look up product name/avatar seed by itemNumber (= sku) for server-fed lines.
+    val productBySku = remember(state.products) { state.products.associateBy { it.sku } }
+
     LazyColumn(
         modifier = modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(top = 10.dp, bottom = 16.dp),
     ) {
+        // ── Editable Cash/Credit toggle ───────────────────────────────────────
+        item(key = "payment-toggle") {
+            PaymentToggle(current = state.paymentMethod, onSelect = onPaymentMethod)
+        }
+        // ── Offline banner ────────────────────────────────────────────────────
+        if (state.isOffline) {
+            item(key = "offline-banner") { OfflineBanner() }
+        }
         // ── Applied-offers banner ─────────────────────────────────────────────
         if (state.appliedOffers.isNotEmpty()) {
             item(key = "offers-banner") {
                 AppliedOffersBanner(offers = state.appliedOffers, evaluating = state.isEvaluatingOffers)
             }
         }
-        items(state.cart, key = { it.productId }) { line ->
-            CartItemCard(
-                line = line,
-                onTap = { onTapLine(line.productId) },
-            )
+        // ── Cart lines ────────────────────────────────────────────────────────
+        // Online: render the server-fed result (per-line server discount + net).
+        // Offline: render the on-device cart lines.
+        if (state.offersFromServer && state.serverLines.isNotEmpty()) {
+            items(state.serverLines, key = { "srv-${it.itemNumber}" }) { srv ->
+                val product = productBySku[srv.itemNumber]
+                ServerCartLineCard(
+                    line = srv,
+                    nameAr = product?.nameAr ?: srv.itemNumber,
+                    unit = state.cart.firstOrNull { it.sku == srv.itemNumber }?.unit ?: "",
+                    onTap = { product?.let { onTapLine(it.id) } },
+                )
+            }
+        } else {
+            items(state.cart, key = { it.productId }) { line ->
+                CartItemCard(
+                    line = line,
+                    onTap = { onTapLine(line.productId) },
+                )
+            }
         }
         // ── FREE lines (read-only, net 0) ─────────────────────────────────────
         items(state.freeLines, key = { "free-${it.itemNumber}-${it.offerId}" }) { free ->
@@ -554,6 +587,151 @@ private fun CartView(
                 shape = RoundedCornerShape(10.dp),
                 colors = fvFieldColors(),
             )
+        }
+    }
+}
+
+// ── Editable Cash/Credit toggle (in-cart) ─────────────────────────────────────
+
+@Composable
+private fun PaymentToggle(current: PaymentMethod, onSelect: (PaymentMethod) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Fv.SurfaceTop, RoundedCornerShape(14.dp))
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        listOf(
+            PaymentMethod.CASH to stringResource(Res.string.payment_method_cash),
+            PaymentMethod.CREDIT to stringResource(Res.string.payment_method_credit),
+        ).forEach { (method, label) ->
+            val active = method == current
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(if (active) Fv.Blue else Color.Transparent)
+                    .clickable { onSelect(method) }
+                    .padding(vertical = 9.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    label,
+                    color = if (active) Color.White else Fv.TextMid,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+// ── Offline banner ────────────────────────────────────────────────────────────
+
+@Composable
+private fun OfflineBanner() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Fv.Amber.copy(alpha = 0.14f))
+            .border(0.5.dp, Fv.Amber.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Text(
+            "غير متصل — الإجماليات محلية، يعاد تطبيق العروض عند المزامنة",
+            color = Fv.Amber,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+// ── Server-fed cart line (per-line server discount + net) ─────────────────────
+
+@Composable
+private fun ServerCartLineCard(
+    line: ServerLine,
+    nameAr: String,
+    unit: String,
+    onTap: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onTap),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(0.5.dp, Fv.Border),
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ProductAvatar(
+                seed = nameAr,
+                letter = nameAr.firstOrNull()?.toString() ?: "؟",
+                size = 50.dp,
+            )
+            Spacer(Modifier.size(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    nameAr,
+                    color = Fv.TextHigh,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    buildString {
+                        append("${line.unitPriceJod.formatJod(AppLanguage.AR)} × ${line.qty.toInt()}")
+                        if (unit.isNotBlank()) append(" · $unit")
+                    },
+                    color = Fv.TextMid,
+                    fontSize = 11.sp,
+                )
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        line.lineNetJod.formatJod(AppLanguage.AR),
+                        color = Fv.Blue,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                    if (line.lineDiscountJod > 0) {
+                        Box(
+                            modifier = Modifier
+                                .background(Fv.Green.copy(alpha = 0.14f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                        ) {
+                            Text(
+                                "- ${line.lineDiscountJod.formatJod(AppLanguage.AR)}",
+                                color = Fv.Green,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.size(8.dp))
+            Box(
+                modifier = Modifier
+                    .background(Fv.SurfaceTop, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    "× ${line.qty.toInt()}",
+                    color = Fv.TextHigh,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
         }
     }
 }
@@ -774,8 +952,6 @@ private fun ChooseFreeItemSheet(
 @Composable
 private fun CartSummaryCard(
     state: SaleVoucherState,
-    onDiscountInputChange: (String) -> Unit,
-    onDiscountTypeToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -788,22 +964,12 @@ private fun CartSummaryCard(
     ) {
         Column {
             AnimatedVisibility(visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
+                // Totals come from the server when online, else on-device calc (offline).
                 Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 4.dp)) {
                     SummaryDetailRow(stringResource(Res.string.voucher_detail_subtotal), state.subtotal.formatJod(AppLanguage.AR), Fv.TextMid)
-                    if (state.lineDiscountTotal > 0)
-                        SummaryDetailRow(stringResource(Res.string.sale_line_discounts), "- ${state.lineDiscountTotal.formatJod(AppLanguage.AR)}", Fv.Red)
-                    // Offer discounts (server-driven): per-line + invoice-level.
-                    val offerDiscount = state.offerLineDiscountTotal + state.offerInvoiceDiscount
-                    if (offerDiscount > 0)
-                        SummaryDetailRow("العروض", "- ${offerDiscount.formatJod(AppLanguage.AR)}", Fv.Green)
-                    Spacer(Modifier.height(8.dp))
-                    VoucherDiscountSection(
-                        type = state.voucherDiscountType,
-                        input = state.voucherDiscountInput,
-                        computedAmount = state.voucherDiscountAmount,
-                        onInputChange = onDiscountInputChange,
-                        onTypeToggle = onDiscountTypeToggle,
-                    )
+                    // All discounts come from offers now (server-driven). One combined row.
+                    if (state.totalDiscount > 0)
+                        SummaryDetailRow("العروض", "- ${state.totalDiscount.formatJod(AppLanguage.AR)}", Fv.Green)
                     if (state.taxAmount > 0) {
                         Spacer(Modifier.height(6.dp))
                         SummaryDetailRow(stringResource(Res.string.voucher_detail_tax), state.taxAmount.formatJod(AppLanguage.AR), Fv.TextMid)
@@ -843,81 +1009,6 @@ private fun SummaryDetailRow(label: String, value: String, valueColor: Color) {
     }
 }
 
-// ── Voucher Discount Section ──────────────────────────────────────────────────
-
-@Composable
-private fun VoucherDiscountSection(
-    type: DiscountType,
-    input: String,
-    computedAmount: Double,
-    onInputChange: (String) -> Unit,
-    onTypeToggle: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(
-            modifier = Modifier
-                .background(Fv.SurfaceTop, RoundedCornerShape(20.dp))
-                .padding(2.dp),
-        ) {
-            listOf(DiscountType.PERCENT to "%", DiscountType.VALUE to stringResource(Res.string.discount_type_value)).forEach { (t, label) ->
-                val active = t == type
-                Box(
-                    modifier = Modifier
-                        .clickable { if (!active) onTypeToggle() }
-                        .background(if (active) Fv.Blue else Color.Transparent, RoundedCornerShape(18.dp))
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        label,
-                        color = if (active) Color.White else Fv.TextMid,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
-        }
-
-        OutlinedTextField(
-            value = input,
-            onValueChange = { v -> onInputChange(v.filter { it.isDigit() || it == '.' }.take(8)) },
-            placeholder = {
-                Text(
-                    if (type == DiscountType.PERCENT) stringResource(Res.string.sale_voucher_discount_percent) else stringResource(Res.string.sale_voucher_discount_value),
-                    color = Fv.TextMid,
-                    fontSize = 11.sp,
-                )
-            },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            suffix = {
-                Text(
-                    if (type == DiscountType.PERCENT) "%" else stringResource(Res.string.currency_jod),
-                    color = Fv.TextMid,
-                    fontSize = 11.sp,
-                )
-            },
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(10.dp),
-            colors = fvFieldColors(),
-        )
-
-        if (computedAmount > 0) {
-            Text(
-                "- ${computedAmount.formatJod(AppLanguage.AR)}",
-                color = Fv.Red,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
-
 // ── Add Item — Bottom Sheet ───────────────────────────────────────────────────
 
 @Composable
@@ -925,7 +1016,7 @@ private fun AddItemBottomSheet(
     product: Product,
     currentLine: CartLine?,
     dbUnits: List<ProductUnit>,
-    onConfirm: (qty: Double, unit: String, unitPrice: Double, unitConversionQty: Double, discountPct: Double) -> Unit,
+    onConfirm: (qty: Double, unit: String, unitPrice: Double, unitConversionQty: Double) -> Unit,
     onDelete: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
@@ -946,19 +1037,10 @@ private fun AddItemBottomSheet(
 
     var qty by remember(product.id) { mutableStateOf(currentLine?.qty ?: 1.0) }
     var selectedUnit by remember(product.id) { mutableStateOf(initialUnit) }
-    var lineDiscountType by remember(product.id) { mutableStateOf(DiscountType.PERCENT) }
-    var discountText by remember(product.id) {
-        val initial = currentLine?.discountPct ?: 0.0
-        mutableStateOf(if (initial > 0) (initial * 100).toInt().toString() else "")
-    }
     var unitDropdownExpanded by remember { mutableStateOf(false) }
 
-    val gross = selectedUnit.price * qty
-    val discountPct = when (lineDiscountType) {
-        DiscountType.PERCENT -> discountText.toDoubleOrNull()?.div(100.0)?.coerceIn(0.0, 1.0) ?: 0.0
-        DiscountType.VALUE -> if (gross > 0) (discountText.toDoubleOrNull() ?: 0.0).coerceIn(0.0, gross) / gross else 0.0
-    }
-    val lineTotal = gross * (1.0 - discountPct)
+    // No manual line discount — offers drive discounts (server-side, authoritative).
+    val lineTotal = selectedUnit.price * qty
 
     val blueGradient = Brush.linearGradient(listOf(Color(0xFF185FA5), Color(0xFF0C447C)))
     val greenGradient = Brush.linearGradient(listOf(Color(0xFF1D9E75), Color(0xFF0F6E56)))
@@ -1161,58 +1243,6 @@ private fun AddItemBottomSheet(
                             Text("· ${stringResource(Res.string.sale_unit_price)}", fontSize = 13.sp, color = Color(0xFF5A7399))
                         }
 
-                        // Line discount
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .border(0.5.dp, Color(0xFFC8D8EC), RoundedCornerShape(10.dp)),
-                                ) {
-                                    listOf(DiscountType.PERCENT to "%", DiscountType.VALUE to stringResource(Res.string.discount_type_value)).forEach { (t, label) ->
-                                        val active = t == lineDiscountType
-                                        Box(
-                                            modifier = Modifier
-                                                .clickable { if (!active) { lineDiscountType = t; discountText = "" } }
-                                                .then(if (active) Modifier.background(blueGradient) else Modifier)
-                                                .padding(horizontal = 14.dp, vertical = 6.dp),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Text(
-                                                label,
-                                                color = if (active) Color.White else Color(0xFF8A9AB0),
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                            )
-                                        }
-                                    }
-                                }
-                                Text(stringResource(Res.string.sale_line_discount), color = Color(0xFF8A9AB0), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                            OutlinedTextField(
-                                value = discountText,
-                                onValueChange = { v -> discountText = v.filter { it.isDigit() || it == '.' }.take(8) },
-                                placeholder = { Text("0", color = Color(0xFFB0BEC5)) },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                suffix = {
-                                    Text(
-                                        if (lineDiscountType == DiscountType.PERCENT) "%" else stringResource(Res.string.currency_jod),
-                                        color = Color(0xFF185FA5),
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = fvFieldColors(),
-                            )
-                        }
-
                         // Total card
                         Row(
                             modifier = Modifier
@@ -1276,7 +1306,7 @@ private fun AddItemBottomSheet(
                                     else Modifier.background(Fv.SurfaceTop)
                                 )
                                 .clickable(enabled = qty > 0) {
-                                    onConfirm(qty, selectedUnit.name, selectedUnit.price, selectedUnit.conversionQty, discountPct)
+                                    onConfirm(qty, selectedUnit.name, selectedUnit.price, selectedUnit.conversionQty)
                                 },
                             contentAlignment = Alignment.Center,
                         ) {
@@ -1310,40 +1340,77 @@ private fun unitLabel(unit: ProductUnit): String {
     return if (unit.conversionQty == 1.0) unit.name else "${unit.name}  ×$qty"
 }
 
-// ── Payment Method Dialog ─────────────────────────────────────────────────────
+// ── Opening Cash/Credit chooser — blocking, shown before the picker ───────────
 
 @Composable
-private fun PaymentMethodDialog(
-    current: PaymentMethod,
-    onSelect: (PaymentMethod) -> Unit,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(Res.string.sale_payment_method), color = Fv.TextHigh) },
-        text = {
-            Column {
+private fun OpeningPaymentChooser(onChoose: (PaymentMethod) -> Unit) {
+    Dialog(
+        // No dismiss: the rep MUST choose a payment method before adding items.
+        onDismissRequest = {},
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false,
+        ),
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth().padding(28.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = Fv.Surface,
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    stringResource(Res.string.sale_payment_method),
+                    color = Fv.TextHigh,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(18.dp))
                 listOf(
                     PaymentMethod.CASH to stringResource(Res.string.payment_method_cash),
                     PaymentMethod.CREDIT to stringResource(Res.string.payment_method_credit),
                 ).forEach { (method, label) ->
-                    val active = method == current
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .clickable { onSelect(method) }
-                            .background(if (active) Fv.Blue else Fv.SurfaceHigh, RoundedCornerShape(10.dp))
-                            .padding(12.dp),
+                            .padding(vertical = 6.dp)
+                            .height(54.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Brush.linearGradient(listOf(Color(0xFF185FA5), Color(0xFF0C447C))))
+                            .clickable { onChoose(method) },
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            label,
-                            color = if (active) Color.White else Fv.TextMid,
-                            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium,
-                        )
+                        Text(label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
                 }
+            }
+        }
+    }
+}
+
+// ── Confirm-save dialog (payment already chosen up-front) ─────────────────────
+
+@Composable
+private fun ConfirmSaveDialog(
+    paymentMethod: PaymentMethod,
+    total: Double,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val methodLabel = when (paymentMethod) {
+        PaymentMethod.CASH -> stringResource(Res.string.payment_method_cash)
+        else -> stringResource(Res.string.payment_method_credit)
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.sale_save), color = Fv.TextHigh) },
+        text = {
+            Column {
+                SummaryDetailRow(stringResource(Res.string.sale_payment_method), methodLabel, Fv.TextHigh)
+                SummaryDetailRow(stringResource(Res.string.sale_final_total), total.formatJod(AppLanguage.AR), Fv.Blue)
             }
         },
         confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(Res.string.confirm), color = Fv.Green) } },

@@ -16,9 +16,40 @@ data class OfferEvaluation(
     val appliedOffers: List<AppliedOffer> = emptyList(),
     /** Offers awaiting a free-item pick — drives the choose-free-item sheet. */
     val pendingChoices: List<OfferChoice> = emptyList(),
+    /**
+     * The server's authoritative per-line result (the server-fed cart). When non-empty
+     * the UI renders these lines (merging product name/avatar by itemNumber) instead of
+     * computing line totals on-device.
+     */
+    val serverLines: List<ServerLine> = emptyList(),
+    /** The server's authoritative totals — preferred over on-device calculation when online. */
+    val totals: OfferTotals = OfferTotals.ZERO,
 ) {
     companion object {
         val EMPTY = OfferEvaluation()
+    }
+}
+
+/** A line of the server-fed cart: server-computed unit price, discount, and net (JOD). */
+data class ServerLine(
+    val itemNumber: String,
+    val qty: Double,
+    val unitPriceJod: Double,
+    val lineDiscountJod: Double,
+    val lineNetJod: Double,
+)
+
+/** The server's invoice totals (JOD). Display-only; the server is authoritative on upload. */
+data class OfferTotals(
+    val subtotalJod: Double = 0.0,
+    val lineDiscountJod: Double = 0.0,
+    val invoiceDiscountJod: Double = 0.0,
+    val totalDiscountJod: Double = 0.0,
+    val taxJod: Double = 0.0,
+    val grandTotalJod: Double = 0.0,
+) {
+    companion object {
+        val ZERO = OfferTotals()
     }
 }
 

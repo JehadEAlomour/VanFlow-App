@@ -1,8 +1,36 @@
 # Offers — Tester Guide (FlowVan app)
 
-How to test the **Offers** feature in a SALE. The app shows a **live preview** of offers
-on every cart change; the **server is authoritative** and re-applies on upload, so the
-on-screen preview must match the posted voucher.
+How to test the **Offers** feature in a SALE. The cart is **server-fed**: on every cart
+change the app calls `/offers/evaluate` and **displays the server's computed result** (per-line
+discounts, free/gift lines, and the totals) as the cart. The **server is authoritative** and
+re-applies on upload, so the on-screen cart matches the posted voucher. Offline, the app falls
+back to on-device totals so the rep can still sell.
+
+## Payment-first flow (NEW)
+
+- The SALE screen opens with a **blocking Cash/Credit chooser**. The rep **cannot add items**
+  until a payment method is chosen — this guarantees offers (esp. payment-method discounts)
+  evaluate correctly from the **first** item.
+- The chosen method is shown later as a small **Cash/Credit toggle at the top of the cart**
+  and stays **editable**; changing it re-evaluates offers (the toggle is part of the evaluate
+  key alongside cart + gift picks).
+- At save there is no second payment prompt — only a confirm dialog showing the method + total.
+
+## No manual discounts (NEW)
+
+- The manual **line discount** (in the add-item sheet) and the **voucher/invoice discount**
+  inputs in the summary have been **removed**. All discounts now come from **offers** only,
+  computed by the server. The local save passes `discountAmount = 0`.
+
+## Server-fed cart (NEW)
+
+- **Online** (`offersFromServer = true`): the cart lines, per-line discounts, and the totals
+  card (subtotal / offers discount / tax / final total) are **exactly what the server returned**
+  — not on-device math. Each line shows its server unit price × qty, net, and a green
+  "- discount" chip when the offer discounted it.
+- **Offline** (`offersFromServer = false`, evaluate failed): an amber **"غير متصل"** banner
+  appears; the cart + totals fall back to the on-device `InvoiceTaxCalculator` (no offers).
+  The sale is never blocked. The server re-applies offers authoritatively on sync.
 
 ## Preconditions
 
@@ -10,9 +38,9 @@ on-screen preview must match the posted voucher.
 - The backend has active offers configured for the test customer / store. The app calls:
   - `POST /api/v1/offers/evaluate` on every cart change (debounced ~300 ms).
   - `GET /api/v1/offers/active` for offline caching.
-- Open a customer → **بيع / SALE** to reach the sale screen. Add items, then switch to the
-  **cart view** (cart icon, top-left) — offer banners, FREE lines, and the offers discount
-  row all render in the cart view + totals card.
+- Open a customer → **بيع / SALE**, **choose Cash or Credit** in the opening chooser, then add
+  items and switch to the **cart view** (cart icon, top-left) — the Cash/Credit toggle, offer
+  banners, FREE lines, server-fed lines, and totals card all render there.
 
 ## What "applied" looks like
 
@@ -20,14 +48,16 @@ on-screen preview must match the posted voucher.
   applied offer with its name + summary.
 - **FREE lines**: a green card with a **"هدية / FREE"** badge, the original unit price
   **struck through**, qty shown, **net 0** (no qty editor, read-only).
-- **Totals card** (tap to expand): an extra green **"العروض"** row = per-line offer
-  discounts + invoice-level offer discount. The **final total** never goes below 0.
+- **Totals card** (tap to expand): the **subtotal**, a green **"العروض"** discount row
+  (= the server's `totalDiscount`), the **tax**, and the **final total** — all read from the
+  server's `totals` when online (from the on-device calculator when offline). The final total
+  never goes below 0.
 - A brief "…" appears next to the banner title while an evaluation is in flight
   (`isEvaluatingOffers`).
 
-> Offer discounts are **display-only**. They are NOT written into the local voucher as a
-> manual discount; the cart (incl. any chosen free item) is what syncs, and the server
-> re-applies the offer.
+> The displayed cart + totals are the **server's** result (display layer). The local save still
+> uploads the raw cart (itemNumber/qty/unitPrice) + paymentMethod + chosenFreeItems with
+> `discountAmount = 0`; the server re-applies the offer and is the final arbiter.
 
 ---
 
@@ -97,19 +127,24 @@ This offer has two reward variants:
 
 ## Totals / rounding check
 
-- Expand the totals card. Verify:
-  `subtotal − (line discounts + voucher discount + offer line discounts + offer invoice
-  discount) + tax = final total`, and the final total equals what the server returns on
-  post. Free lines do not move the total (full price + 100% discount = net 0).
+- Expand the totals card. **Online:** verify `subtotal − offersDiscount + tax = final total`,
+  where every number is the server's (`totals.subtotalFils` … `totals.grandTotalFils`,
+  converted to JOD). Free lines do not move the total (full price + 100% discount = net 0).
+- **Offline:** the same arithmetic holds but is computed on-device by `InvoiceTaxCalculator`
+  with **no offers** applied.
 
 ## Offline behaviour
 
-- Turn off connectivity. Editing the cart still works; the evaluate call fails silently —
-  the offer banner/free lines/offers row **clear** (no crash, sale never blocked). The
-  spinner clears. Re-enabling connectivity and editing the cart re-evaluates.
+- Turn off connectivity. Editing the cart still works; the evaluate call fails silently. The
+  state flips to `offersFromServer = false`:
+  - the offer banner / free lines / offers row **clear**,
+  - an amber **"غير متصل"** banner appears,
+  - the cart lines + totals card switch to **on-device** values (no offers, no crash, sale
+    never blocked).
+- Re-enabling connectivity and editing the cart re-evaluates and restores the server-fed cart.
 - **TODO (not yet implemented):** full offline preview from the cached `GET /offers/active`
-  list. Currently offline simply shows no offers until back online; the server remains the
-  final arbiter at promotion on sync.
+  list. Currently offline shows the local no-offers total until back online; the server remains
+  the final arbiter at promotion on sync.
 
 ## Save / sync
 

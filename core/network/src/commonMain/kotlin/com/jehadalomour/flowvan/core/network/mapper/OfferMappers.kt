@@ -5,6 +5,8 @@ import com.jehadalomour.flowvan.core.model.FreeLine
 import com.jehadalomour.flowvan.core.model.OfferChoice
 import com.jehadalomour.flowvan.core.model.OfferEvaluation
 import com.jehadalomour.flowvan.core.model.OfferLineAdj
+import com.jehadalomour.flowvan.core.model.OfferTotals
+import com.jehadalomour.flowvan.core.model.ServerLine
 import com.jehadalomour.flowvan.core.network.dto.EvaluationResultDto
 import com.jehadalomour.flowvan.core.network.http.filsToJod
 
@@ -39,4 +41,21 @@ fun EvaluationResultDto.toOfferEvaluation(): OfferEvaluation = OfferEvaluation(
             OfferChoice(offerId = ao.offerId, choices = c.choices, qty = c.qty)
         }
     },
+    serverLines = lines.map {
+        ServerLine(
+            itemNumber = it.itemNumber,
+            qty = it.qty,
+            unitPriceJod = it.unitPriceFils.filsToJod(),
+            lineDiscountJod = it.lineDiscountFils.filsToJod(),
+            lineNetJod = it.lineNetFils.filsToJod(),
+        )
+    },
+    totals = OfferTotals(
+        subtotalJod = totals.subtotalFils.filsToJod(),
+        lineDiscountJod = totals.lineDiscountFils.filsToJod(),
+        invoiceDiscountJod = totals.invoiceDiscountFils.filsToJod(),
+        totalDiscountJod = totals.totalDiscountFils.filsToJod(),
+        taxJod = totals.taxFils.filsToJod(),
+        grandTotalJod = totals.grandTotalFils.filsToJod(),
+    ),
 )
