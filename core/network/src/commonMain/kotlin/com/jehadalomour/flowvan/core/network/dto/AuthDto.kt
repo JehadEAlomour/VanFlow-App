@@ -39,3 +39,18 @@ data class MeDto(
     /** F10 granular permission keys (e.g. vouchers.return.direct). */
     val permKeys: List<String> = emptyList(),
 )
+
+/** `GET /company-info` payload — company profile + the authoritative tax mode (mirrors the ERP). */
+@Serializable
+data class CompanyInfoDto(
+    val companyNameAr: String = "",
+    val companyNameEn: String? = null,
+    val sellerTin: String? = null,
+    val sellerAddress: String? = null,
+    val sellerPhone: String? = null,
+    val logoUrl: String? = null,
+    /** INCLUSIVE | EXCLUSIVE — the source of truth for the app's tax mode. */
+    val taxCalcMethod: String = "EXCLUSIVE",
+    val timezone: String = "Asia/Amman",
+    val locale: String = "ar",
+)

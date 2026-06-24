@@ -135,7 +135,7 @@ fun sharedModule(): Module = module {
     factory { StartShiftUseCase(get(), get()) }
     factory { BackendLoginUseCase(get(), get(), get()) }
     factory { PurgeDemoDataUseCase(get(), get()) }
-    factory { RefreshCatalogUseCase(get(), get(), get(), get(), get(), get(), get()) }
+    factory { RefreshCatalogUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { SubmitInvoiceUseCase(get()) }
     factory { SubmitCollectionUseCase(get()) }
 }

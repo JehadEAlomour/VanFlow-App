@@ -13,6 +13,7 @@ import com.jehadalomour.flowvan.core.network.http.jodToFils
 import com.jehadalomour.flowvan.core.network.http.toAmountString
 import com.jehadalomour.flowvan.core.network.http.toPercentString
 import com.jehadalomour.flowvan.core.model.InvoiceLine
+import kotlin.math.roundToLong
 import kotlinx.serialization.json.Json
 
 /**
@@ -61,16 +62,23 @@ fun InvoiceEntity.toVoucherRequest(userCode: String, customerNumber: String?, js
         emptyList()
     }
 
-    // Invoice-level (header) discount. The server applies per-line discounts from
-    // `discountPercentage`, then subtracts `totalDiscountValue` from the tax-inclusive
-    // gross. So the header discount we send is the POST-TAX residual that brings the
-    // server's net total down to the grand total the app showed — this also folds in
-    // the tax saved by the app's pre-tax invoice discount, with no double-counting.
-    val backendGross = lines.sumOf { line ->
-        val net = line.qty * line.unitPrice * (1.0 - line.discountPct.coerceIn(0.0, 1.0))
-        net * (1.0 + line.taxRate)
+    // EXACT per-line discount in fils. Never convert a value discount to an integer
+    // percentage (the old `discountPct.toPercentString()` rounded e.g. 5.6% → 6%,
+    // corrupting the amount). We compute the discount once, in the SAME fils
+    // rounding the server uses, and send it as a VALUE — so no approximation.
+    fun lineDiscountFils(line: InvoiceLine): Long {
+        val unitFils = (line.unitPrice * 1000.0).roundToLong()
+        val grossFils = (unitFils.toDouble() * line.qty).roundToLong()
+        return (grossFils.toDouble() * line.discountPct.coerceIn(0.0, 1.0)).roundToLong()
     }
-    val headerDiscount = (backendGross - total).coerceAtLeast(0.0)
+
+    // Header (voucher-level) discount ONLY. The entity's `discountAmount` is the
+    // COMBINED total (line discounts + voucher discount); line discounts are sent
+    // per-line, so the header carries only the voucher-level remainder — otherwise
+    // the server applies the line discounts twice (the INV-…-4 "0.75 not 1.00" bug).
+    val totalLineDiscountFils = lines.sumOf { lineDiscountFils(it) }
+    val voucherDiscountFils =
+        ((discountAmount * 1000.0).roundToLong() - totalLineDiscountFils).coerceAtLeast(0L)
 
     return CreateVoucherRequest(
         voucherNumber = id,                 // ignored by the inbox; the server assigns the real number
@@ -80,15 +88,18 @@ fun InvoiceEntity.toVoucherRequest(userCode: String, customerNumber: String?, js
         customerNumber = customerNumber,
         referenceVoucherNumber = referenceNumber,
         isPosted = true,
-        totalDiscountValue = if (headerDiscount > 0.005) headerDiscount.toAmountString() else null,
+        totalDiscountValue = if (voucherDiscountFils > 0L) (voucherDiscountFils / 1000.0).toAmountString() else null,
         transactions = lines.map { line ->
+            val discFils = lineDiscountFils(line)
             VoucherTxn(
                 itemNumber = line.sku,
                 itemName = line.nameAr,
                 itemQty = line.qty.toAmountString(),
                 unitPrice = line.unitPrice.toAmountString(),
                 taxPercentage = line.taxRate.toPercentString(),
-                discountPercentage = line.discountPct.toPercentString(),
+                // EXACT value, not a rounded percentage (see note above).
+                discountPercentage = "0",
+                discountValue = if (discFils > 0L) (discFils / 1000.0).toAmountString() else null,
             )
         },
         payments = payments,
