@@ -1,8 +1,5 @@
 package com.jehadalomour.flowvan.core.model
 
-import kotlin.math.max
-import kotlin.math.min
-
 /** Per-line (per-product) tax treatment — distinct from the global AppSettings.TaxType. */
 enum class LineTaxType {
     /** Tax is added on top of the net price (prices exclude tax). */
@@ -74,82 +71,75 @@ data class VoucherSummary(
  */
 object InvoiceTaxCalculator {
 
+    /**
+     * Delegates to the canonical fils engine [VoucherCalc] (the backend's twin),
+     * then re-projects the integer-fils result into the [VoucherSummary] the UI
+     * expects. All lines share one tax mode (from the global setting); EXEMPT and
+     * zero-rate lines simply carry rate 0.
+     */
     fun calculateInvoice(
         cart: List<CartLine>,
         invoiceDiscount: InvoiceDiscountInput = InvoiceDiscountInput.None,
     ): VoucherSummary {
         if (cart.isEmpty()) return VoucherSummary.ZERO
 
-        // ── Step 1: line totals ──────────────────────────────────────────────
-        val subtotal     = cart.sumOf { it.grossLineTotal }
-        val lineDiscounts = cart.sumOf { it.lineDiscount }
+        val mode =
+            if (cart.any { it.lineTaxType == LineTaxType.INCLUSIVE }) TaxMode.INCLUSIVE
+            else TaxMode.EXCLUSIVE
+        val headerPct = (invoiceDiscount as? InvoiceDiscountInput.Percent)?.pct ?: 0.0
+        val headerFils = (invoiceDiscount as? InvoiceDiscountInput.Fixed)?.amount?.toFils() ?: 0L
 
-        // ── Step 2: group nets by tax type ───────────────────────────────────
-        val sumNetTaxable   = cart.sumNetByType(LineTaxType.TAXABLE)
-        val sumNetInclusive = cart.sumNetByType(LineTaxType.INCLUSIVE)
-        val sumNetExempt    = cart.sumNetByType(LineTaxType.EXEMPT)
-        val sumNetAll       = sumNetTaxable + sumNetInclusive + sumNetExempt
+        val result = VoucherCalc.calc(
+            CalcInput(
+                taxMode = mode,
+                headerDiscountPct = headerPct,
+                headerDiscountFils = headerFils,
+                lines = cart.map { line ->
+                    CalcLineInput(
+                        unitPriceFils = line.unitPrice.toFils(),
+                        qty = line.qty,
+                        lineDiscountPct = line.discountPct.coerceIn(0.0, 1.0) * 100.0,
+                        lineDiscountFils = 0L,
+                        taxRatePct = if (line.lineTaxType == LineTaxType.EXEMPT) 0.0
+                        else line.taxRate * 100.0,
+                    )
+                },
+            ),
+        )
 
-        // ── Step 3: invoice-level discount ───────────────────────────────────
-        val invDisc = computeDiscount(sumNetAll, invoiceDiscount)
-
-        // ── Step 4: distribute discount proportionally by type ───────────────
-        val discTaxable   = proportional(invDisc, sumNetTaxable,   sumNetAll)
-        val discInclusive = proportional(invDisc, sumNetInclusive,  sumNetAll)
-        val discExempt    = proportional(invDisc, sumNetExempt,     sumNetAll)
-
-        val finalTaxable   = sumNetTaxable   - discTaxable
-        val finalInclusive = sumNetInclusive - discInclusive
-        val finalExempt    = sumNetExempt    - discExempt
-
-        // ── Step 5: re-calculate tax per line after invoice discount ─────────
-        val taxOnTaxable = if (sumNetTaxable > 0.0) {
-            cart.filter { it.lineTaxType == LineTaxType.TAXABLE }.sumOf { line ->
-                val lineNetFinal = line.lineNet * (finalTaxable / sumNetTaxable)
-                lineNetFinal * line.taxRate
+        // Re-bucket nets/tax by type for the summary (same index as the cart).
+        var netTaxable = 0L
+        var netInclusive = 0L
+        var netExempt = 0L
+        var taxOnTaxable = 0L
+        var taxInInclusive = 0L
+        cart.forEachIndexed { i, line ->
+            val r = result.lines[i]
+            when {
+                line.lineTaxType == LineTaxType.INCLUSIVE -> {
+                    netInclusive += r.netFils; taxInInclusive += r.taxFils
+                }
+                line.lineTaxType == LineTaxType.EXEMPT || line.taxRate <= 0.0 -> {
+                    netExempt += r.netFils
+                }
+                else -> {
+                    netTaxable += r.netFils; taxOnTaxable += r.taxFils
+                }
             }
-        } else 0.0
-
-        val taxInInclusive = if (sumNetInclusive > 0.0) {
-            cart.filter { it.lineTaxType == LineTaxType.INCLUSIVE }.sumOf { line ->
-                val lineAmtFinal = line.lineNet * (finalInclusive / sumNetInclusive)
-                lineAmtFinal * (line.taxRate / (1.0 + line.taxRate))
-            }
-        } else 0.0
-
-        val totalTax   = taxOnTaxable + taxInInclusive
-        // TAXABLE: customer pays net + tax; INCLUSIVE: tax already inside; EXEMPT: no tax
-        val grandTotal = finalTaxable + taxOnTaxable + finalInclusive + finalExempt
+        }
 
         return VoucherSummary(
-            subtotalBeforeDiscounts = subtotal,
-            totalLineDiscounts      = lineDiscounts,
-            netAfterLineDiscounts   = sumNetAll,
-            invoiceDiscountAmount   = invDisc,
-            netTaxable              = finalTaxable,
-            netInclusive            = finalInclusive,
-            netExempt               = finalExempt,
-            taxOnTaxable            = taxOnTaxable,
-            taxInInclusive          = taxInInclusive,
-            totalTax                = totalTax,
-            grandTotal              = grandTotal,
+            subtotalBeforeDiscounts = result.lines.sumOf { it.grossFils }.filsToJod(),
+            totalLineDiscounts      = result.totalLineDiscountFils.filsToJod(),
+            netAfterLineDiscounts   = result.lines.sumOf { it.netBeforeHeaderFils }.filsToJod(),
+            invoiceDiscountAmount   = result.headerDiscountFils.filsToJod(),
+            netTaxable              = netTaxable.filsToJod(),
+            netInclusive            = netInclusive.filsToJod(),
+            netExempt               = netExempt.filsToJod(),
+            taxOnTaxable            = taxOnTaxable.filsToJod(),
+            taxInInclusive          = taxInInclusive.filsToJod(),
+            totalTax                = result.totalTaxFils.filsToJod(),
+            grandTotal              = result.grandTotalFils.filsToJod(),
         )
     }
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
-
-    private fun computeDiscount(base: Double, input: InvoiceDiscountInput): Double {
-        val raw = when (input) {
-            is InvoiceDiscountInput.None    -> 0.0
-            is InvoiceDiscountInput.Percent -> base * (input.pct / 100.0)
-            is InvoiceDiscountInput.Fixed   -> input.amount
-        }
-        return max(0.0, min(raw, base))
-    }
-
-    private fun proportional(total: Double, part: Double, whole: Double): Double =
-        if (whole > 0.0) total * (part / whole) else 0.0
-
-    private fun List<CartLine>.sumNetByType(type: LineTaxType): Double =
-        filter { it.lineTaxType == type }.sumOf { it.lineNet }
 }
