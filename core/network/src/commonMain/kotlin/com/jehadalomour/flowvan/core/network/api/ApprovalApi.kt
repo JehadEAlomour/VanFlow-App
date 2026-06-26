@@ -6,6 +6,7 @@ import com.jehadalomour.flowvan.core.network.dto.CreateVoucherRequest
 import com.jehadalomour.flowvan.core.network.http.FlowVanApiClient
 import com.jehadalomour.flowvan.core.network.http.getData
 import com.jehadalomour.flowvan.core.network.http.postData
+import com.jehadalomour.flowvan.core.network.http.postEmpty
 
 /**
  * F10 — manager approval requests. When the backend answers a voucher POST
@@ -34,4 +35,16 @@ class ApprovalApi(private val client: FlowVanApiClient) {
     /** The salesman's own requests, newest first (poll for decisions). */
     suspend fun mine(status: String? = null): List<ApprovalRequestDto> =
         client.getData("approvals/mine", mapOf("status" to status))
+
+    /**
+     * Fetch one of *my own* requests by id. The `GET /approvals/:id` route is
+     * manager-only, so a salesman polls their `mine` list and filters locally.
+     * Returns null when the id isn't in the caller's recent requests.
+     */
+    suspend fun one(id: String): ApprovalRequestDto? =
+        mine().firstOrNull { it.id == id }
+
+    /** Cancel my own still-pending request (e.g. left the cart screen). */
+    suspend fun cancel(id: String): ApprovalRequestDto =
+        client.postEmpty("approvals/$id/cancel")
 }

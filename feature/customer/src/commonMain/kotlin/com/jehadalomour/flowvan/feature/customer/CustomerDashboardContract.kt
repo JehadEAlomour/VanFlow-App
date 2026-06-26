@@ -6,6 +6,9 @@ import com.jehadalomour.flowvan.core.model.Customer
 
 enum class CustomerTab { SUMMARY, SALES, RETURNS, REQUESTS, COLLECTIONS }
 
+/** Dialog shown when the salesman leaves a customer. */
+enum class LeaveDialog { NONE, REASON, CONFIRM }
+
 data class CustomerDashboardState(
     val customer: Customer? = null,
     val sales: List<InvoiceEntity> = emptyList(),
@@ -14,6 +17,11 @@ data class CustomerDashboardState(
     val payments: List<PaymentEntity> = emptyList(),
     val selectedTab: CustomerTab = CustomerTab.SUMMARY,
     val isLoading: Boolean = true,
+    /** Permission: require a written reason when leaving a customer with no transaction. */
+    val requireVisitReason: Boolean = false,
+    val leaveDialog: LeaveDialog = LeaveDialog.NONE,
+    /** Set once the visit has been recorded so the screen can pop back. */
+    val navigateBack: Boolean = false,
 ) {
     val salesTotal: Double get() = sales.sumOf { it.total }
     val returnsTotal: Double get() = returns.sumOf { it.total }
@@ -22,4 +30,8 @@ data class CustomerDashboardState(
 
 sealed interface CustomerDashboardEvent {
     data class TabSelected(val tab: CustomerTab) : CustomerDashboardEvent
+    /** Back pressed; `hadTransaction` = the salesman started a sale/return/etc. this visit. */
+    data class LeaveRequested(val hadTransaction: Boolean) : CustomerDashboardEvent
+    data class ConfirmLeave(val reason: String?) : CustomerDashboardEvent
+    data object DismissLeave : CustomerDashboardEvent
 }

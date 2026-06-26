@@ -9,7 +9,10 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class CreateVoucherRequest(
-    val voucherNumber: String,
+    // Nullable so the approval flow can OMIT it (null → dropped by the request
+    // encoder's explicitNulls=false) and let the server assign a unique serial.
+    // The backend rejects an empty string (@Length(1,64)); only omission is valid.
+    val voucherNumber: String? = null,
     val transKind: String,                 // SALE | RETURN | ORDER
     val userCode: String,
     val clientRef: String? = null,
@@ -45,6 +48,11 @@ data class VoucherTxn(
     val discountValue: String? = null,
     val storeNumber: String? = null,
     val transKind: String? = null,         // defaults to the header transKind
+    // The chosen sales unit for this line. unitBaseQty = pieces per unit, used
+    // server-side for stock movement (itemQty × unitBaseQty) and ERP per-piece price.
+    val unitCode: String? = null,
+    val unitName: String? = null,
+    val unitBaseQty: Int? = null,
 )
 
 @Serializable

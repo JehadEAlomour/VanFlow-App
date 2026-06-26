@@ -70,6 +70,7 @@ class CreateSaleVoucherUseCase(
                 taxType     = it.lineTaxType.name,
                 taxAmount   = it.lineTax,
                 unit        = it.unit,
+                unitConversionQty = it.unitConversionQty,
                 taxRate     = it.taxRate,
             )
         }

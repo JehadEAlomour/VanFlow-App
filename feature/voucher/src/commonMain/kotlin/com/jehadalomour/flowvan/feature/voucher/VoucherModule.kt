@@ -15,7 +15,10 @@ fun voucherModule(): Module = module {
         RequestVoucherViewModel(customerId, get(), get(), get(), get())
     }
     viewModel { (customerId: String, type: VoucherType) ->
-        VoucherViewModel(customerId, type, get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get())
+        VoucherViewModel(
+            customerId, type, get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(),
+            get(), get(), get(), get(),
+        )
     }
     viewModel { (customerId: String) ->
         CollectionViewModel(customerId, get(), get(), get())

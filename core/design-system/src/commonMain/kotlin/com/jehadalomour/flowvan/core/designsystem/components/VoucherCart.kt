@@ -35,6 +35,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -114,7 +116,12 @@ private fun ProductRow(
             modifier = Modifier.padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ProductAvatar(seed = product.category, letter = product.nameAr.firstOrNull()?.toString() ?: "؟", size = 46.dp)
+            ProductThumb(
+                imageUrl = product.imageUrl,
+                seed = product.category,
+                letter = product.nameAr.firstOrNull()?.toString() ?: "؟",
+                size = 46.dp,
+            )
             Spacer(Modifier.size(10.dp))
 
             Column(modifier = Modifier.weight(1f)) {
@@ -450,6 +457,23 @@ private fun TotalsRow(
             color = color,
             fontSize = fontSize,
             fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium,
+        )
+    }
+}
+
+/** Product image when available (Coil async), else the generated letter avatar. */
+@Composable
+fun ProductThumb(imageUrl: String?, seed: String, letter: String, size: Dp) {
+    if (imageUrl.isNullOrBlank()) {
+        ProductAvatar(seed = seed, letter = letter, size = size)
+    } else {
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(size)
+                .clip(RoundedCornerShape((size.value * 0.25f).dp)),
         )
     }
 }

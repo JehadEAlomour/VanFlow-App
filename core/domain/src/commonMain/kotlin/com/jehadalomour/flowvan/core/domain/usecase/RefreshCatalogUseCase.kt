@@ -10,7 +10,9 @@ import com.jehadalomour.flowvan.core.network.http.ApiConfig
 import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
+import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
+import com.jehadalomour.flowvan.core.model.ProductUnit
 import com.jehadalomour.flowvan.core.model.TaxType
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -27,6 +29,7 @@ class RefreshCatalogUseCase(
     private val repApi: RepApi,
     private val customers: CustomerRepository,
     private val products: ProductRepository,
+    private val productUnits: ProductUnitRepository,
     private val session: SessionStore,
     private val authApi: AuthApi,
     private val appSettings: AppSettingsRepository,
@@ -35,6 +38,7 @@ class RefreshCatalogUseCase(
 
     suspend operator fun invoke(): Result<CatalogRefresh> {
         if (!apiConfig.isEnabled) return Result.success(CatalogRefresh(0, 0, 0, skipped = true))
+        syncPermissions()
         syncCompanyTaxMode()
         return try {
             coroutineScope {
@@ -47,6 +51,21 @@ class RefreshCatalogUseCase(
                 val productCount = run {
                     val page = productApi.list()
                     products.cacheAll(page.items.map { it.toEntity() })
+                    // …then refill each item's REAL units (base + larger) so the app
+                    // shows the item's own units, not a hardcoded list.
+                    val units = page.items.flatMap { p ->
+                        p.units.map { u ->
+                            ProductUnit(
+                                id = u.barcode.ifBlank { "${p.id}:${u.code}:${u.conversionQty}" },
+                                productId = p.id,
+                                name = u.name,
+                                price = u.priceFils / 1000.0,
+                                conversionQty = u.conversionQty,
+                            )
+                        }
+                    }
+                    productUnits.deleteAll()
+                    if (units.isNotEmpty()) productUnits.upsertAll(units)
                     page.items.size
                 }
                 // …then overlay the real per-rep van stock.
@@ -64,6 +83,21 @@ class RefreshCatalogUseCase(
         val stock = repApi.vanStock(repId)
         stock.forEach { products.setStock(it.productId, it.quantity) }
         return stock.size
+    }
+
+    /**
+     * Refresh the salesman's permissions from the server (`GET /auth/me`) so any
+     * change an admin made on the dashboard takes effect on the next home refresh
+     * — no re-login needed. Best-effort. Stored as the comma-joined permKeys that
+     * `SessionStore.can(...)` reads.
+     */
+    private suspend fun syncPermissions() {
+        try {
+            val me = authApi.me()
+            session.currentPermKeys = me.permKeys.joinToString(",")
+        } catch (e: Exception) {
+            log.w("permissions sync failed: ${e.message}")
+        }
     }
 
     /**

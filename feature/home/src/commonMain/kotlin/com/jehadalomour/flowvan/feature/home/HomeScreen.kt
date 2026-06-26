@@ -34,6 +34,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -89,6 +91,12 @@ fun HomeScreen(
 
     var isRefreshing by remember { mutableStateOf(false) }
     LaunchedEffect(state.isLoading) { if (!state.isLoading) isRefreshing = false }
+
+    // Every time the home screen is shown (each ON_RESUME), pull fresh permissions,
+    // company info + tax mode (and catalog) from the server.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.onEvent(HomeEvent.Refresh)
+    }
 
     Surface(modifier = Modifier.fillMaxSize(), color = Fv.BgDeepest) {
         PullToRefreshBox(

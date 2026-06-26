@@ -86,6 +86,7 @@ fun ProductDto.toEntity(): ProductEntity = ProductEntity(
     expiryDate = null,
     brand = null,
     taxRate = taxRate.toDoubleOrNull() ?: 0.16,
+    imageUrl = imageUrl,
 )
 
 // ---- Invoices ----

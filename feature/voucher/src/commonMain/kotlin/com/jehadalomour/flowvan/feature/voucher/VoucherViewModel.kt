@@ -15,11 +15,15 @@ import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.TaxType
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import com.jehadalomour.flowvan.core.domain.usecase.CancelApprovalUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.CommitApprovedReturnUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateRequestVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateReturnVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateSaleVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.EmptyCartException
 import com.jehadalomour.flowvan.core.domain.usecase.GetCustomerSalesUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.PollApprovalUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.RequestReturnApprovalUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.StockShortageException
 import com.jehadalomour.flowvan.feature.voucher.DiscountType
 import com.jehadalomour.flowvan.feature.voucher.VoucherView
@@ -29,6 +33,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class VoucherViewModel(
@@ -45,7 +52,14 @@ class VoucherViewModel(
     private val invoiceDao: InvoiceDao,
     private val json: Json,
     private val getCustomerSales: GetCustomerSalesUseCase,
+    private val requestReturnApproval: RequestReturnApprovalUseCase,
+    private val pollApproval: PollApprovalUseCase,
+    private val cancelApproval: CancelApprovalUseCase,
+    private val commitApprovedReturn: CommitApprovedReturnUseCase,
 ) : ViewModel() {
+
+    /** Active poll loop for a pending return approval; cancelled when decided/left. */
+    private var approvalPollJob: Job? = null
 
     private val _state = MutableStateFlow(
         VoucherState(type = type, showSourcePicker = type == VoucherType.RETURN),
@@ -53,6 +67,17 @@ class VoucherViewModel(
     val state: StateFlow<VoucherState> = _state.asStateFlow()
 
     init {
+        // Salesman permissions (set by the dashboard, delivered via permKeys on
+        // login). Gate the discount + price-edit UI on them.
+        _state.update {
+            it.copy(
+                canDiscount = session.can("vouchers.discount.direct"),
+                canEditPrice = session.can("vouchers.priceOverride"),
+                canCreateReturn = session.can("vouchers.return.create"),
+                returnNeedsApproval = session.can("vouchers.return.approval"),
+            )
+        }
+
         customers.observeById(customerId)
             .onEach { c -> _state.update { it.copy(customer = c) } }
             .launchIn(viewModelScope)
@@ -130,6 +155,7 @@ class VoucherViewModel(
                 }
             }
             VoucherEvent.ConfirmSave -> save()
+            VoucherEvent.CancelApproval -> cancelPendingApproval()
             VoucherEvent.DismissSaveSheet -> _state.update { it.copy(showSaveSheet = false) }
             VoucherEvent.DismissError -> _state.update { it.copy(errorAr = null) }
 
@@ -322,6 +348,12 @@ class VoucherViewModel(
     private fun save() {
         val s = _state.value
         if (!s.canSave) return
+        // Blocking return approval: file a request, then wait — no local save, no
+        // print — until a manager approves (or we discard on reject/cancel).
+        if (type == VoucherType.RETURN && s.returnNeedsApproval) {
+            requestApproval()
+            return
+        }
         _state.update { it.copy(isSaving = true, showSaveSheet = false) }
         viewModelScope.launch {
             val salesmanId = session.currentUserId.orEmpty()
@@ -366,6 +398,109 @@ class VoucherViewModel(
                 },
             )
         }
+    }
+
+    /** File the return as a manager approval request, then poll until decided. */
+    private fun requestApproval() {
+        val s = _state.value
+        _state.update { it.copy(isSaving = true, showSaveSheet = false, errorAr = null) }
+        viewModelScope.launch {
+            val result = requestReturnApproval(
+                customerId = customerId,
+                salesmanId = session.currentUserId.orEmpty(),
+                userCode = session.currentUserCode.orEmpty(),
+                customerNumber = s.customer?.code,
+                cart = s.cart,
+                reason = s.reason!!.labelAr,
+                extraNotes = s.notes.takeIf { it.isNotBlank() },
+                referenceInvoiceId = s.referenceInvoiceId,
+                referenceNumber = s.referenceNumber,
+            )
+            result.fold(
+                onSuccess = { id ->
+                    _state.update {
+                        it.copy(isSaving = false, pendingApprovalId = id, approvalDecisionNote = null)
+                    }
+                    startApprovalPolling(id)
+                },
+                onFailure = {
+                    _state.update { it.copy(isSaving = false, errorAr = "تعذّر إرسال طلب الموافقة") }
+                },
+            )
+        }
+    }
+
+    /** Poll the pending request every 5s; commit + print on approve, discard on reject/cancel. */
+    private fun startApprovalPolling(id: String) {
+        approvalPollJob?.cancel()
+        approvalPollJob = viewModelScope.launch {
+            while (isActive) {
+                delay(5_000)
+                val decision = pollApproval(id).getOrNull() ?: continue
+                when (decision.status) {
+                    "approved" -> {
+                        val s = _state.value
+                        val number = decision.resultVoucher ?: id
+                        val commit = commitApprovedReturn(
+                            approvedNumber = number,
+                            customerId = customerId,
+                            salesmanId = session.currentUserId.orEmpty(),
+                            cart = s.cart,
+                            reason = s.reason!!.labelAr,
+                            extraNotes = s.notes.takeIf { it.isNotBlank() },
+                            referenceInvoiceId = s.referenceInvoiceId,
+                            referenceNumber = s.referenceNumber,
+                        )
+                        commit.fold(
+                            onSuccess = { entity ->
+                                _state.update {
+                                    it.copy(
+                                        pendingApprovalId = null,
+                                        savedNumber = entity.number,
+                                        savedId = entity.id,
+                                    )
+                                }
+                            },
+                            onFailure = {
+                                _state.update {
+                                    it.copy(pendingApprovalId = null, errorAr = "تمت الموافقة لكن تعذّر حفظ المرتجع محليًا")
+                                }
+                            },
+                        )
+                        return@launch
+                    }
+                    "rejected" -> {
+                        val note = decision.decisionNote?.takeIf { n -> n.isNotBlank() }
+                        _state.update {
+                            it.copy(
+                                pendingApprovalId = null,
+                                errorAr = if (note != null) "تم رفض طلب المرتجع من قبل المدير: $note"
+                                else "تم رفض طلب المرتجع من قبل المدير",
+                            )
+                        }
+                        return@launch
+                    }
+                    "cancelled" -> {
+                        _state.update { it.copy(pendingApprovalId = null) }
+                        return@launch
+                    }
+                    else -> Unit   // still pending — keep polling
+                }
+            }
+        }
+    }
+
+    /** Salesman backs out of the pending request (frees the cart screen). */
+    private fun cancelPendingApproval() {
+        val id = _state.value.pendingApprovalId ?: return
+        approvalPollJob?.cancel()
+        _state.update { it.copy(pendingApprovalId = null) }
+        viewModelScope.launch { cancelApproval(id) }
+    }
+
+    override fun onCleared() {
+        approvalPollJob?.cancel()
+        super.onCleared()
     }
 }
 

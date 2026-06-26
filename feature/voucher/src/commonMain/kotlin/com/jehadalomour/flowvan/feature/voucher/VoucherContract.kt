@@ -35,6 +35,18 @@ data class VoucherState(
     val errorAr: String? = null,
     /** Driven from AppSettings — stamps each new CartLine at add-time. */
     val taxType: LineTaxType = LineTaxType.TAXABLE,
+    /** Salesman permission: may apply discounts (else discount fields are hidden). */
+    val canDiscount: Boolean = false,
+    /** Salesman permission: may change an item's unit price when selling. */
+    val canEditPrice: Boolean = false,
+    /** Salesman permission: may create returns at all. */
+    val canCreateReturn: Boolean = false,
+    /** Salesman permission: returns require admin approval (Save → Request approval). */
+    val returnNeedsApproval: Boolean = false,
+    /** A return approval request is pending a manager decision — cart is blocked from print. */
+    val pendingApprovalId: String? = null,
+    /** Manager's note when a request was rejected (shown to the salesman). */
+    val approvalDecisionNote: String? = null,
 
     // ── RETURN: source sale invoice this return is issued against ──────────────
     /** The customer's confirmed SALE invoices, offered as return sources. */
@@ -73,8 +85,15 @@ data class VoucherState(
         LineTaxType.EXEMPT    -> "الضريبة"
     }
 
-    val canSave: Boolean get() = cart.isNotEmpty() && !isSaving &&
-        (type != VoucherType.RETURN || (reason != null && referenceInvoiceId != null))
+    /** True while a return request is awaiting a manager decision — the cart is locked. */
+    val isAwaitingApproval: Boolean get() = pendingApprovalId != null
+
+    // A salesman may build a RETURN if they can create directly OR if returns need
+    // approval (the button becomes "request approval"). Either flag enables it.
+    // While a request is pending, the action is locked (waiting on the manager).
+    val canSave: Boolean get() = cart.isNotEmpty() && !isSaving && !isAwaitingApproval &&
+        (type != VoucherType.RETURN ||
+            (reason != null && referenceInvoiceId != null && (canCreateReturn || returnNeedsApproval)))
 
     /** RETURN must be issued against a real sale invoice of the same customer. */
     val requiresSourceInvoice: Boolean get() = type == VoucherType.RETURN
@@ -87,7 +106,8 @@ data class VoucherState(
     }
     val saveLabelAr: String get() = when (type) {
         VoucherType.SALE   -> "حفظ الفاتورة"
-        VoucherType.RETURN -> "حفظ المرتجع"
+        // Returns that need approval: the button becomes "request manager approval".
+        VoucherType.RETURN -> if (returnNeedsApproval) "طلب موافقة المدير" else "حفظ المرتجع"
         VoucherType.ORDER  -> "حفظ الطلب"
     }
     val confirmTextAr: String get() = when (type) {
@@ -124,6 +144,7 @@ sealed interface VoucherEvent {
     data object ToggleView : VoucherEvent
     data object Save : VoucherEvent
     data object ConfirmSave : VoucherEvent
+    data object CancelApproval : VoucherEvent
     data object DismissSaveSheet : VoucherEvent
     data class ReasonSelected(val reason: ReturnReason) : VoucherEvent
     data object DismissError : VoucherEvent
