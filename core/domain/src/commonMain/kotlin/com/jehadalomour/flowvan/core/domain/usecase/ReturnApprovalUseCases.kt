@@ -8,6 +8,7 @@ import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.InvoiceDiscountInput
 import com.jehadalomour.flowvan.core.model.InvoiceLine
 import com.jehadalomour.flowvan.core.model.InvoiceTaxCalculator
+import com.jehadalomour.flowvan.core.model.PaymentMethod
 import com.jehadalomour.flowvan.core.network.api.ApprovalApi
 import com.jehadalomour.flowvan.core.network.dto.ApprovalTypes
 import com.jehadalomour.flowvan.core.network.mapper.toVoucherRequest
@@ -34,6 +35,7 @@ private fun buildReturnEntity(
     salesmanId: String,
     cart: List<CartLine>,
     reason: String,
+    paymentMethod: PaymentMethod,
     extraNotes: String?,
     referenceInvoiceId: String?,
     referenceNumber: String?,
@@ -75,7 +77,7 @@ private fun buildReturnEntity(
         discountAmount = summary.totalLineDiscounts,
         taxAmount = summary.totalTax,
         total = summary.grandTotal,
-        paymentMethod = null,
+        paymentMethod = paymentMethod.name,
         notes = "سبب: $reason${extraNotes?.let { " — $it" } ?: ""}",
         syncedAt = syncedAt,
         referenceInvoiceId = referenceInvoiceId,
@@ -97,6 +99,7 @@ class RequestReturnApprovalUseCase(
         customerNumber: String?,
         cart: List<CartLine>,
         reason: String,
+        paymentMethod: PaymentMethod,
         extraNotes: String?,
         referenceInvoiceId: String?,
         referenceNumber: String?,
@@ -118,6 +121,7 @@ class RequestReturnApprovalUseCase(
             salesmanId = salesmanId,
             cart = cart,
             reason = reason,
+            paymentMethod = paymentMethod,
             extraNotes = extraNotes,
             referenceInvoiceId = referenceInvoiceId,
             referenceNumber = referenceNumber,
@@ -191,6 +195,7 @@ class CommitApprovedReturnUseCase(
         salesmanId: String,
         cart: List<CartLine>,
         reason: String,
+        paymentMethod: PaymentMethod,
         extraNotes: String?,
         referenceInvoiceId: String?,
         referenceNumber: String?,
@@ -202,6 +207,7 @@ class CommitApprovedReturnUseCase(
             salesmanId = salesmanId,
             cart = cart,
             reason = reason,
+            paymentMethod = paymentMethod,
             extraNotes = extraNotes,
             referenceInvoiceId = referenceInvoiceId,
             referenceNumber = referenceNumber,
@@ -214,7 +220,11 @@ class CommitApprovedReturnUseCase(
         for (line in cart) {
             products.adjustStock(line.productId, line.stockQty.toInt())
         }
-        customers.adjustBalance(customerId, -entity.total)
+        // Only a CREDIT return (credit note) reduces the customer's balance; a CASH return
+        // refunds cash and leaves the balance unchanged.
+        if (paymentMethod == PaymentMethod.CREDIT) {
+            customers.adjustBalance(customerId, -entity.total)
+        }
         entity
     }
 }

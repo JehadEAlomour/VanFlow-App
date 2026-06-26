@@ -10,6 +10,9 @@ import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.domain.usecase.CreateReturnVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.EmptyCartException
 import com.jehadalomour.flowvan.feature.voucher.VoucherView
+import com.jehadalomour.flowvan.core.designsystem.resources.Res
+import com.jehadalomour.flowvan.core.designsystem.resources.*
+import org.jetbrains.compose.resources.getString
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,7 +61,10 @@ class ReturnVoucherViewModel(
             }
             ReturnVoucherEvent.OpenSaveSheet -> {
                 if (_state.value.reason == null) {
-                    _state.update { it.copy(errorAr = "اختر سبب الإرجاع") }
+                    viewModelScope.launch {
+                        val msg = getString(Res.string.err_select_return_reason)
+                        _state.update { it.copy(errorAr = msg) }
+                    }
                 } else {
                     _state.update { it.copy(showSaveSheet = true) }
                 }
@@ -103,7 +109,10 @@ class ReturnVoucherViewModel(
         val s = _state.value
         val reason = s.reason ?: return
         if (s.cart.isEmpty()) {
-            _state.update { it.copy(errorAr = "السلة فارغة", showSaveSheet = false) }
+            viewModelScope.launch {
+                val msg = getString(Res.string.err_cart_empty)
+                _state.update { it.copy(errorAr = msg, showSaveSheet = false) }
+            }
             return
         }
         _state.update { it.copy(isSaving = true) }
@@ -113,6 +122,8 @@ class ReturnVoucherViewModel(
                 salesmanId = session.currentUserId.orEmpty(),
                 cart = s.cart,
                 reason = reason.labelAr,
+                // Legacy path (not the active return flow) — keep the prior credit-note behaviour.
+                paymentMethod = com.jehadalomour.flowvan.core.model.PaymentMethod.CREDIT,
                 extraNotes = s.notes.takeIf { it.isNotBlank() },
             )
             result.fold(
@@ -126,7 +137,7 @@ class ReturnVoucherViewModel(
                     }
                 },
                 onFailure = { ex ->
-                    val msg = if (ex is EmptyCartException) "السلة فارغة" else "حدث خطأ غير متوقع"
+                    val msg = if (ex is EmptyCartException) getString(Res.string.err_cart_empty) else getString(Res.string.err_unexpected)
                     _state.update { it.copy(isSaving = false, showSaveSheet = false, errorAr = msg) }
                 },
             )

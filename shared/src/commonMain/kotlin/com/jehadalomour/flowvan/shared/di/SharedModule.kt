@@ -36,6 +36,8 @@ import com.jehadalomour.flowvan.core.domain.usecase.RequestReturnApprovalUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.PollApprovalUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CancelApprovalUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CommitApprovedReturnUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.RequestDiscountApprovalUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.CommitApprovedSaleUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetCustomerSalesUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateSaleVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.EndShiftUseCase
@@ -132,6 +134,8 @@ fun sharedModule(): Module = module {
     factory { PollApprovalUseCase(get()) }
     factory { CancelApprovalUseCase(get()) }
     factory { CommitApprovedReturnUseCase(get(), get(), get(), get()) }
+    factory { RequestDiscountApprovalUseCase(get(), get(), get()) }
+    factory { CommitApprovedSaleUseCase(get(), get(), get(), get()) }
     factory { GetCustomerSalesUseCase(get()) }
     factory { CreateRequestVoucherUseCase(get(), get(), get(), get()) }
     factory { RecordCollectionUseCase(get(), get(), get()) }

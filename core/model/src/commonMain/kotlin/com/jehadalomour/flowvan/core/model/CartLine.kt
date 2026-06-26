@@ -11,6 +11,8 @@ data class CartLine(
     val unitConversionQty: Double = 1.0,
     val taxRate: Double = 0.16,
     val lineTaxType: LineTaxType = LineTaxType.TAXABLE,
+    /** Product image (carried from the product) so cart rows show the image too. */
+    val imageUrl: String? = null,
 ) {
     /** qty × unitPrice — gross before any discount. */
     val grossLineTotal: Double get() = unitPrice * qty

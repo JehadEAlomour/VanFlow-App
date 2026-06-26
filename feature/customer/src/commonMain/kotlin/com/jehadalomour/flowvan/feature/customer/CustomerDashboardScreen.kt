@@ -33,6 +33,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -76,6 +78,9 @@ fun CustomerDashboardScreen(
     var startedTxn by remember { mutableStateOf(false) }
     // Pop back once the visit has been recorded.
     LaunchedEffect(state.navigateBack) { if (state.navigateBack) onBack() }
+    // Refresh the board every time it becomes visible again (e.g. returning from a
+    // sale/return/collection or the invoice print screen) so balances/totals are current.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     val requestLeave = { viewModel.onEvent(CustomerDashboardEvent.LeaveRequested(startedTxn)) }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -177,27 +182,27 @@ private fun LeaveCustomerDialog(
     val needsReason = dialog == LeaveDialog.REASON
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (needsReason) "سبب عدم الشراء" else "تأكيد الخروج") },
+        title = { Text(if (needsReason) stringResource(Res.string.dlg_leave_reason_title) else stringResource(Res.string.dlg_leave_confirm_title)) },
         text = {
             if (needsReason) {
                 OutlinedTextField(
                     value = reason,
                     onValueChange = { reason = it },
-                    placeholder = { Text("اكتب سبب الزيارة دون عملية بيع") },
+                    placeholder = { Text(stringResource(Res.string.dlg_leave_reason_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2,
                 )
             } else {
-                Text("هل تريد الخروج من هذا العميل دون تسجيل عملية؟")
+                Text(stringResource(Res.string.dlg_leave_confirm_msg))
             }
         },
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(if (needsReason) reason else null) },
                 enabled = !needsReason || reason.isNotBlank(),
-            ) { Text("خروج") }
+            ) { Text(stringResource(Res.string.action_exit)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel)) } },
     )
 }
 

@@ -9,6 +9,7 @@ import com.jehadalomour.flowvan.core.data.repository.PaymentRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
 import com.jehadalomour.flowvan.core.network.api.CustomerApi
 import com.jehadalomour.flowvan.core.network.dto.LogVisitRequest
+import com.jehadalomour.flowvan.core.network.mapper.toEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,7 +20,7 @@ import kotlinx.coroutines.launch
 
 class CustomerDashboardViewModel(
     private val customerId: String,
-    customers: CustomerRepository,
+    private val customers: CustomerRepository,
     invoices: InvoiceRepository,
     payments: PaymentRepository,
     private val customerApi: CustomerApi,
@@ -52,6 +53,22 @@ class CustomerDashboardViewModel(
         payments.observeByCustomer(customerId)
             .onEach { list -> _state.update { it.copy(payments = list) } }
             .launchIn(viewModelScope)
+    }
+
+    /**
+     * Pull the latest customer record from the server so the board reflects an updated
+     * balance/totals after returning from a sale, return, collection or invoice print.
+     * Invoices/payments are already DB-observed and update reactively.
+     */
+    fun refresh() {
+        viewModelScope.launch {
+            try {
+                val dto = customerApi.getById(customerId)
+                customers.cacheAll(listOf(dto.toEntity()))
+            } catch (e: Exception) {
+                log.w("customer refresh failed: ${e.message}")
+            }
+        }
     }
 
     fun onEvent(event: CustomerDashboardEvent) {

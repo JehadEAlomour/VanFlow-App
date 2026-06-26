@@ -4,12 +4,19 @@ import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.Customer
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.feature.voucher.VoucherView
+import com.jehadalomour.flowvan.core.designsystem.resources.Res
+import com.jehadalomour.flowvan.core.designsystem.resources.return_reason_expired
+import com.jehadalomour.flowvan.core.designsystem.resources.return_reason_damaged
+import com.jehadalomour.flowvan.core.designsystem.resources.return_reason_wrong_order
+import com.jehadalomour.flowvan.core.designsystem.resources.return_reason_other
+import org.jetbrains.compose.resources.StringResource
 
-enum class ReturnReason(val labelAr: String) {
-    EXPIRED("منتهي الصلاحية"),
-    DAMAGED("تالف"),
-    WRONG_ORDER("خطأ في الطلب"),
-    OTHER("آخر"),
+// labelAr is the canonical value persisted/sent with the return; labelRes is for display only.
+enum class ReturnReason(val labelAr: String, val labelRes: StringResource) {
+    EXPIRED("منتهي الصلاحية", Res.string.return_reason_expired),
+    DAMAGED("تالف", Res.string.return_reason_damaged),
+    WRONG_ORDER("خطأ في الطلب", Res.string.return_reason_wrong_order),
+    OTHER("آخر", Res.string.return_reason_other),
 }
 
 data class ReturnVoucherState(

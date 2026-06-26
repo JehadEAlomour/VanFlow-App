@@ -12,6 +12,9 @@ import com.jehadalomour.flowvan.core.model.ProductUnit
 import com.jehadalomour.flowvan.core.domain.usecase.CreateSaleVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.EmptyCartException
 import com.jehadalomour.flowvan.core.domain.usecase.StockShortageException
+import com.jehadalomour.flowvan.core.designsystem.resources.Res
+import com.jehadalomour.flowvan.core.designsystem.resources.*
+import org.jetbrains.compose.resources.getString
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -159,7 +162,10 @@ class SaleVoucherViewModel(
     private fun save() {
         val s = _state.value
         if (s.cart.isEmpty()) {
-            _state.update { it.copy(errorAr = "السلة فارغة", showSaveSheet = false) }
+            viewModelScope.launch {
+                val msg = getString(Res.string.err_cart_empty)
+                _state.update { it.copy(errorAr = msg, showSaveSheet = false) }
+            }
             return
         }
         _state.update { it.copy(isSaving = true) }
@@ -181,9 +187,9 @@ class SaleVoucherViewModel(
                 onFailure = { ex ->
                     val msg = when (ex) {
                         is StockShortageException ->
-                            "الكمية غير متوفرة في الفان (${ex.available} متاح من ${ex.requested})"
-                        is EmptyCartException -> "السلة فارغة"
-                        else -> "حدث خطأ غير متوقع"
+                            getString(Res.string.err_stock_unavailable, ex.available, ex.requested)
+                        is EmptyCartException -> getString(Res.string.err_cart_empty)
+                        else -> getString(Res.string.err_unexpected)
                     }
                     _state.update { it.copy(isSaving = false, showSaveSheet = false, errorAr = msg) }
                 },

@@ -218,6 +218,7 @@
     <string name="visits_title">تقرير الزيارات</string>
     <string name="visits_visited">تمت الزيارة</string>
     <string name="visits_not_visited">لم تتم الزيارة</string>
+    <string name="visits_off_route">بدون مسار</string>
     <string name="visits_rate">معدل الزيارة</string>
     <string name="visits_total_customers">إجمالي العملاء</string>
 
@@ -640,4 +641,74 @@
     <string name="printer_printing">جارٍ الطباعة…</string>
     <string name="printer_print_success">تمت الطباعة بنجاح</string>
     <string name="printer_print_failed">فشلت الطباعة</string>
+
+    <!-- i18n sweep: extracted hardcoded strings -->
+    <string name="action_exit">خروج</string>
+    <string name="common_retry">إعادة المحاولة</string>
+    <string name="dlg_leave_reason_title">سبب عدم الشراء</string>
+    <string name="dlg_leave_confirm_title">تأكيد الخروج</string>
+    <string name="dlg_leave_reason_hint">اكتب سبب الزيارة دون عملية بيع</string>
+    <string name="dlg_leave_confirm_msg">هل تريد الخروج من هذا العميل دون تسجيل عملية؟</string>
+    <string name="login_user_number_hint">رقم المستخدم</string>
+    <string name="login_brand">كاش فلو</string>
+    <string name="login_brand_subtitle">CashFlow — نظام مندوب الفان</string>
+    <string name="settings_server_section">خادم النظام</string>
+    <string name="settings_server_url_label">عنوان الخادم (API)</string>
+    <string name="settings_refreshing">جارٍ التحديث…</string>
+    <string name="settings_refresh_desc">تحديث العملاء والأصناف من الخادم</string>
+    <string name="settings_enter_server_first">أدخل عنوان الخادم أولاً</string>
+    <string name="settings_refresh_success">تم التحديث: %1$d عميل، %2$d صنف</string>
+    <string name="settings_refresh_failed">فشل الاتصال بالخادم</string>
+    <string name="route_today_title">خط سير اليوم</string>
+    <string name="route_no_visits_today">لا توجد زيارات مجدولة اليوم</string>
+    <string name="route_note_prefix">ملاحظة: %1$s</string>
+    <string name="route_done_check">تم ✓</string>
+    <string name="route_complete">إنجاز</string>
+
+    <!-- Voucher labels -->
+    <string name="tax_label_inclusive">الضريبة (مضمّنة)</string>
+    <string name="tax_label_default">الضريبة</string>
+    <string name="voucher_title_sale">فاتورة بيع</string>
+    <string name="voucher_title_return">فاتورة مرتجع</string>
+    <string name="voucher_title_order">طلب مسبق</string>
+    <string name="voucher_save_sale">حفظ الفاتورة</string>
+    <string name="voucher_save_return_approval">طلب موافقة المدير</string>
+    <string name="voucher_save_discount_approval">طلب موافقة المدير على الخصم</string>
+    <string name="voucher_save_return">حفظ المرتجع</string>
+    <string name="voucher_save_order">حفظ الطلب</string>
+    <string name="voucher_confirm_return">سيتم تسجيل المرتجع وإعادة المخزون وتعديل الرصيد</string>
+    <string name="voucher_confirm_order">سيتم تسجيل الطلب للمراجعة</string>
+    <string name="return_reason_wrong_order">خطأ في الطلب</string>
+    <string name="return_reason_other">آخر</string>
+
+    <!-- Voucher / collection errors -->
+    <string name="err_unexpected">حدث خطأ غير متوقع</string>
+    <string name="err_cart_empty">السلة فارغة</string>
+    <string name="err_select_source_invoice">اختر فاتورة البيع المرجعية أولاً</string>
+    <string name="err_select_return_reason">اختر سبب الإرجاع</string>
+    <string name="err_source_invoice_not_found">لم يتم العثور على فاتورة بيع بهذا الرقم لهذا العميل</string>
+    <string name="err_stock_unavailable">الكمية غير متوفرة في الفان (%1$d متاح من %2$d)</string>
+    <string name="err_approval_send_failed">تعذّر إرسال طلب الموافقة</string>
+    <string name="err_approved_local_save_failed">تمت الموافقة لكن تعذّر حفظ المرتجع محليًا</string>
+    <string name="err_return_rejected_note">تم رفض طلب المرتجع من قبل المدير: %1$s</string>
+    <string name="err_return_rejected">تم رفض طلب المرتجع من قبل المدير</string>
+    <string name="err_enter_valid_amount">أدخل مبلغ صحيح</string>
+    <string name="err_enter_valid_cheque_amount">أدخل مبلغ صحيح للشيك %1$d</string>
+    <string name="err_enter_cheque_number">أدخل رقم الشيك %1$d</string>
+    <string name="err_select_cheque_bank">اختر البنك للشيك %1$d</string>
+
+    <!-- Daily / cash-flow summary breakdown -->
+    <string name="cash_flow_section_sales">المبيعات</string>
+    <string name="cash_flow_section_returns">المرتجعات</string>
+    <string name="cash_flow_section_collections">التحصيلات</string>
+    <string name="cash_flow_sales_cash">مبيعات نقد</string>
+    <string name="cash_flow_sales_credit">مبيعات ذمم</string>
+    <string name="cash_flow_returns_cash">مرتجع نقد</string>
+    <string name="cash_flow_returns_credit">مرتجع ذمم</string>
+    <string name="cash_flow_collection_cash">تحصيل نقد</string>
+    <string name="cash_flow_collection_cheque">تحصيل شيكات</string>
+    <string name="cash_flow_total_cash">إجمالي النقد</string>
+    <string name="cash_flow_additional_info">معلومات إضافية</string>
+    <string name="cash_flow_total_cheque_collection">إجمالي شيكات التحصيل</string>
+    <string name="cash_flow_total_credit_sales">إجمالي مبيعات الذمم</string>
 </resources>

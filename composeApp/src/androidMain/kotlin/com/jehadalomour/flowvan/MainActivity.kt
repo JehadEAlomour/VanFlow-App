@@ -1,6 +1,8 @@
 package com.jehadalomour.flowvan
 
 import android.Manifest
+import android.content.Context
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,11 +11,23 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
     private val locationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { /* result ignored — login degrades gracefully */ }
+
+    // Arabic is the app's main language: force the Arabic locale (and RTL) regardless of the
+    // device language, so string resources always resolve to the default (Arabic) set.
+    override fun attachBaseContext(newBase: Context) {
+        val locale = Locale("ar")
+        Locale.setDefault(locale)
+        val config = Configuration(newBase.resources.configuration)
+        config.setLocale(locale)
+        config.setLayoutDirection(locale)
+        super.attachBaseContext(newBase.createConfigurationContext(config))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()

@@ -21,7 +21,13 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
-data class VisitedCustomer(val customer: CustomerEntity, val visited: Boolean, val invoiceCount: Int, val salesTotal: Double)
+data class VisitedCustomer(
+    val customer: CustomerEntity,
+    val visited: Boolean,
+    val invoiceCount: Int,
+    val salesTotal: Double,
+    val onRoute: Boolean = true,
+)
 
 data class VisitReportState(
     val from: Long = 0L,
@@ -64,27 +70,37 @@ class VisitReportViewModel(
         combine(_from, _to) { f, t -> f to t }
             .flatMapLatest { (f, t) ->
                 combine(
-                    customerDao.observeRouteCustomers(),
+                    customerDao.observeAll(),
                     invoiceDao.observeAllByRange(f, t),
                 ) { customers, invoices ->
                     val invoicesByCustomer = invoices.groupBy { it.customerId }
-                    customers.map { c ->
+                    // Route customers are always listed (planned coverage). Off-route customers
+                    // only appear if they were actually visited in range, flagged onRoute = false.
+                    customers.mapNotNull { c ->
                         val cInvoices = invoicesByCustomer[c.id] ?: emptyList()
+                        val visited = cInvoices.isNotEmpty()
                         val sales = cInvoices.filter { it.type == "SALE" }.sumOf { it.total }
-                        VisitedCustomer(c, cInvoices.isNotEmpty(), cInvoices.size, sales)
+                        when {
+                            c.isOnRoute -> VisitedCustomer(c, visited, cInvoices.size, sales, onRoute = true)
+                            visited -> VisitedCustomer(c, true, cInvoices.size, sales, onRoute = false)
+                            else -> null
+                        }
                     }
                 }
             }
             .onEach { list ->
-                val visited = list.count { it.visited }
-                val total = list.size
+                // Visit rate is measured against the planned route only; off-route visits are
+                // bonus and don't dilute the denominator, but their sales still count.
+                val routeCustomers = list.filter { it.onRoute }
+                val visited = routeCustomers.count { it.visited }
+                val planned = routeCustomers.size
                 _state.update {
                     it.copy(
                         from = _from.value, to = _to.value,
                         customers = list,
                         visitedCount = visited,
-                        plannedCount = total,
-                        visitRate = if (total > 0) visited.toFloat() / total else 0f,
+                        plannedCount = planned,
+                        visitRate = if (planned > 0) visited.toFloat() / planned else 0f,
                         totalSales = list.sumOf { it.salesTotal },
                     )
                 }

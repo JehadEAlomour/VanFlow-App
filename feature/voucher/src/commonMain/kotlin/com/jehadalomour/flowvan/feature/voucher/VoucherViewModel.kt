@@ -24,9 +24,14 @@ import com.jehadalomour.flowvan.core.domain.usecase.EmptyCartException
 import com.jehadalomour.flowvan.core.domain.usecase.GetCustomerSalesUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.PollApprovalUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.RequestReturnApprovalUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.RequestDiscountApprovalUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.CommitApprovedSaleUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.StockShortageException
 import com.jehadalomour.flowvan.feature.voucher.DiscountType
 import com.jehadalomour.flowvan.feature.voucher.VoucherView
+import com.jehadalomour.flowvan.core.designsystem.resources.Res
+import com.jehadalomour.flowvan.core.designsystem.resources.*
+import org.jetbrains.compose.resources.getString
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,9 +61,15 @@ class VoucherViewModel(
     private val pollApproval: PollApprovalUseCase,
     private val cancelApproval: CancelApprovalUseCase,
     private val commitApprovedReturn: CommitApprovedReturnUseCase,
+    private val requestDiscountApproval: RequestDiscountApprovalUseCase,
+    private val commitApprovedSale: CommitApprovedSaleUseCase,
 ) : ViewModel() {
 
-    /** Active poll loop for a pending return approval; cancelled when decided/left. */
+    /** Which pending approval is in flight, so the poll commits the right voucher. */
+    private enum class PendingKind { RETURN, SALE_DISCOUNT }
+    private var pendingKind: PendingKind = PendingKind.RETURN
+
+    /** Active poll loop for a pending approval; cancelled when decided/left. */
     private var approvalPollJob: Job? = null
 
     private val _state = MutableStateFlow(
@@ -72,6 +83,7 @@ class VoucherViewModel(
         _state.update {
             it.copy(
                 canDiscount = session.can("vouchers.discount.direct"),
+                canRequestDiscount = session.can("vouchers.discount.approval"),
                 canEditPrice = session.can("vouchers.priceOverride"),
                 canCreateReturn = session.can("vouchers.return.create"),
                 returnNeedsApproval = session.can("vouchers.return.approval"),
@@ -147,10 +159,19 @@ class VoucherViewModel(
                 val s = _state.value
                 when {
                     type == VoucherType.RETURN && s.referenceInvoiceId == null ->
-                        _state.update { it.copy(errorAr = "اختر فاتورة البيع المرجعية أولاً", showSourcePicker = true) }
-                    s.cart.isEmpty() -> _state.update { it.copy(errorAr = "السلة فارغة") }
+                        viewModelScope.launch {
+                            val msg = getString(Res.string.err_select_source_invoice)
+                            _state.update { it.copy(errorAr = msg, showSourcePicker = true) }
+                        }
+                    s.cart.isEmpty() -> viewModelScope.launch {
+                        val msg = getString(Res.string.err_cart_empty)
+                        _state.update { it.copy(errorAr = msg) }
+                    }
                     type == VoucherType.RETURN && s.reason == null ->
-                        _state.update { it.copy(errorAr = "اختر سبب الإرجاع") }
+                        viewModelScope.launch {
+                            val msg = getString(Res.string.err_select_return_reason)
+                            _state.update { it.copy(errorAr = msg) }
+                        }
                     s.canSave -> _state.update { it.copy(showSaveSheet = true) }
                 }
             }
@@ -191,6 +212,7 @@ class VoucherViewModel(
                     unitConversionQty = conversionFor(line),
                     taxRate = line.taxRate,
                     lineTaxType = runCatching { LineTaxType.valueOf(line.taxType) }.getOrDefault(s.taxType),
+                    imageUrl = s.products.firstOrNull { it.id == line.productId }?.imageUrl,
                 )
             }
             val sold = lines.associate { it.productId to it.qty * conversionFor(it) }
@@ -219,7 +241,7 @@ class VoucherViewModel(
         viewModelScope.launch {
             val sale = runCatching { getCustomerSales.byNumber(number, customerNumber) }.getOrNull()
             if (sale == null) {
-                _state.update { it.copy(isLookingUp = false, errorAr = "لم يتم العثور على فاتورة بيع بهذا الرقم لهذا العميل") }
+                _state.update { it.copy(isLookingUp = false, errorAr = getString(Res.string.err_source_invoice_not_found)) }
                 return@launch
             }
             val lines = runCatching { getCustomerSales.lines(sale.id) }.getOrDefault(emptyList())
@@ -241,6 +263,7 @@ class VoucherViewModel(
                         unitConversionQty = conversion,
                         taxRate = sl.taxRate,
                         lineTaxType = s.taxType,
+                        imageUrl = product?.imageUrl,
                     )
                 }
                 val sold = cart.associate { it.productId to it.qty * it.unitConversionQty }
@@ -293,6 +316,7 @@ class VoucherViewModel(
                         unitConversionQty = defaultUnit?.conversionQty ?: 1.0,
                         taxRate = product.taxRate,
                         lineTaxType = s.taxType,
+                        imageUrl = product.imageUrl,
                     )
                 }
                 existing == null -> s.cart
@@ -320,6 +344,7 @@ class VoucherViewModel(
                     discountPct = event.discountPct,
                     taxRate = event.product.taxRate,
                     lineTaxType = s.taxType,
+                    imageUrl = event.product.imageUrl,
                 )
                 else -> s.cart.map {
                     if (it.productId == event.product.id)
@@ -354,6 +379,12 @@ class VoucherViewModel(
             requestApproval()
             return
         }
+        // Blocking discount approval: a SALE with a discount, when the salesman may
+        // only request (not apply) discounts → file it and wait for the admin.
+        if (type == VoucherType.SALE && s.needsDiscountApproval) {
+            requestDiscountApprovalFlow()
+            return
+        }
         _state.update { it.copy(isSaving = true, showSaveSheet = false) }
         viewModelScope.launch {
             val salesmanId = session.currentUserId.orEmpty()
@@ -371,6 +402,7 @@ class VoucherViewModel(
                     salesmanId = salesmanId,
                     cart = s.cart,
                     reason = s.reason!!.labelAr,
+                    paymentMethod = s.paymentMethod,
                     extraNotes = s.notes.takeIf { it.isNotBlank() },
                     referenceInvoiceId = s.referenceInvoiceId,
                     referenceNumber = s.referenceNumber,
@@ -390,9 +422,9 @@ class VoucherViewModel(
                 onFailure = { ex ->
                     val msg = when (ex) {
                         is StockShortageException ->
-                            "الكمية غير متوفرة في الفان (${ex.available} متاح من ${ex.requested})"
-                        is EmptyCartException -> "السلة فارغة"
-                        else -> "حدث خطأ غير متوقع"
+                            getString(Res.string.err_stock_unavailable, ex.available, ex.requested)
+                        is EmptyCartException -> getString(Res.string.err_cart_empty)
+                        else -> getString(Res.string.err_unexpected)
                     }
                     _state.update { it.copy(isSaving = false, errorAr = msg) }
                 },
@@ -403,6 +435,7 @@ class VoucherViewModel(
     /** File the return as a manager approval request, then poll until decided. */
     private fun requestApproval() {
         val s = _state.value
+        pendingKind = PendingKind.RETURN
         _state.update { it.copy(isSaving = true, showSaveSheet = false, errorAr = null) }
         viewModelScope.launch {
             val result = requestReturnApproval(
@@ -412,6 +445,7 @@ class VoucherViewModel(
                 customerNumber = s.customer?.code,
                 cart = s.cart,
                 reason = s.reason!!.labelAr,
+                paymentMethod = s.paymentMethod,
                 extraNotes = s.notes.takeIf { it.isNotBlank() },
                 referenceInvoiceId = s.referenceInvoiceId,
                 referenceNumber = s.referenceNumber,
@@ -424,7 +458,37 @@ class VoucherViewModel(
                     startApprovalPolling(id)
                 },
                 onFailure = {
-                    _state.update { it.copy(isSaving = false, errorAr = "تعذّر إرسال طلب الموافقة") }
+                    _state.update { it.copy(isSaving = false, errorAr = getString(Res.string.err_approval_send_failed)) }
+                },
+            )
+        }
+    }
+
+    /** File a discounted SALE as a manager approval request, then poll until decided. */
+    private fun requestDiscountApprovalFlow() {
+        val s = _state.value
+        pendingKind = PendingKind.SALE_DISCOUNT
+        _state.update { it.copy(isSaving = true, showSaveSheet = false, errorAr = null) }
+        viewModelScope.launch {
+            val result = requestDiscountApproval(
+                customerId = customerId,
+                salesmanId = session.currentUserId.orEmpty(),
+                userCode = session.currentUserCode.orEmpty(),
+                customerNumber = s.customer?.code,
+                cart = s.cart,
+                discountAmount = s.voucherDiscountAmount,
+                paymentMethod = s.paymentMethod,
+                notes = s.notes.takeIf { it.isNotBlank() },
+            )
+            result.fold(
+                onSuccess = { id ->
+                    _state.update {
+                        it.copy(isSaving = false, pendingApprovalId = id, approvalDecisionNote = null)
+                    }
+                    startApprovalPolling(id)
+                },
+                onFailure = {
+                    _state.update { it.copy(isSaving = false, errorAr = getString(Res.string.err_approval_send_failed)) }
                 },
             )
         }
@@ -441,16 +505,29 @@ class VoucherViewModel(
                     "approved" -> {
                         val s = _state.value
                         val number = decision.resultVoucher ?: id
-                        val commit = commitApprovedReturn(
-                            approvedNumber = number,
-                            customerId = customerId,
-                            salesmanId = session.currentUserId.orEmpty(),
-                            cart = s.cart,
-                            reason = s.reason!!.labelAr,
-                            extraNotes = s.notes.takeIf { it.isNotBlank() },
-                            referenceInvoiceId = s.referenceInvoiceId,
-                            referenceNumber = s.referenceNumber,
-                        )
+                        val salesmanId = session.currentUserId.orEmpty()
+                        val commit = when (pendingKind) {
+                            PendingKind.RETURN -> commitApprovedReturn(
+                                approvedNumber = number,
+                                customerId = customerId,
+                                salesmanId = salesmanId,
+                                cart = s.cart,
+                                reason = s.reason!!.labelAr,
+                                paymentMethod = s.paymentMethod,
+                                extraNotes = s.notes.takeIf { it.isNotBlank() },
+                                referenceInvoiceId = s.referenceInvoiceId,
+                                referenceNumber = s.referenceNumber,
+                            )
+                            PendingKind.SALE_DISCOUNT -> commitApprovedSale(
+                                approvedNumber = number,
+                                customerId = customerId,
+                                salesmanId = salesmanId,
+                                cart = s.cart,
+                                discountAmount = s.voucherDiscountAmount,
+                                paymentMethod = s.paymentMethod,
+                                notes = s.notes.takeIf { it.isNotBlank() },
+                            )
+                        }
                         commit.fold(
                             onSuccess = { entity ->
                                 _state.update {
@@ -463,7 +540,7 @@ class VoucherViewModel(
                             },
                             onFailure = {
                                 _state.update {
-                                    it.copy(pendingApprovalId = null, errorAr = "تمت الموافقة لكن تعذّر حفظ المرتجع محليًا")
+                                    it.copy(pendingApprovalId = null, errorAr = getString(Res.string.err_approved_local_save_failed))
                                 }
                             },
                         )
@@ -474,8 +551,8 @@ class VoucherViewModel(
                         _state.update {
                             it.copy(
                                 pendingApprovalId = null,
-                                errorAr = if (note != null) "تم رفض طلب المرتجع من قبل المدير: $note"
-                                else "تم رفض طلب المرتجع من قبل المدير",
+                                errorAr = if (note != null) getString(Res.string.err_return_rejected_note, note)
+                                else getString(Res.string.err_return_rejected),
                             )
                         }
                         return@launch

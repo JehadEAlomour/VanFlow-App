@@ -8,6 +8,7 @@ import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.InvoiceDiscountInput
 import com.jehadalomour.flowvan.core.model.InvoiceLine
 import com.jehadalomour.flowvan.core.model.InvoiceTaxCalculator
+import com.jehadalomour.flowvan.core.model.PaymentMethod
 import com.jehadalomour.flowvan.core.domain.sync.SyncScheduler
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -28,6 +29,7 @@ class CreateReturnVoucherUseCase(
         salesmanId: String,
         cart: List<CartLine>,
         reason: String,
+        paymentMethod: PaymentMethod,
         extraNotes: String?,
         referenceInvoiceId: String? = null,
         referenceNumber: String? = null,
@@ -73,7 +75,7 @@ class CreateReturnVoucherUseCase(
             discountAmount = summary.totalLineDiscounts,
             taxAmount      = summary.totalTax,
             total          = summary.grandTotal,
-            paymentMethod  = null,
+            paymentMethod  = paymentMethod.name,
             notes          = "سبب: $reason${extraNotes?.let { " — $it" } ?: ""}",
             syncedAt       = null,
             referenceInvoiceId = referenceInvoiceId,
@@ -85,8 +87,11 @@ class CreateReturnVoucherUseCase(
         for (line in cart) {
             products.adjustStock(line.productId, line.stockQty.toInt())
         }
-        // Return credits the customer (reduces their balance)
-        customers.adjustBalance(customerId, -summary.grandTotal)
+        // A CREDIT return is a credit note → reduces the customer's balance (debt).
+        // A CASH return refunds cash from the drawer → no balance change.
+        if (paymentMethod == PaymentMethod.CREDIT) {
+            customers.adjustBalance(customerId, -summary.grandTotal)
+        }
         syncScheduler.syncNow()
         entity
     }

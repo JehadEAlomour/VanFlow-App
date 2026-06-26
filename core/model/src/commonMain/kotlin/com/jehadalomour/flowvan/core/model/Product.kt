@@ -14,6 +14,5 @@ data class Product(
     val expiryDate: Long?,
     val brand: String?,
     val taxRate: Double = 0.16,
-    /** Product image URL (absolute; resolved from the ERP). Null = show the avatar. */
     val imageUrl: String? = null,
 )
