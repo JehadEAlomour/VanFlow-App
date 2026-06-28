@@ -72,10 +72,15 @@ import com.jehadalomour.flowvan.core.designsystem.components.Fv
 import com.jehadalomour.flowvan.core.designsystem.components.ProductAvatar
 import com.jehadalomour.flowvan.core.designsystem.components.fvFieldColors
 import com.jehadalomour.flowvan.core.designsystem.components.standardUnits
+import com.jehadalomour.flowvan.core.model.AppliedOffer
 import com.jehadalomour.flowvan.core.model.CartLine
+import com.jehadalomour.flowvan.core.model.FreeLine
+import com.jehadalomour.flowvan.core.model.LineOffer
+import com.jehadalomour.flowvan.core.model.OfferChoice
 import com.jehadalomour.flowvan.core.model.PaymentMethod
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.ProductUnit
+import com.jehadalomour.flowvan.core.model.ServerLine
 import com.jehadalomour.flowvan.feature.voucher.ReturnReason
 import com.jehadalomour.flowvan.feature.voucher.DiscountType
 import com.jehadalomour.flowvan.feature.voucher.VoucherView
@@ -198,6 +203,7 @@ fun VoucherScreen(
                         },
                         onNotesChange = { viewModel.onEvent(VoucherEvent.NotesChanged(it)) },
                         onReasonSelect = { viewModel.onEvent(VoucherEvent.ReasonSelected(it)) },
+                        onPaymentMethod = { viewModel.onEvent(VoucherEvent.PaymentMethodSelected(it)) },
                         modifier = Modifier.weight(1f),
                     )
                     CartSummaryCard(
@@ -242,9 +248,17 @@ fun VoucherScreen(
     // ── Item bottom sheet ─────────────────────────────────────────────────────
     dialogProduct?.let { product ->
         val currentLine = state.cart.firstOrNull { it.productId == product.id }
+        // SALE + server offers: seed the line-discount field with the offer discount
+        // applied to this line, so tapping a discounted line shows its % (not blank).
+        val offerDiscountPct = if (state.useServerOffers) {
+            state.serverLines.firstOrNull { it.itemNumber == product.sku }
+                ?.takeIf { it.lineDiscountJod > 0 }
+                ?.discountFraction
+        } else null
         AddItemBottomSheet(
             product = product,
             currentLine = currentLine,
+            offerDiscountPct = offerDiscountPct,
             dbUnits = state.productUnits[product.id] ?: emptyList(),
             enforceStock = state.showStockBadge,
             onConfirm = { qty, unit, unitPrice, unitConversionQty, discountPct ->
@@ -257,6 +271,21 @@ fun VoucherScreen(
                 { viewModel.onEvent(VoucherEvent.RemoveLine(currentLine.productId)); dialogProduct = null }
             } else null,
             onDismiss = { dialogProduct = null },
+        )
+    }
+
+    // ── SALE: choose-free-item sheet (ITEM_QTY_REWARD gift picks) ───────────────
+    if (state.offersEnabled && state.pendingChoices.isNotEmpty()) {
+        ChooseFreeItemSheet(
+            choices = state.pendingChoices,
+            selectedItems = state.chosenFreeItems,
+            productNameFor = { itemNumber ->
+                state.products.firstOrNull { it.sku == itemNumber }?.nameAr ?: itemNumber
+            },
+            onPick = { offerId, itemNumber ->
+                viewModel.onEvent(VoucherEvent.ChooseFreeItem(offerId, itemNumber))
+            },
+            onDismiss = { viewModel.onEvent(VoucherEvent.DismissFreeItemSheet) },
         )
     }
 
@@ -532,17 +561,52 @@ private fun CartView(
     onTapLine: (String) -> Unit,
     onNotesChange: (String) -> Unit,
     onReasonSelect: (ReturnReason) -> Unit,
+    onPaymentMethod: (PaymentMethod) -> Unit,
     modifier: Modifier,
 ) {
+    // Look up product name/avatar seed by itemNumber (= sku) for server-fed lines (SALE).
+    val productBySku = remember(state.products) { state.products.associateBy { it.sku } }
+
     LazyColumn(
         modifier = modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(top = 10.dp, bottom = 16.dp),
     ) {
-        items(state.cart, key = { it.productId }) { line ->
-            CartItemCard(line = line, onTap = { onTapLine(line.productId) })
+        // ── SALE: editable Cash/Credit toggle ─────────────────────────────────
+        if (state.offersEnabled) {
+            item(key = "payment-toggle") {
+                PaymentToggle(current = state.paymentMethod, onSelect = onPaymentMethod)
+            }
         }
-        if (state.cart.isEmpty()) {
+        // ── SALE: offline banner ──────────────────────────────────────────────
+        if (state.isOffline) {
+            item(key = "offline-banner") { OfflineBanner() }
+        }
+        // ── Cart lines (per-line offer discount shown on each line) ────────────
+        // SALE online: render the server-fed result (per-line server discount + net).
+        // Otherwise: render the on-device cart lines (RETURN/ORDER unchanged).
+        if (state.useServerOffers && state.serverLines.isNotEmpty()) {
+            items(state.serverLines, key = { "srv-${it.itemNumber}" }) { srv ->
+                val product = productBySku[srv.itemNumber]
+                ServerCartLineCard(
+                    line = srv,
+                    nameAr = product?.nameAr ?: srv.itemNumber,
+                    unit = state.cart.firstOrNull { it.sku == srv.itemNumber }?.unit ?: "",
+                    onTap = { product?.let { onTapLine(it.id) } },
+                )
+            }
+        } else {
+            items(state.cart, key = { it.productId }) { line ->
+                CartItemCard(line = line, onTap = { onTapLine(line.productId) })
+            }
+        }
+        // ── SALE: FREE lines (read-only, net 0) ───────────────────────────────
+        if (state.offersEnabled) {
+            items(state.freeLines, key = { "free-${it.itemNumber}-${it.offerId}" }) { free ->
+                FreeLineCard(free)
+            }
+        }
+        if (state.cart.isEmpty() && state.freeLines.isEmpty()) {
             item {
                 Text(stringResource(Res.string.voucher_cart_empty_hint), color = Fv.TextMid, fontSize = 12.sp, modifier = Modifier.padding(24.dp))
             }
@@ -560,6 +624,387 @@ private fun CartView(
                 shape = RoundedCornerShape(10.dp),
                 colors = fvFieldColors(),
             )
+        }
+    }
+}
+
+// ── SALE: editable Cash/Credit toggle (in-cart) ───────────────────────────────
+
+@Composable
+private fun PaymentToggle(current: PaymentMethod, onSelect: (PaymentMethod) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Fv.SurfaceTop, RoundedCornerShape(14.dp))
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        listOf(
+            PaymentMethod.CASH to stringResource(Res.string.payment_method_cash),
+            PaymentMethod.CREDIT to stringResource(Res.string.payment_method_credit),
+        ).forEach { (method, label) ->
+            val active = method == current
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(if (active) Fv.Blue else Color.Transparent)
+                    .clickable { onSelect(method) }
+                    .padding(vertical = 9.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    label,
+                    color = if (active) Color.White else Fv.TextMid,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+// ── SALE: offline banner ──────────────────────────────────────────────────────
+
+@Composable
+private fun OfflineBanner() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Fv.Amber.copy(alpha = 0.14f))
+            .border(0.5.dp, Fv.Amber.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Text(
+            "غير متصل — الإجماليات محلية، يعاد تطبيق العروض عند المزامنة",
+            color = Fv.Amber,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+// ── SALE: server-fed cart line (per-line server discount + net) ───────────────
+
+@Composable
+private fun ServerCartLineCard(
+    line: ServerLine,
+    nameAr: String,
+    unit: String,
+    onTap: () -> Unit,
+) {
+    val hasDiscount = line.lineDiscountJod > 0
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onTap),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(
+            0.5.dp,
+            if (hasDiscount) Fv.Green.copy(alpha = 0.45f) else Fv.Border,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ProductAvatar(
+                    seed = nameAr,
+                    letter = nameAr.firstOrNull()?.toString() ?: "؟",
+                    size = 50.dp,
+                )
+                Spacer(Modifier.size(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        nameAr,
+                        color = Fv.TextHigh,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        buildString {
+                            append("${line.unitPriceJod.formatJod(AppLanguage.AR)} × ${line.qty.toInt()}")
+                            if (unit.isNotBlank()) append(" · $unit")
+                        },
+                        color = Fv.TextMid,
+                        fontSize = 11.sp,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            line.lineNetJod.formatJod(AppLanguage.AR),
+                            color = Fv.Blue,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                        // Total WITHOUT discount, struck through, so the saving is obvious.
+                        if (hasDiscount) {
+                            Text(
+                                line.grossJod.formatJod(AppLanguage.AR),
+                                color = Fv.TextMid,
+                                fontSize = 12.sp,
+                                textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.size(8.dp))
+                Box(
+                    modifier = Modifier
+                        .background(Fv.SurfaceTop, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        "× ${line.qty.toInt()}",
+                        color = Fv.TextHigh,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+            // ── Per-line offer rows: offer name + % + amount saved ───────────────
+            if (hasDiscount) {
+                Spacer(Modifier.height(8.dp))
+                Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(Fv.Border))
+                Spacer(Modifier.height(8.dp))
+                if (line.offers.isNotEmpty()) {
+                    line.offers.forEach { offer -> OfferLineRow(offer) }
+                } else {
+                    // Fallback (older server without per-line attribution): combined % only.
+                    OfferLineRow(
+                        LineOffer(
+                            offerId = "",
+                            name = "خصم العرض",
+                            pct = line.discountFraction * 100.0,
+                            discountJod = line.lineDiscountJod,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** A single applied-offer row on a cart line: 🎟 name · −X% · −amount. */
+@Composable
+private fun OfferLineRow(offer: LineOffer) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text("🎟", fontSize = 12.sp)
+        Text(
+            offer.name,
+            color = Fv.Green,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Box(
+            modifier = Modifier
+                .background(Fv.Green.copy(alpha = 0.14f), RoundedCornerShape(6.dp))
+                .padding(horizontal = 6.dp, vertical = 2.dp),
+        ) {
+            Text(
+                "- ${formatPct(offer.pct)}",
+                color = Fv.Green,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Text(
+            "- ${offer.discountJod.formatJod(AppLanguage.AR)}",
+            color = Fv.Green,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+/** Format an offer percentage: drop the decimal when whole (10.0 → "10%", 12.5 → "12.5%"). */
+private fun formatPct(pct: Double): String {
+    val rounded = (pct * 10).toLong() / 10.0
+    val text = if (rounded % 1.0 == 0.0) rounded.toLong().toString() else rounded.toString()
+    return "$text%"
+}
+
+// ── SALE: FREE line card (read-only, net 0) ───────────────────────────────────
+
+@Composable
+private fun FreeLineCard(free: FreeLine) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Fv.Green.copy(alpha = 0.06f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(0.5.dp, Fv.Green.copy(alpha = 0.35f)),
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ProductAvatar(
+                seed = free.itemNumber,
+                letter = "🎁",
+                size = 50.dp,
+            )
+            Spacer(Modifier.size(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    free.itemNumber,
+                    color = Fv.TextHigh,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        free.unitPriceJod.formatJod(AppLanguage.AR),
+                        color = Fv.TextMid,
+                        fontSize = 11.sp,
+                        textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
+                    )
+                    Text("× ${free.qty.toInt()}", color = Fv.TextMid, fontSize = 11.sp)
+                }
+            }
+            Spacer(Modifier.size(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Fv.Green)
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+            ) {
+                Text("هدية / FREE", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+// ── SALE: choose-free-item bottom sheet ───────────────────────────────────────
+
+@Composable
+private fun ChooseFreeItemSheet(
+    choices: List<OfferChoice>,
+    selectedItems: List<String>,
+    productNameFor: (String) -> String,
+    onPick: (offerId: String, itemNumber: String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    if (choices.isEmpty()) return
+    // Whether every pending choice has its full quota of gifts picked → enables "Done".
+    val allChosen = choices.all { choice ->
+        val picksForChoice = choice.choices.count { it in selectedItems }
+        choice.qty <= 0 || picksForChoice >= choice.qty
+    }
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                color = Color.White,
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp).height(4.dp)
+                                .background(Color(0xFFDDE8F5), RoundedCornerShape(2.dp)),
+                        )
+                    }
+                    Text("اختر هديتك", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(12.dp))
+                    choices.forEach { choice ->
+                        val picksForChoice = choice.choices.count { it in selectedItems }
+                        if (choice.qty > 1) {
+                            Text(
+                                "اختر ${choice.qty} ($picksForChoice/${choice.qty})",
+                                color = Fv.TextMid,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(bottom = 4.dp, top = 2.dp),
+                            )
+                        }
+                        choice.choices.forEach { itemNumber ->
+                            val selected = itemNumber in selectedItems
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        if (selected) Fv.Green.copy(alpha = 0.22f)
+                                        else Fv.Green.copy(alpha = 0.10f)
+                                    )
+                                    .border(
+                                        if (selected) 1.5.dp else 0.5.dp,
+                                        Fv.Green.copy(alpha = if (selected) 0.7f else 0.35f),
+                                        RoundedCornerShape(12.dp),
+                                    )
+                                    .clickable { onPick(choice.offerId, itemNumber) }
+                                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text("🎁", fontSize = 14.sp)
+                                        Text(
+                                            productNameFor(itemNumber),
+                                            color = Fv.TextHigh,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                        )
+                                    }
+                                    if (selected) {
+                                        Text("✓", color = Fv.Green, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .then(
+                                if (allChosen)
+                                    Modifier.background(Brush.linearGradient(listOf(Color(0xFF1D9E75), Color(0xFF0F6E56))))
+                                else Modifier.border(0.5.dp, Color(0xFFC8D8EC), RoundedCornerShape(14.dp))
+                            )
+                            .clickable { onDismiss() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            if (allChosen) stringResource(Res.string.confirm) else stringResource(Res.string.cancel),
+                            color = if (allChosen) Color.White else Fv.TextMid,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -750,6 +1195,7 @@ private fun VoucherDiscountSection(
 private fun AddItemBottomSheet(
     product: Product,
     currentLine: CartLine?,
+    offerDiscountPct: Double? = null,
     dbUnits: List<ProductUnit>,
     enforceStock: Boolean,
     onConfirm: (qty: Double, unit: String, unitPrice: Double, unitConversionQty: Double, discountPct: Double) -> Unit,
@@ -773,7 +1219,8 @@ private fun AddItemBottomSheet(
     var selectedUnit by remember(product.id) { mutableStateOf(initialUnit) }
     var lineDiscountType by remember(product.id) { mutableStateOf(DiscountType.PERCENT) }
     var discountText by remember(product.id) {
-        val initial = currentLine?.discountPct ?: 0.0
+        // Prefer the offer discount applied to this line (SALE), else the manual line discount.
+        val initial = offerDiscountPct ?: currentLine?.discountPct ?: 0.0
         mutableStateOf(if (initial > 0) (initial * 100).toInt().toString() else "")
     }
     var unitDropdownExpanded by remember { mutableStateOf(false) }

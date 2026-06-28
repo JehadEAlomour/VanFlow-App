@@ -52,6 +52,16 @@ data class EvalLineDto(
     val unitPriceFils: Long = 0,
     val lineDiscountFils: Long = 0,
     val lineNetFils: Long = 0,
+    // The offer(s) that discounted this line, each with its % and fils share.
+    val offers: List<LineOfferDto> = emptyList(),
+)
+
+@Serializable
+data class LineOfferDto(
+    val offerId: String = "",
+    val name: String = "",
+    val pct: Double = 0.0,
+    val discountFils: Long = 0,
 )
 
 @Serializable

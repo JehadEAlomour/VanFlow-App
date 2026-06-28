@@ -1,18 +1,30 @@
 package com.jehadalomour.flowvan.feature.voucher
 
 import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
+import com.jehadalomour.flowvan.core.model.AppliedOffer
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.Customer
+import com.jehadalomour.flowvan.core.model.FreeLine
 import com.jehadalomour.flowvan.core.model.InvoiceDiscountInput
 import com.jehadalomour.flowvan.core.model.InvoiceTaxCalculator
 import com.jehadalomour.flowvan.core.model.LineTaxType
+import com.jehadalomour.flowvan.core.model.OfferChoice
+import com.jehadalomour.flowvan.core.model.OfferTotals
 import com.jehadalomour.flowvan.core.model.PaymentMethod
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.ProductUnit
+import com.jehadalomour.flowvan.core.model.ServerLine
 import com.jehadalomour.flowvan.core.model.VoucherSummary
 import com.jehadalomour.flowvan.feature.voucher.ReturnReason
-import com.jehadalomour.flowvan.feature.voucher.DiscountType
-import com.jehadalomour.flowvan.feature.voucher.VoucherView
+
+enum class VoucherView { PICKER, CART }
+
+/**
+ * Percent vs fixed-value discount selector. The SALE flow no longer uses manual discounts
+ * (offers are server-authoritative), but the other voucher flows (RETURN, etc.) in this
+ * package still depend on this enum, so it stays defined here.
+ */
+enum class DiscountType { PERCENT, VALUE }
 
 data class VoucherState(
     val type: VoucherType,
@@ -47,6 +59,35 @@ data class VoucherState(
     val isLookingUp: Boolean = false,
     /** Max returnable qty per product (base units) = what was sold on the source invoice. */
     val soldQtyByProduct: Map<String, Double> = emptyMap(),
+
+    // ── Offers (SALE only — server-authoritative, display only) ────────────────
+    /**
+     * Whether the rep has chosen the payment method from the opening Cash/Credit chooser.
+     * SALE only — gates the picker until chosen. Not applicable to RETURN/ORDER.
+     */
+    val paymentChosen: Boolean = false,
+    /** Offers that were applied — drives the banner chips (SALE). */
+    val appliedOffers: List<AppliedOffer> = emptyList(),
+    /** Free items the offers add as net-0 lines (SALE). */
+    val freeLines: List<FreeLine> = emptyList(),
+    /** Offers awaiting a free-item pick — drives the choose-free-item sheet (SALE). */
+    val pendingChoices: List<OfferChoice> = emptyList(),
+    /**
+     * Flat list of item numbers the rep picked as GIFTs for ITEM_QTY_REWARD offers.
+     * Sent to the server on both evaluate and sale-upload so it adds the free lines (SALE).
+     */
+    val chosenFreeItems: List<String> = emptyList(),
+    /**
+     * True when the displayed cart + totals come from the server's `/offers/evaluate`
+     * result (online, SALE). False → fall back to on-device [summary] (offline, no offers).
+     */
+    val offersFromServer: Boolean = false,
+    /** The server's authoritative per-line result, keyed by itemNumber (= sku) (SALE). */
+    val serverLines: List<ServerLine> = emptyList(),
+    /** The server's authoritative invoice totals (SALE). */
+    val serverTotals: OfferTotals = OfferTotals.ZERO,
+    /** True while a debounced offer evaluation is in flight (SALE). */
+    val isEvaluatingOffers: Boolean = false,
 ) {
     /** Full invoice calculation via the tax calculator (pure, no side effects). */
     val summary: VoucherSummary get() = InvoiceTaxCalculator.calculateInvoice(
@@ -59,12 +100,23 @@ data class VoucherState(
         } ?: InvoiceDiscountInput.None,
     )
 
-    val subtotal: Double get() = summary.subtotalBeforeDiscounts
+    /** SALE only: offers came back from the server, so totals/lines are server-fed. */
+    val useServerOffers: Boolean get() = type == VoucherType.SALE && offersFromServer
+
+    /** SALE only: a non-empty cart with no fresh server result → offline banner. */
+    val isOffline: Boolean get() = type == VoucherType.SALE && cart.isNotEmpty() && !offersFromServer
+
+    val subtotal: Double get() =
+        if (useServerOffers) serverTotals.subtotalJod else summary.subtotalBeforeDiscounts
     val lineDiscountTotal: Double get() = summary.totalLineDiscounts
-    val taxAmount: Double get() = summary.totalTax
+    val taxAmount: Double get() =
+        if (useServerOffers) serverTotals.taxJod else summary.totalTax
     val voucherDiscountAmount: Double get() = summary.invoiceDiscountAmount
-    val totalDiscount: Double get() = summary.totalLineDiscounts + summary.invoiceDiscountAmount
-    val total: Double get() = summary.grandTotal
+    val totalDiscount: Double get() =
+        if (useServerOffers) serverTotals.totalDiscountJod
+        else summary.totalLineDiscounts + summary.invoiceDiscountAmount
+    val total: Double get() =
+        if (useServerOffers) serverTotals.grandTotalJod else summary.grandTotal
 
     /** Label shown next to the tax row — clarifies inclusive vs additive. */
     val taxLabelAr: String get() = when (taxType) {
@@ -100,8 +152,22 @@ data class VoucherState(
 
     val showReasonRow: Boolean get() = type == VoucherType.RETURN
     val showStockBadge: Boolean get() = type == VoucherType.SALE
-    val showDiscountSection: Boolean get() = type == VoucherType.SALE
+
+    /**
+     * Manual invoice-level discount UI. Disabled for SALE — offers are the only discount
+     * and are applied server-side (authoritative). RETURN/ORDER unchanged (they never
+     * showed it; the [DiscountType] enum / voucher-discount state remain for the contract).
+     */
+    val showDiscountSection: Boolean get() = false
+
+    /** SALE only: confirm-save flow shows the in-line payment picker. */
     val showPaymentDialog: Boolean get() = type == VoucherType.SALE
+
+    /** SALE only: show the opening blocking Cash/Credit chooser until chosen. */
+    val showPaymentChooser: Boolean get() = type == VoucherType.SALE && !paymentChosen
+
+    /** SALE only: offer banners / free-line UI are relevant. */
+    val offersEnabled: Boolean get() = type == VoucherType.SALE
 }
 
 sealed interface VoucherEvent {
@@ -118,6 +184,8 @@ sealed interface VoucherEvent {
     data class ChangeQty(val productId: String, val qty: Double) : VoucherEvent
     data class RemoveLine(val productId: String) : VoucherEvent
     data class PaymentMethodSelected(val method: PaymentMethod) : VoucherEvent
+    /** SALE: from the opening Cash/Credit chooser — sets method AND unblocks the picker. */
+    data class PaymentMethodChosen(val method: PaymentMethod) : VoucherEvent
     data class NotesChanged(val notes: String) : VoucherEvent
     data class VoucherDiscountInputChanged(val input: String) : VoucherEvent
     data object VoucherDiscountTypeToggled : VoucherEvent
@@ -134,4 +202,8 @@ sealed interface VoucherEvent {
     data class SelectSourceInvoice(val invoiceId: String) : VoucherEvent
     data class SourceLookupChanged(val q: String) : VoucherEvent
     data object LookupSource : VoucherEvent
+
+    // SALE: offers — choosing/clearing GIFT picks for ITEM_QTY_REWARD offers
+    data class ChooseFreeItem(val offerId: String, val itemNumber: String) : VoucherEvent
+    data object DismissFreeItemSheet : VoucherEvent
 }

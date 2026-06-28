@@ -2,6 +2,7 @@ package com.jehadalomour.flowvan.core.network.mapper
 
 import com.jehadalomour.flowvan.core.model.AppliedOffer
 import com.jehadalomour.flowvan.core.model.FreeLine
+import com.jehadalomour.flowvan.core.model.LineOffer
 import com.jehadalomour.flowvan.core.model.OfferChoice
 import com.jehadalomour.flowvan.core.model.OfferEvaluation
 import com.jehadalomour.flowvan.core.model.OfferLineAdj
@@ -48,6 +49,14 @@ fun EvaluationResultDto.toOfferEvaluation(): OfferEvaluation = OfferEvaluation(
             unitPriceJod = it.unitPriceFils.filsToJod(),
             lineDiscountJod = it.lineDiscountFils.filsToJod(),
             lineNetJod = it.lineNetFils.filsToJod(),
+            offers = it.offers.map { o ->
+                LineOffer(
+                    offerId = o.offerId,
+                    name = o.name,
+                    pct = o.pct,
+                    discountJod = o.discountFils.filsToJod(),
+                )
+            },
         )
     },
     totals = OfferTotals(

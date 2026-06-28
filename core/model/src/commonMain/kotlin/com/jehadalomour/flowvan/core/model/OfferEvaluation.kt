@@ -37,6 +37,21 @@ data class ServerLine(
     val unitPriceJod: Double,
     val lineDiscountJod: Double,
     val lineNetJod: Double,
+    /** The offer(s) that discounted this line, each with its % and JOD share. */
+    val offers: List<LineOffer> = emptyList(),
+) {
+    /** Pre-discount line total (JOD) = unit price × qty. */
+    val grossJod: Double get() = unitPriceJod * qty
+    /** Combined effective discount fraction (0–1) across all offers on this line. */
+    val discountFraction: Double get() = if (grossJod > 0) (lineDiscountJod / grossJod).coerceIn(0.0, 1.0) else 0.0
+}
+
+/** One offer's contribution to a single cart line (display label). */
+data class LineOffer(
+    val offerId: String,
+    val name: String,
+    val pct: Double,
+    val discountJod: Double,
 )
 
 /** The server's invoice totals (JOD). Display-only; the server is authoritative on upload. */
