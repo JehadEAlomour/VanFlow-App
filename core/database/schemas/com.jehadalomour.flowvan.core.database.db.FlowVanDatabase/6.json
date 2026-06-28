@@ -445,6 +445,11 @@
             "fieldPath": "referenceNumber",
             "columnName": "referenceNumber",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "chosenFreeItemsCsv",
+            "columnName": "chosenFreeItemsCsv",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {

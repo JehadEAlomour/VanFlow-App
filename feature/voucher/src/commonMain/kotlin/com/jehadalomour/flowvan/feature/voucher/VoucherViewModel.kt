@@ -11,16 +11,20 @@ import com.jehadalomour.flowvan.core.datastore.SessionStore
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.InvoiceLine
 import com.jehadalomour.flowvan.core.model.LineTaxType
+import com.jehadalomour.flowvan.core.model.OfferEvaluation
+import com.jehadalomour.flowvan.core.model.OfferTotals
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.TaxType
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.FlowPreview
 import com.jehadalomour.flowvan.core.domain.usecase.CancelApprovalUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CommitApprovedReturnUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateRequestVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateReturnVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateSaleVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.EmptyCartException
+import com.jehadalomour.flowvan.core.domain.usecase.EvaluateOffersUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetCustomerSalesUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.PollApprovalUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.RequestReturnApprovalUseCase
@@ -35,7 +39,10 @@ import org.jetbrains.compose.resources.getString
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Job
@@ -57,6 +64,7 @@ class VoucherViewModel(
     private val invoiceDao: InvoiceDao,
     private val json: Json,
     private val getCustomerSales: GetCustomerSalesUseCase,
+    private val evaluateOffers: EvaluateOffersUseCase,
     private val requestReturnApproval: RequestReturnApprovalUseCase,
     private val pollApproval: PollApprovalUseCase,
     private val cancelApproval: CancelApprovalUseCase,
@@ -78,8 +86,6 @@ class VoucherViewModel(
     val state: StateFlow<VoucherState> = _state.asStateFlow()
 
     init {
-        // Salesman permissions (set by the dashboard, delivered via permKeys on
-        // login). Gate the discount + price-edit UI on them.
         _state.update {
             it.copy(
                 canDiscount = session.can("vouchers.discount.direct"),
@@ -89,6 +95,10 @@ class VoucherViewModel(
                 returnNeedsApproval = session.can("vouchers.return.approval"),
             )
         }
+
+        // SALE only: re-evaluate offers (debounced) whenever the cart, payment method,
+        // or the rep's gift picks change. RETURN/ORDER never evaluate offers.
+        if (type == VoucherType.SALE) observeCartForOffers()
 
         customers.observeById(customerId)
             .onEach { c -> _state.update { it.copy(customer = c) } }
@@ -130,6 +140,105 @@ class VoucherViewModel(
 
     }
 
+    // ── Offers (SALE only) ─────────────────────────────────────────────────────
+
+    /** A cart fingerprint that changes only when offer-relevant cart data changes. */
+    private fun cartKey(s: VoucherState): List<Pair<String, Double>> =
+        s.cart.map { it.sku to it.qty }
+
+    @OptIn(FlowPreview::class)
+    private fun observeCartForOffers() {
+        _state
+            .map { Triple(it.paymentMethod, cartKey(it), it.chosenFreeItems) }
+            .distinctUntilChanged()
+            .onEach { _state.update { s -> s.copy(isEvaluatingOffers = s.cart.isNotEmpty()) } }
+            .debounce(300)
+            .onEach { evaluateOffersNow() }
+            .launchIn(viewModelScope)
+    }
+
+    private suspend fun evaluateOffersNow() {
+        val s = _state.value
+        if (s.cart.isEmpty()) {
+            applyEvaluation(OfferEvaluation.EMPTY)
+            return
+        }
+        val result = evaluateOffers(
+            cart = s.cart,
+            customerNumber = s.customer?.code,
+            repId = session.currentUserId,
+            // The customer number identifies the buyer; the backend resolves the store.
+            storeNumber = null,
+            paymentMethod = s.paymentMethod.name,   // CASH/CREDIT condition for payment-method offers
+            chosenFreeItems = s.chosenFreeItems,    // rep's GIFT picks → server returns FREE lines
+        )
+        result.fold(
+            onSuccess = { applyEvaluation(it) },
+            // Offline / failure: never break the sale — fall back to on-device totals.
+            onFailure = { applyOffline() },
+        )
+    }
+
+    /**
+     * Merge an evaluation result into state. Prune the rep's gift picks down to items
+     * still offered by some pending choice, so a cart edit that drops the trigger doesn't
+     * leave a stale gift selected.
+     */
+    private fun applyEvaluation(eval: OfferEvaluation) {
+        _state.update { s ->
+            val validGiftPool = eval.pendingChoices.flatMap { it.choices }.toSet()
+            s.copy(
+                appliedOffers = eval.appliedOffers,
+                freeLines = eval.freeLines,
+                pendingChoices = eval.pendingChoices,
+                chosenFreeItems = s.chosenFreeItems.filter { it in validGiftPool },
+                serverLines = eval.serverLines,
+                serverTotals = eval.totals,
+                offersFromServer = true,
+                isEvaluatingOffers = false,
+            )
+        }
+    }
+
+    /** Evaluate failed (offline) — fall back to on-device totals; server re-applies on sync. */
+    private fun applyOffline() {
+        _state.update { s ->
+            s.copy(
+                appliedOffers = emptyList(),
+                freeLines = emptyList(),
+                pendingChoices = emptyList(),
+                serverLines = emptyList(),
+                serverTotals = OfferTotals.ZERO,
+                offersFromServer = false,
+                isEvaluatingOffers = false,
+            )
+        }
+    }
+
+    /**
+     * Toggle a GIFT pick for an ITEM_QTY_REWARD offer (SALE). We DO NOT add a cart line —
+     * the server adds the free line from [VoucherState.chosenFreeItems] on the next
+     * (debounced) re-evaluate and on upload. Picking is capped at the offer's `qty`; a
+     * fresh pick past the cap evicts the oldest pick for that offer. Tapping a selected
+     * item again removes it.
+     */
+    private fun chooseFreeItem(offerId: String, itemNumber: String) {
+        _state.update { s ->
+            val choice = s.pendingChoices.firstOrNull { it.offerId == offerId } ?: return@update s
+            val poolForOffer = choice.choices.toSet()
+            if (itemNumber in s.chosenFreeItems) {
+                return@update s.copy(chosenFreeItems = s.chosenFreeItems - itemNumber)
+            }
+            val picksForOffer = s.chosenFreeItems.filter { it in poolForOffer }
+            val capped = if (choice.qty in 1..picksForOffer.size) {
+                s.chosenFreeItems - picksForOffer.first()
+            } else {
+                s.chosenFreeItems
+            }
+            s.copy(chosenFreeItems = capped + itemNumber)
+        }
+    }
+
     fun onEvent(event: VoucherEvent) {
         when (event) {
             is VoucherEvent.SearchChanged -> {
@@ -143,6 +252,9 @@ class VoucherViewModel(
                 s.copy(cart = s.cart.filterNot { it.productId == event.productId })
             }
             is VoucherEvent.PaymentMethodSelected -> _state.update { it.copy(paymentMethod = event.method) }
+            is VoucherEvent.PaymentMethodChosen -> _state.update {
+                it.copy(paymentMethod = event.method, paymentChosen = true)
+            }
             is VoucherEvent.NotesChanged -> _state.update { it.copy(notes = event.notes) }
             is VoucherEvent.VoucherDiscountInputChanged -> _state.update { it.copy(voucherDiscountInput = event.input) }
             VoucherEvent.VoucherDiscountTypeToggled -> _state.update {
@@ -186,6 +298,9 @@ class VoucherViewModel(
             is VoucherEvent.SourceLookupChanged ->
                 _state.update { it.copy(sourceLookupQuery = event.q) }
             VoucherEvent.LookupSource -> lookupSourceByNumber()
+
+            is VoucherEvent.ChooseFreeItem -> chooseFreeItem(event.offerId, event.itemNumber)
+            VoucherEvent.DismissFreeItemSheet -> _state.update { it.copy(pendingChoices = emptyList()) }
         }
     }
 

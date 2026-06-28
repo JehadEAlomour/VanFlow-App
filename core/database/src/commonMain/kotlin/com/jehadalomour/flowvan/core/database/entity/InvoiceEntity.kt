@@ -23,4 +23,10 @@ data class InvoiceEntity(
     /** For RETURN vouchers: the original SALE invoice this return is issued against. */
     val referenceInvoiceId: String? = null,
     val referenceNumber: String? = null,
+    /**
+     * GIFT picks for ITEM_QTY_REWARD offers, as a comma-joined list of item numbers
+     * (e.g. "ITM-1,ITM-3"). Null/blank when the sale carries no gift picks. Sent to the
+     * server on sync so it adds the free lines and records the redemption.
+     */
+    val chosenFreeItemsCsv: String? = null,
 )
