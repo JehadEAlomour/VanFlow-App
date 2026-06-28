@@ -33,6 +33,8 @@ kotlin {
             implementation(libs.maps.compose)
             implementation(libs.play.services.maps)
             implementation(libs.play.services.location)
+            // XPrinter / POS thermal printer SDK (USB / Bluetooth / Serial / Network)
+            implementation(files("libs/printer-sdk.aar"))
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -49,6 +51,19 @@ kotlin {
             implementation(libs.koin.compose.viewmodel.navigation)
             implementation(libs.kotlinx.datetime)
             implementation(projects.core.designSystem)
+            implementation(projects.core.model)
+            implementation(projects.core.common)
+            implementation(projects.core.database)
+            implementation(projects.core.datastore)
+            implementation(projects.core.domain)
+            implementation(projects.feature.ai)
+            implementation(projects.feature.auth)
+            implementation(projects.feature.customer)
+            implementation(projects.feature.home)
+            implementation(projects.feature.map)
+            implementation(projects.feature.print)
+            implementation(projects.feature.reports)
+            implementation(projects.feature.voucher)
             implementation(projects.shared)
         }
         commonTest.dependencies {
@@ -71,6 +86,12 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+        jniLibs {
+            // The XPrinter serial driver (libserial_port.so) is a prebuilt vendor binary whose
+            // LOAD segments aren't 16 KB-aligned, which blocks Play Store uploads for Android 15+.
+            // Only the SERIAL transport needs it; we print over Bluetooth/USB/Network, so drop it.
+            excludes += "**/libserial_port.so"
         }
     }
     buildTypes {

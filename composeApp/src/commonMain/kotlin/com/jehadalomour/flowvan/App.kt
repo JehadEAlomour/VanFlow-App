@@ -13,9 +13,7 @@ import com.jehadalomour.flowvan.navigation.FlowVanNavHost
 @Composable
 fun App() {
     AppTheme(darkTheme = false) {
-        // Outer box fills the full window (behind status bar + nav bar) with the app background.
-        // Inner box pads content into the safe area so nothing overlaps system bars.
-        Box(
+       Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF4F6FB)),

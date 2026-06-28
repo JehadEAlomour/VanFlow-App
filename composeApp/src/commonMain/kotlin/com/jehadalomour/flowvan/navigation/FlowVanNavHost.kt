@@ -13,36 +13,37 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.jehadalomour.flowvan.screens.ai.AiAssistantScreen
-import com.jehadalomour.flowvan.screens.settings.SettingsScreen
-import com.jehadalomour.flowvan.screens.map.MapNavigationScreen
-import com.jehadalomour.flowvan.screens.reports.AccountStatementScreen
-import com.jehadalomour.flowvan.screens.reports.AllPaymentsReportScreen
-import com.jehadalomour.flowvan.screens.reports.AllSalesReportScreen
-import com.jehadalomour.flowvan.screens.reports.CashFlowReportScreen
-import com.jehadalomour.flowvan.screens.reports.ItemsSalesReportScreen
-import com.jehadalomour.flowvan.screens.reports.ReportsHubScreen
-import com.jehadalomour.flowvan.screens.reports.VisitReportScreen
-import com.jehadalomour.flowvan.screens.reports.PaymentReportScreen
-import com.jehadalomour.flowvan.screens.reports.ReceiptDetailScreen
-import com.jehadalomour.flowvan.screens.reports.ReceivablesReportScreen
-import com.jehadalomour.flowvan.screens.reports.TransactionReportScreen
-import com.jehadalomour.flowvan.screens.reports.VoucherDetailScreen
-import com.jehadalomour.flowvan.screens.reports.VoucherReportScreen
-import com.jehadalomour.flowvan.screens.collection.CollectionScreen
-import com.jehadalomour.flowvan.screens.customer.CustomerDashboardScreen
-import com.jehadalomour.flowvan.screens.customers.CustomerListScreen
-import com.jehadalomour.flowvan.screens.endofday.EndOfDayScreen
-import com.jehadalomour.flowvan.screens.home.HomeScreen
-import com.jehadalomour.flowvan.screens.login.LoginScreen
-import com.jehadalomour.flowvan.screens.route.RouteScreen
-import com.jehadalomour.flowvan.screens.print.VoucherPrintScreen
-import com.jehadalomour.flowvan.screens.voucher.VoucherScreen
-import com.jehadalomour.flowvan.shared.presentation.feature.voucher.VoucherType
-import com.jehadalomour.flowvan.screens.vanstock.VanStockScreen
-import com.jehadalomour.flowvan.shared.data.seeder.DemoSeeder
-import com.jehadalomour.flowvan.shared.domain.usecase.GetCurrentUserUseCase
-import com.jehadalomour.flowvan.shared.domain.usecase.LogoutUseCase
+import com.jehadalomour.flowvan.feature.ai.AiAssistantScreen
+import com.jehadalomour.flowvan.feature.home.SettingsScreen
+import com.jehadalomour.flowvan.feature.map.MapNavigationScreen
+import com.jehadalomour.flowvan.feature.customer.AccountStatementScreen
+import com.jehadalomour.flowvan.feature.reports.AllPaymentsReportScreen
+import com.jehadalomour.flowvan.feature.reports.AllSalesReportScreen
+import com.jehadalomour.flowvan.feature.reports.CashFlowReportScreen
+import com.jehadalomour.flowvan.feature.reports.ItemsSalesReportScreen
+import com.jehadalomour.flowvan.feature.reports.ReportsHubScreen
+import com.jehadalomour.flowvan.feature.reports.VisitReportScreen
+import com.jehadalomour.flowvan.feature.reports.PaymentReportScreen
+import com.jehadalomour.flowvan.feature.print.ReceiptDetailScreen
+import com.jehadalomour.flowvan.feature.reports.ReceivablesReportScreen
+import com.jehadalomour.flowvan.feature.reports.TransactionReportScreen
+import com.jehadalomour.flowvan.feature.print.VoucherDetailScreen
+import com.jehadalomour.flowvan.feature.reports.VoucherReportScreen
+import com.jehadalomour.flowvan.feature.voucher.CollectionScreen
+import com.jehadalomour.flowvan.feature.customer.CustomerDashboardScreen
+import com.jehadalomour.flowvan.feature.customer.CustomerListScreen
+import com.jehadalomour.flowvan.feature.home.EndOfDayScreen
+import com.jehadalomour.flowvan.feature.home.HomeScreen
+import com.jehadalomour.flowvan.feature.auth.LoginScreen
+import com.jehadalomour.flowvan.feature.home.TodayRouteScreen
+import com.jehadalomour.flowvan.feature.print.VoucherPrintScreen
+import com.jehadalomour.flowvan.feature.voucher.VoucherScreen
+import com.jehadalomour.flowvan.feature.voucher.VoucherType
+import com.jehadalomour.flowvan.feature.voucher.VanStockScreen
+import com.jehadalomour.flowvan.core.domain.usecase.PurgeDemoDataUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.GetCurrentUserUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.LogoutUseCase
+import com.jehadalomour.flowvan.core.datastore.SessionStore
 import org.koin.compose.koinInject
 
 object Routes {
@@ -94,15 +95,24 @@ object Routes {
 fun FlowVanNavHost(
     navController: NavHostController = rememberNavController(),
 ) {
-    val seeder: DemoSeeder = koinInject()
+    val purgeDemoData: PurgeDemoDataUseCase = koinInject()
     val getCurrentUser: GetCurrentUserUseCase = koinInject()
     val logout: LogoutUseCase = koinInject()
+    val sessionStore: SessionStore = koinInject()
 
     var startDestination by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        seeder.seedIfNeeded()
+        purgeDemoData()
         startDestination = if (getCurrentUser() != null) Routes.HOME else Routes.LOGIN
+    }
+
+    LaunchedEffect(Unit) {
+        sessionStore.unauthorizedEvents.collect {
+            navController.navigate(Routes.LOGIN) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
     }
 
     val dest = startDestination ?: run {
@@ -133,9 +143,8 @@ fun FlowVanNavHost(
             )
         }
         composable(Routes.ROUTE) {
-            RouteScreen(
+            TodayRouteScreen(
                 onBack = { navController.popBackStack() },
-                onOpenCustomers = { navController.navigate(Routes.CUSTOMERS) },
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
                 onNavigateTo = { id -> navController.navigate(Routes.map(id)) },
             )

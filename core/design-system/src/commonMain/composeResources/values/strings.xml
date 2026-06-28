@@ -1,0 +1,714 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">FlowVan</string>
+    <string name="app_subtitle">نظام مبيعات الفان</string>
+
+    <!-- Common / Navigation -->
+    <string name="back">رجوع</string>
+    <string name="save">حفظ</string>
+    <string name="cancel">إلغاء</string>
+    <string name="confirm">تأكيد</string>
+    <string name="loading">جاري التحميل…</string>
+    <string name="error_retry">حاول مجدداً</string>
+    <string name="close">إغلاق</string>
+    <string name="delete">حذف</string>
+    <string name="edit">تعديل</string>
+    <string name="search">بحث</string>
+    <string name="filter">تصفية</string>
+    <string name="all">الكل</string>
+    <string name="from_date">من</string>
+    <string name="to_date">إلى</string>
+    <string name="total">الإجمالي</string>
+    <string name="count">العدد</string>
+    <string name="no_data">لا توجد بيانات</string>
+    <string name="currency_jod">د.أ</string>
+
+    <!-- Login -->
+    <string name="login_username">اسم المستخدم</string>
+    <string name="login_password">كلمة المرور</string>
+    <string name="login_button">تسجيل الدخول</string>
+    <string name="login_loading">جاري تسجيل الدخول…</string>
+    <string name="login_error_invalid">اسم المستخدم أو كلمة المرور غير صحيحة</string>
+    <string name="login_error_empty">يرجى إدخال بيانات تسجيل الدخول</string>
+
+    <!-- Home -->
+    <string name="home_title">الرئيسية</string>
+    <string name="home_greeting">مرحباً</string>
+    <string name="home_today">اليوم</string>
+    <string name="home_kpi_sales">مبيعات</string>
+    <string name="home_kpi_returns">مرتجعات</string>
+    <string name="home_kpi_collections">تحصيلات</string>
+    <string name="home_kpi_visits">زيارات</string>
+    <string name="home_top_customers">أعلى عملاء اليوم</string>
+    <string name="home_quick_route">مسار اليوم</string>
+    <string name="home_quick_customers">العملاء</string>
+    <string name="home_quick_van_stock">مخزون الفان</string>
+    <string name="home_quick_ai">المساعد الذكي</string>
+    <string name="home_quick_end_of_day">نهاية اليوم</string>
+    <string name="home_quick_reports">التقارير</string>
+    <string name="home_logout">خروج</string>
+    <string name="home_shift_active">الوردية نشطة</string>
+    <string name="home_shift_start">بدء اليوم</string>
+    <string name="home_shift_start_hint">اضغط لبدء تتبع الموقع</string>
+
+    <!-- Route -->
+    <string name="route_title">مسار اليوم</string>
+    <string name="route_empty">لا يوجد عملاء في المسار</string>
+    <string name="route_visited">تمت الزيارة</string>
+    <string name="route_pending">لم تتم الزيارة</string>
+    <string name="route_navigate">تنقل</string>
+    <string name="route_overdue_warning">ذمم متأخرة</string>
+    <string name="route_churn_warning">خطر توقف</string>
+
+    <!-- Customer List -->
+    <string name="customers_title">العملاء</string>
+    <string name="customers_search_hint">ابحث عن عميل…</string>
+    <string name="customers_empty">لا يوجد عملاء</string>
+    <string name="customers_navigate">تنقل</string>
+
+    <!-- Customer Dashboard -->
+    <string name="customer_balance">رصيد مستحق</string>
+    <string name="customer_overdue">متأخرات</string>
+    <string name="customer_churn_risk">مخاطر التوقف</string>
+    <string name="customer_credit_limit">حد الائتمان</string>
+    <string name="customer_tier_gold">ذهبي</string>
+    <string name="customer_tier_silver">فضي</string>
+    <string name="customer_tier_bronze">برونزي</string>
+    <string name="customer_tier_new">جديد</string>
+    <string name="customer_report_vouchers">تقرير الفواتير</string>
+    <string name="customer_report_payments">تقرير التحصيلات</string>
+    <string name="customer_report_statement">كشف الحساب</string>
+    <string name="customer_action_sale">بيع</string>
+    <string name="customer_action_return">مرتجع</string>
+    <string name="customer_action_request">طلب</string>
+    <string name="customer_action_collection">تحصيل</string>
+    <string name="customer_action_ai">سؤال الذكاء الاصطناعي</string>
+
+    <!-- Sale Voucher -->
+    <string name="sale_title">فاتورة بيع</string>
+    <string name="sale_search_product">ابحث عن منتج…</string>
+    <string name="sale_cart_empty">السلة فارغة</string>
+    <string name="sale_subtotal">المجموع قبل الضريبة</string>
+    <string name="sale_discount">الخصم</string>
+    <string name="sale_vat">ضريبة القيمة المضافة ١٦٪</string>
+    <string name="sale_total">الإجمالي</string>
+    <string name="sale_payment_method">طريقة الدفع</string>
+    <string name="sale_save">حفظ الفاتورة</string>
+    <string name="sale_saving">جاري الحفظ…</string>
+    <string name="sale_saved">تم حفظ الفاتورة</string>
+    <string name="sale_error_no_items">يرجى إضافة منتج واحد على الأقل</string>
+    <string name="sale_error_stock">الكمية المطلوبة غير متوفرة في المخزون</string>
+
+    <!-- Return Voucher -->
+    <string name="return_title">مرتجع</string>
+    <string name="return_reason">سبب الإرجاع</string>
+    <string name="return_reason_damaged">تالف</string>
+    <string name="return_reason_expired">منتهي الصلاحية</string>
+    <string name="return_reason_wrong_item">صنف خاطئ</string>
+    <string name="return_reason_refusal">رفض العميل</string>
+    <string name="return_confirm_title">تأكيد الإرجاع</string>
+    <string name="return_confirm_message">هل تريد تأكيد إرجاع البضاعة؟</string>
+    <string name="return_save">حفظ المرتجع</string>
+
+    <!-- Request Voucher -->
+    <string name="request_title">طلب بضاعة</string>
+    <string name="request_save">حفظ الطلب</string>
+
+    <!-- Collection -->
+    <string name="collection_title">تحصيل</string>
+    <string name="collection_amount">المبلغ</string>
+    <string name="collection_method_cash">نقد</string>
+    <string name="collection_method_cheque">شيك</string>
+    <string name="collection_method_transfer">حوالة بنكية</string>
+    <string name="collection_cheque_number">رقم الشيك</string>
+    <string name="collection_cheque_date">تاريخ الشيك</string>
+    <string name="collection_bank">البنك</string>
+    <string name="collection_transfer_ref">رقم الحوالة</string>
+    <string name="collection_notes">ملاحظات</string>
+    <string name="collection_advance_warning">تنبيه: هذا المبلغ يتجاوز الرصيد المستحق. سيُسجَّل الفائض كدفعة مقدمة.</string>
+    <string name="collection_save">تسجيل التحصيل</string>
+
+    <!-- Payment Methods -->
+    <string name="payment_method_cash">نقد</string>
+    <string name="payment_method_credit">ذمم</string>
+    <string name="payment_method_cheque">شيك</string>
+    <string name="payment_method_transfer">حوالة</string>
+
+    <!-- Van Stock -->
+    <string name="van_stock_title">مخزون الفان</string>
+    <string name="van_stock_search_hint">ابحث عن صنف…</string>
+    <string name="van_stock_in_stock">متوفر</string>
+    <string name="van_stock_out_of_stock">نفد</string>
+    <string name="van_stock_low_stock">منخفض</string>
+    <string name="van_stock_expiring_soon">ينتهي قريباً</string>
+    <string name="van_stock_qty">الكمية</string>
+    <string name="van_stock_min">الحد الأدنى</string>
+    <string name="van_stock_expiry">تاريخ الانتهاء</string>
+
+    <!-- AI Assistant -->
+    <string name="ai_title">المساعد الذكي</string>
+    <string name="ai_input_hint">اكتب سؤالك…</string>
+    <string name="ai_send">إرسال</string>
+    <string name="ai_online">متصل</string>
+    <string name="ai_offline">بدون اتصال</string>
+    <string name="ai_api_key_title">مفتاح Claude API</string>
+    <string name="ai_api_key_hint">sk-ant-…</string>
+    <string name="ai_api_key_save">حفظ المفتاح</string>
+    <string name="ai_api_key_empty_note">اتركه فارغاً للعمل بدون اتصال</string>
+    <string name="ai_chip_summary">ملخص اليوم</string>
+    <string name="ai_chip_sales">المبيعات</string>
+    <string name="ai_chip_stock">المخزون</string>
+    <string name="ai_chip_route">المسار</string>
+    <string name="ai_chip_customer">العميل الحالي</string>
+
+    <!-- End of Day -->
+    <string name="end_of_day_title">إغلاق اليوم</string>
+    <string name="end_of_day_sales_summary">ملخص المبيعات</string>
+    <string name="end_of_day_total_sales">إجمالي المبيعات</string>
+    <string name="end_of_day_total_returns">إجمالي المرتجعات</string>
+    <string name="end_of_day_net_sales">صافي المبيعات</string>
+    <string name="end_of_day_total_collections">إجمالي التحصيلات</string>
+    <string name="end_of_day_visits">الزيارات</string>
+    <string name="end_of_day_confirm_title">تأكيد إغلاق اليوم</string>
+    <string name="end_of_day_confirm_message">هل تريد إغلاق اليوم وتسجيل الخروج؟</string>
+    <string name="end_of_day_close_button">إغلاق اليوم وخروج</string>
+    <string name="end_of_day_closing">جاري الإغلاق…</string>
+
+    <!-- Map Navigation -->
+    <string name="map_title">التنقل إلى العميل</string>
+    <string name="map_start_navigation">ابدأ الملاحة</string>
+    <string name="map_no_location">موقع العميل غير متوفر</string>
+
+    <!-- Reports Hub -->
+    <string name="reports_title">التقارير</string>
+    <string name="reports_sales_title">تقرير المبيعات</string>
+    <string name="reports_sales_subtitle">فواتير البيع والمرتجعات حسب التاريخ</string>
+    <string name="reports_payments_title">تقرير التحصيلات</string>
+    <string name="reports_payments_subtitle">المدفوعات المستلمة حسب التاريخ والطريقة</string>
+    <string name="reports_visits_title">تقرير الزيارات</string>
+    <string name="reports_visits_subtitle">العملاء المزارين والمتبقين في المسار</string>
+    <string name="reports_cash_flow_title">الكشف اليومي</string>
+    <string name="reports_cash_flow_subtitle">ملخص كامل للمبيعات والتحصيلات والمرتجعات</string>
+    <string name="reports_items_title">مبيعات الأصناف</string>
+    <string name="reports_items_subtitle">إجمالي مبيعات كل صنف من تاريخ إلى تاريخ</string>
+    <string name="reports_receivables_title">تقرير ذمم العملاء</string>
+    <string name="reports_receivables_subtitle">العملاء الذين لديهم أرصدة مستحقة مرتبة تنازلياً</string>
+
+    <!-- All Sales Report -->
+    <string name="all_sales_title">تقرير المبيعات</string>
+    <string name="all_sales_filter_all">الكل</string>
+    <string name="all_sales_filter_sales">مبيعات</string>
+    <string name="all_sales_filter_returns">مرتجعات</string>
+    <string name="all_sales_filter_requests">طلبات</string>
+    <string name="all_sales_total_sales">إجمالي المبيعات</string>
+    <string name="all_sales_total_returns">إجمالي المرتجعات</string>
+    <string name="all_sales_count">عدد الفواتير</string>
+
+    <!-- All Payments Report -->
+    <string name="all_payments_title">تقرير التحصيلات</string>
+    <string name="all_payments_filter_all">الكل</string>
+    <string name="all_payments_filter_cash">نقد</string>
+    <string name="all_payments_filter_cheque">شيك</string>
+    <string name="all_payments_filter_transfer">حوالة</string>
+    <string name="all_payments_total">إجمالي التحصيلات</string>
+    <string name="all_payments_count">عدد التحصيلات</string>
+
+    <!-- Visit Report -->
+    <string name="visits_title">تقرير الزيارات</string>
+    <string name="visits_visited">تمت الزيارة</string>
+    <string name="visits_not_visited">لم تتم الزيارة</string>
+    <string name="visits_off_route">بدون مسار</string>
+    <string name="visits_rate">معدل الزيارة</string>
+    <string name="visits_total_customers">إجمالي العملاء</string>
+
+    <!-- Cash Flow Report -->
+    <string name="cash_flow_title">الكشف اليومي</string>
+    <string name="cash_flow_net">صافي النقد</string>
+    <string name="cash_flow_debits">مبيعات ومطالبات</string>
+    <string name="cash_flow_credits">تحصيلات ومرتجعات</string>
+
+    <!-- Items Sales Report -->
+    <string name="items_sales_title">مبيعات الأصناف</string>
+    <string name="items_sales_revenue">الإيراد</string>
+    <string name="items_sales_qty">الكمية المباعة</string>
+    <string name="items_sales_share">الحصة من المبيعات</string>
+    <string name="items_sales_empty">لا توجد مبيعات في هذه الفترة</string>
+
+    <!-- Receivables Report -->
+    <string name="receivables_title">تقرير ذمم العملاء</string>
+    <string name="receivables_total_balance">إجمالي الذمم</string>
+    <string name="receivables_total_overdue">متأخرات</string>
+    <string name="receivables_customers_count">%1$d عميل لديه ذمم مستحقة</string>
+    <string name="receivables_overdue_label">متأخر</string>
+    <string name="receivables_empty">لا توجد ذمم مستحقة على العملاء</string>
+
+    <!-- Voucher Report -->
+    <string name="voucher_report_title">تقرير الفواتير</string>
+    <string name="voucher_report_filter_type_all">الكل</string>
+    <string name="voucher_report_filter_type_sale">بيع</string>
+    <string name="voucher_report_filter_type_return">مرتجع</string>
+    <string name="voucher_report_filter_type_request">طلب</string>
+    <string name="voucher_report_filter_kind_all">الكل</string>
+    <string name="voucher_report_filter_kind_cash">نقد</string>
+    <string name="voucher_report_filter_kind_credit">ذمم</string>
+    <string name="voucher_report_count">عدد الفواتير</string>
+    <string name="voucher_report_total">إجمالي الفواتير</string>
+
+    <!-- Voucher Detail -->
+    <string name="voucher_detail_title">تفاصيل الفاتورة</string>
+    <string name="voucher_detail_number">رقم الفاتورة</string>
+    <string name="voucher_detail_date">التاريخ</string>
+    <string name="voucher_detail_type">النوع</string>
+    <string name="voucher_detail_status">الحالة</string>
+    <string name="voucher_detail_items">الأصناف</string>
+    <string name="voucher_detail_subtotal">المجموع الفرعي</string>
+    <string name="voucher_detail_discount">الخصم</string>
+    <string name="voucher_detail_tax">الضريبة</string>
+    <string name="voucher_detail_total">الإجمالي</string>
+    <string name="voucher_status_confirmed">مؤكدة</string>
+    <string name="voucher_status_draft">مسودة</string>
+    <string name="voucher_status_cancelled">ملغاة</string>
+    <string name="voucher_type_sale">بيع</string>
+    <string name="voucher_type_return">مرتجع</string>
+    <string name="voucher_type_request">طلب</string>
+
+    <!-- Receipt Detail -->
+    <string name="receipt_detail_title">تفاصيل التحصيل</string>
+    <string name="receipt_detail_amount">المبلغ المحصَّل</string>
+    <string name="receipt_detail_method">طريقة الدفع</string>
+    <string name="receipt_detail_date">التاريخ</string>
+    <string name="receipt_detail_status">الحالة</string>
+    <string name="receipt_detail_cheque_info">معلومات الشيك</string>
+    <string name="receipt_detail_transfer_info">معلومات الحوالة</string>
+    <string name="receipt_detail_notes">ملاحظات</string>
+    <string name="receipt_status_confirmed">مؤكد</string>
+    <string name="receipt_status_bounced">مرتجع</string>
+    <string name="receipt_status_pending">قيد المراجعة</string>
+
+    <!-- Payment Report -->
+    <string name="payment_report_title">تقرير التحصيلات</string>
+    <string name="payment_report_total">إجمالي التحصيلات</string>
+    <string name="payment_report_confirmed">مؤكد</string>
+
+    <!-- Account Statement -->
+    <string name="statement_title">كشف الحساب</string>
+    <string name="statement_debits">إجمالي المديونية</string>
+    <string name="statement_credits">إجمالي الدفعات</string>
+    <string name="statement_net">الرصيد الصافي</string>
+
+    <!-- Transaction Report -->
+    <string name="txn_report_title">تقرير المعاملات</string>
+
+    <!-- Tier Badges -->
+    <string name="tier_gold">ذهبي</string>
+    <string name="tier_silver">فضي</string>
+    <string name="tier_bronze">برونزي</string>
+    <string name="tier_new">جديد</string>
+
+    <!-- Chips / filters common -->
+    <string name="chip_all">الكل</string>
+    <string name="chip_cash">نقد</string>
+    <string name="chip_cheque">شيك</string>
+    <string name="chip_transfer">حوالة</string>
+    <string name="chip_sale">بيع</string>
+    <string name="chip_return">مرتجع</string>
+    <string name="chip_request">طلب</string>
+
+    <!-- Sync / AI settings -->
+    <string name="settings_backend_url">عنوان الخادم</string>
+    <string name="settings_backend_url_hint">https://api.example.com</string>
+    <string name="settings_backend_empty_note">اتركه فارغاً لتعطيل المزامنة</string>
+
+    <!-- Errors -->
+    <string name="error_connection">خطأ في الاتصال</string>
+    <string name="error_unknown">حدث خطأ غير متوقع</string>
+    <string name="error_empty_field">هذا الحقل مطلوب</string>
+
+    <!-- ===== Redesign additions (collection/print/tax/settings) ===== -->
+    <string name="ai_api_key_dialog_message">أدخل مفتاح Claude API لتفعيل المساعد الذكي عبر الإنترنت.</string>
+    <string name="ai_api_key_local_note">يُحفظ المفتاح محلياً على جهازك فقط.</string>
+    <string name="ai_connected_claude">متصل بـ Claude</string>
+    <string name="ai_demo_mode">وضع تجريبي</string>
+    <string name="all_payments_empty">لا توجد تحصيلات في هذه الفترة</string>
+    <string name="all_sales_pill_net">الصافي</string>
+    <string name="all_sales_pill_returns">المرتجعات</string>
+    <string name="all_sales_pill_sales">المبيعات</string>
+    <string name="amount_jod_format">%1$d د.أ</string>
+    <string name="balance_label">الرصيد</string>
+    <string name="cart_discount_pct">خصم %1$d٪</string>
+    <string name="cart_line_discount">خصم السطر</string>
+    <string name="cart_no_products">لا توجد منتجات في السلة</string>
+    <string name="cart_stock_available">متوفر: %1$d</string>
+    <string name="cart_stock_low">منخفض: %1$d</string>
+    <string name="cart_voucher_discount">خصم الفاتورة</string>
+    <string name="cash_flow_empty">لا توجد حركات في هذه الفترة</string>
+    <string name="cash_flow_pill_collections">التحصيلات</string>
+    <string name="cheque_number_format">شيك %1$d</string>
+    <string name="chip_churn_risk">خطر توقف %1$d٪</string>
+    <string name="chip_off_route">خارج المسار</string>
+    <string name="chip_overdue_amount">متأخر %1$s</string>
+    <string name="collection_add_cheque">إضافة شيك</string>
+    <string name="collection_advance_warning_short">يتجاوز الرصيد المستحق</string>
+    <string name="collection_amount_before_tax">المبلغ قبل الضريبة</string>
+    <string name="collection_amount_jod">المبلغ (د.أ)</string>
+    <string name="collection_cheque_date_optional">تاريخ الشيك (اختياري)</string>
+    <string name="collection_cheques_total">إجمالي الشيكات</string>
+    <string name="collection_notes_optional">ملاحظات (اختياري)</string>
+    <string name="collection_sales_tax">ضريبة المبيعات</string>
+    <string name="collection_save_button">تسجيل التحصيل</string>
+    <string name="collection_search_bank">ابحث عن بنك…</string>
+    <string name="collection_select_bank">اختر البنك</string>
+    <string name="collection_tax_calculator">حاسبة الضريبة</string>
+    <string name="collection_tax_exclusive">غير شامل الضريبة</string>
+    <string name="collection_tax_inclusive">شامل الضريبة</string>
+    <string name="collection_total_with_tax">الإجمالي شامل الضريبة</string>
+    <string name="collection_voucher_title">سند تحصيل</string>
+    <string name="coming_soon_label">قريباً: %1$s</string>
+    <string name="customer_account_summary">ملخص الحساب</string>
+    <string name="customer_card_title">بطاقة العميل</string>
+    <string name="customer_credit_ceiling">سقف الائتمان</string>
+    <string name="customer_current_balance">الرصيد الحالي</string>
+    <string name="customer_payments_report">تقرير التحصيلات</string>
+    <string name="customer_quick_actions">إجراءات سريعة</string>
+    <string name="customer_segment_at_risk">معرّض للخطر</string>
+    <string name="customer_segment_champions">الأبطال</string>
+    <string name="customer_segment_dormant">خاملون</string>
+    <string name="customer_segment_loyal">أوفياء</string>
+    <string name="customer_segment_promising">واعدون</string>
+    <string name="customer_segment_regular">عاديون</string>
+    <string name="customer_statement_subtitle">كشف حساب تفصيلي بالحركات</string>
+    <string name="customer_tier_a">فئة A</string>
+    <string name="customer_tier_b">فئة B</string>
+    <string name="customer_tier_c">فئة C</string>
+    <string name="customer_view_report">عرض التقرير</string>
+    <string name="customers_list_title">العملاء</string>
+    <string name="customers_no_results">لا توجد نتائج</string>
+    <string name="customers_off_route">خارج المسار</string>
+    <string name="customers_overdue_amount">متأخرات %1$s</string>
+    <string name="customers_search_name_code_area_hint">ابحث بالاسم أو الرمز أو المنطقة…</string>
+    <string name="customers_segment_at_risk">معرّض للخطر</string>
+    <string name="customers_segment_champions">الأبطال</string>
+    <string name="customers_segment_dormant">خاملون</string>
+    <string name="customers_segment_loyal">أوفياء</string>
+    <string name="customers_segment_promising">واعدون</string>
+    <string name="customers_segment_regular">عاديون</string>
+    <string name="customers_tier_prefix">فئة %1$s</string>
+    <string name="dialog_error_title">خطأ</string>
+    <string name="dialog_ok">حسناً</string>
+    <string name="discount_type_value">قيمة</string>
+    <string name="end_of_day_cash_settlement">تسوية النقد</string>
+    <string name="end_of_day_cheques">الشيكات</string>
+    <string name="end_of_day_confirm_end_message">هل تريد إنهاء اليوم وتسجيل الخروج؟</string>
+    <string name="end_of_day_confirm_end_title">تأكيد إنهاء اليوم</string>
+    <string name="end_of_day_customers_visited">العملاء المزارون</string>
+    <string name="end_of_day_end_button">إنهاء اليوم وخروج</string>
+    <string name="end_of_day_ending">جاري الإنهاء…</string>
+    <string name="end_of_day_summary_title">ملخص اليوم</string>
+    <string name="end_of_day_sync_note">تأكد من مزامنة جميع البيانات قبل الإنهاء.</string>
+    <string name="end_of_day_sync_status">حالة المزامنة</string>
+    <string name="end_of_day_transfers">الحوالات</string>
+    <string name="end_of_day_unsynced_invoices">فواتير غير مزامنة</string>
+    <string name="end_of_day_unsynced_payments">تحصيلات غير مزامنة</string>
+    <string name="error_title">خطأ</string>
+    <string name="home_action_ai_sub">اسأل عن يومك</string>
+    <string name="home_action_customers">العملاء</string>
+    <string name="home_action_customers_sub">إدارة العملاء</string>
+    <string name="home_action_end_of_day_sub">إغلاق وتسوية</string>
+    <string name="home_action_reports_sub">التقارير والتحليلات</string>
+    <string name="home_action_route_sub">عملاء اليوم</string>
+    <string name="home_action_van_stock_sub">إدارة المخزون</string>
+    <string name="home_category_a">فئة A</string>
+    <string name="home_category_b">فئة B</string>
+    <string name="home_category_c">فئة C</string>
+    <string name="home_greeting_name">مرحباً، %1$s</string>
+    <string name="home_quick_access">وصول سريع</string>
+    <string name="home_shift_active_tracking">الوردية نشطة - تتبع الموقع</string>
+    <string name="home_sync_synced">تمت المزامنة</string>
+    <string name="home_sync_pending">%1$d بانتظار المزامنة</string>
+    <string name="home_sync_last">آخر مزامنة %1$s</string>
+    <string name="home_stat_collections">تحصيلات</string>
+    <string name="home_stat_customers_today">عملاء اليوم</string>
+    <string name="home_stat_returns">مرتجعات</string>
+    <string name="home_stat_sales">مبيعات</string>
+    <string name="home_stat_visits">زيارات</string>
+    <string name="home_visits_completed">%1$d تمت</string>
+    <string name="home_visits_remaining">%1$d متبقية</string>
+    <string name="home_visits_today">زيارات اليوم</string>
+    <string name="home_welcome_name">أهلاً، %1$s</string>
+    <string name="item_singular">صنف</string>
+    <string name="items_plural">أصناف</string>
+    <string name="items_sales_col_item">الصنف</string>
+    <string name="items_sales_total_qty">إجمالي الكمية</string>
+    <string name="items_sales_unit_count">%1$d وحدة</string>
+    <string name="login_demo_credentials">بيانات تجريبية: admin / 1234</string>
+    <string name="login_phone_label">رقم الهاتف</string>
+    <string name="map_locating">جاري تحديد الموقع…</string>
+    <string name="map_navigation_fallback">تعذّر فتح الملاحة</string>
+    <string name="map_step_of">الخطوة %1$d من %2$d</string>
+    <string name="map_stop_navigation">إيقاف الملاحة</string>
+    <string name="method_cash_label">نقد</string>
+    <string name="method_cheque_label">شيك</string>
+    <string name="method_transfer_label">حوالة</string>
+    <string name="notes_optional">ملاحظات (اختياري)</string>
+    <string name="ok">حسناً</string>
+    <string name="overdue_label">متأخرات</string>
+    <string name="payment_cheque_line">شيك %1$s - %2$s</string>
+    <string name="payment_ref_line">حوالة %1$s</string>
+    <string name="payment_report_empty">لا توجد تحصيلات</string>
+    <string name="payment_report_payments_title">التحصيلات</string>
+    <string name="payment_status_pending">قيد المراجعة</string>
+    <string name="placeholder_logged_in">تم تسجيل الدخول</string>
+    <string name="placeholder_logout">تسجيل الخروج</string>
+    <string name="placeholder_phase2_next">الميزة القادمة قيد التطوير</string>
+    <string name="placeholder_phase_title">قيد التطوير</string>
+    <string name="print_action_print">طباعة</string>
+    <string name="print_action_share_pdf">مشاركة PDF</string>
+    <string name="print_col_discount">الخصم</string>
+    <string name="print_col_price">السعر</string>
+    <string name="print_col_qty">الكمية</string>
+    <string name="print_col_tax">الضريبة</string>
+    <string name="print_col_total">الإجمالي</string>
+    <string name="print_col_unit">الوحدة</string>
+    <string name="print_customer">العميل</string>
+    <string name="print_customer_code">رمز العميل</string>
+    <string name="print_customer_tax_number">الرقم الضريبي</string>
+    <string name="print_footer_legal">هذه الفاتورة صادرة إلكترونياً</string>
+    <string name="print_footer_thanks">شكراً لتعاملكم معنا</string>
+    <string name="print_notes_prefix">ملاحظات: %1$s</string>
+    <string name="print_payment_cash">نقد</string>
+    <string name="print_payment_credit">ذمم</string>
+    <string name="print_payment_transfer">حوالة</string>
+    <string name="print_salesman">المندوب</string>
+    <string name="print_signature_recipient">توقيع المستلم</string>
+    <string name="print_signature_stamp">الختم</string>
+    <string name="print_tax_inclusive">الأسعار شاملة الضريبة</string>
+    <string name="print_title">فاتورة</string>
+    <string name="print_total_discount">إجمالي الخصم</string>
+    <string name="print_voucher_type_request">طلب</string>
+    <string name="print_voucher_type_return">مرتجع</string>
+    <string name="print_voucher_type_sale">بيع</string>
+    <string name="receipt_detail_not_found">التحصيل غير موجود</string>
+    <string name="receipt_detail_ref_number">رقم المرجع</string>
+    <string name="receipt_voucher_title">سند قبض</string>
+    <string name="receivables_overdue_value">متأخر %1$s</string>
+    <string name="report_empty_period">لا توجد بيانات في هذه الفترة</string>
+    <string name="route_champion">بطل</string>
+    <string name="route_churn_pct">خطر %1$d٪</string>
+    <string name="route_no_results">لا توجد نتائج</string>
+    <string name="route_overdue_amount">متأخر %1$s</string>
+    <string name="route_remaining_count">%1$d متبقي</string>
+    <string name="route_search_hint">ابحث في المسار…</string>
+    <string name="route_tier_a">فئة A</string>
+    <string name="route_tier_b">فئة B</string>
+    <string name="route_tier_c">فئة C</string>
+    <string name="route_visited_count">%1$d تمت زيارته</string>
+    <string name="sale_add_to_cart">أضف إلى السلة</string>
+    <string name="sale_cart_empty_hint">ابحث عن منتج لإضافته إلى السلة</string>
+    <string name="sale_final_total">الإجمالي النهائي</string>
+    <string name="sale_line_discount">خصم السطر</string>
+    <string name="sale_line_discounts">خصومات الأسطر</string>
+    <string name="sale_no_products">لا توجد منتجات</string>
+    <string name="sale_required_qty">الكمية المطلوبة</string>
+    <string name="sale_total_price">السعر الإجمالي</string>
+    <string name="sale_unit_price">سعر الوحدة</string>
+    <string name="sale_update_line">تحديث السطر</string>
+    <string name="sale_voucher_discount_percent">نسبة</string>
+    <string name="sale_voucher_discount_value">قيمة</string>
+    <string name="segment_at_risk">معرّض للخطر</string>
+    <string name="segment_champions">الأبطال</string>
+    <string name="segment_dormant">خاملون</string>
+    <string name="segment_loyal">أوفياء</string>
+    <string name="segment_promising">واعدون</string>
+    <string name="segment_regular">عاديون</string>
+    <string name="settings_branch">الفرع</string>
+    <string name="settings_branch_placeholder">أدخل اسم الفرع</string>
+    <string name="settings_edit_price">تعديل السعر</string>
+    <string name="settings_edit_price_sublabel">السماح بتعديل أسعار البيع</string>
+    <string name="settings_ip_address">عنوان IP</string>
+    <string name="settings_language">اللغة</string>
+    <string name="settings_language_ar">العربية</string>
+    <string name="settings_language_en">الإنجليزية</string>
+    <string name="settings_max_order_voucher">الحد الأقصى لسند الطلب</string>
+    <string name="settings_max_return_voucher">الحد الأقصى لسند المرتجع</string>
+    <string name="settings_max_sale_voucher">الحد الأقصى لسند البيع</string>
+    <string name="settings_offline_mode">وضع عدم الاتصال</string>
+    <string name="settings_offline_mode_sublabel">العمل دون اتصال بالإنترنت</string>
+    <string name="settings_salesman_number">رقم المندوب</string>
+    <string name="settings_save">حفظ الإعدادات</string>
+    <string name="settings_saved">تم حفظ الإعدادات</string>
+    <string name="settings_section_appearance">المظهر</string>
+    <string name="settings_section_connection">الاتصال</string>
+    <string name="settings_section_permissions">الصلاحيات</string>
+    <string name="settings_section_salesman">بيانات المندوب</string>
+    <string name="settings_section_tax">الضريبة</string>
+    <string name="settings_section_voucher_limits">حدود السندات</string>
+    <string name="settings_tax_excluded">غير شامل الضريبة</string>
+    <string name="settings_tax_included">شامل الضريبة</string>
+    <string name="settings_tax_type">نوع الضريبة</string>
+    <string name="settings_theme">السمة</string>
+    <string name="settings_theme_dark">داكن</string>
+    <string name="settings_theme_light">فاتح</string>
+    <string name="settings_theme_system">حسب النظام</string>
+    <string name="settings_title">الإعدادات</string>
+    <string name="statement_credit_side">دائن</string>
+    <string name="statement_debit_side">مدين</string>
+    <string name="statement_empty">لا توجد حركات</string>
+    <string name="statement_summary">ملخص الحساب</string>
+    <string name="tier_badge_label">فئة %1$s</string>
+    <string name="txn_report_empty">لا توجد معاملات</string>
+    <string name="van_stock_category">الفئة</string>
+    <string name="van_stock_cost_price">سعر التكلفة</string>
+    <string name="van_stock_current_qty">الكمية الحالية</string>
+    <string name="van_stock_level">مستوى المخزون</string>
+    <string name="van_stock_low_stock_full">مخزون منخفض</string>
+    <string name="van_stock_no_results">لا توجد نتائج</string>
+    <string name="van_stock_out_of_stock_full">نفد المخزون</string>
+    <string name="van_stock_print">طباعة المخزون</string>
+    <string name="van_stock_qty_min_label">الكمية / الحد الأدنى</string>
+    <string name="van_stock_sale_price">سعر البيع</string>
+    <string name="van_stock_search_full_hint">ابحث عن صنف بالاسم أو الرمز…</string>
+    <string name="van_stock_stat_items">الأصناف</string>
+    <string name="van_stock_stat_low_stock">مخزون منخفض</string>
+    <string name="van_stock_stat_total_value">قيمة المخزون</string>
+    <string name="van_stock_unit">الوحدة</string>
+    <string name="view_all">عرض الكل</string>
+    <string name="visits_invoice_count">%1$d فاتورة</string>
+    <string name="visits_pill_remaining">المتبقون</string>
+    <string name="visits_pill_visited">تمت زيارتهم</string>
+    <string name="visits_rate_label">معدل الزيارة</string>
+    <string name="visits_total_sales_value">مبيعات %1$s</string>
+    <string name="voucher_add_to_cart">أضف إلى السلة</string>
+    <string name="voucher_cart_empty_hint">ابحث عن منتج لإضافته</string>
+    <string name="voucher_confirm_save_title">تأكيد حفظ السند</string>
+    <string name="voucher_delivery_date_label">تاريخ التسليم</string>
+    <string name="voucher_delivery_date_placeholder">اختر تاريخ التسليم</string>
+    <string name="voucher_detail_discount_short">خصم</string>
+    <string name="voucher_detail_not_found">السند غير موجود</string>
+    <string name="voucher_detail_title_generic">تفاصيل السند</string>
+    <string name="voucher_detail_title_request">تفاصيل سند الطلب</string>
+    <string name="voucher_detail_title_return">تفاصيل سند المرتجع</string>
+    <string name="voucher_detail_title_sale">تفاصيل سند البيع</string>
+    <string name="voucher_detail_totals">الإجماليات</string>
+    <string name="voucher_detail_unit_price">سعر الوحدة</string>
+    <string name="voucher_discount_hint_percent">٪</string>
+    <string name="voucher_discount_hint_value">د.أ</string>
+    <string name="voucher_discount_type_value">قيمة</string>
+    <string name="voucher_final_total">الإجمالي النهائي</string>
+    <string name="voucher_item_count">%1$d صنف</string>
+    <string name="voucher_line_discount">خصم السطر</string>
+    <string name="voucher_line_discount_total">إجمالي خصم الأسطر</string>
+    <string name="voucher_line_total">إجمالي السطر</string>
+    <string name="voucher_no_products">لا توجد منتجات</string>
+    <string name="voucher_notes_optional">ملاحظات (اختياري)</string>
+    <string name="voucher_payment_cash">نقد</string>
+    <string name="voucher_payment_transfer">حوالة</string>
+    <string name="voucher_qty_required">الكمية المطلوبة</string>
+    <string name="voucher_report_count_value">%1$d فاتورة</string>
+    <string name="voucher_report_empty">لا توجد فواتير في هذه الفترة</string>
+    <string name="voucher_status_fulfilled">منفّذ</string>
+    <string name="voucher_stock_available_count">متوفر: %1$d</string>
+    <string name="voucher_stock_low_count">منخفض: %1$d</string>
+    <string name="voucher_stock_required_units">المطلوب: %1$s وحدة</string>
+    <string name="voucher_stock_exceeds_warning">الكمية المطلوبة تتجاوز المتوفر في الفان</string>
+    <string name="return_source_pick">اختر فاتورة البيع للإرجاع</string>
+    <string name="return_source_title">فواتير البيع</string>
+    <string name="return_source_empty">لا توجد فواتير بيع لهذا العميل</string>
+    <string name="return_reference_label">مرجع الفاتورة: #%1$s</string>
+    <string name="return_change">تغيير</string>
+    <string name="voucher_unit_price">سعر الوحدة</string>
+    <string name="voucher_update_line">تحديث السطر</string>
+
+    <!-- Thermal printer -->
+    <string name="printer_thermal_print">طباعة حرارية</string>
+    <string name="printer_connect_title">توصيل الطابعة</string>
+    <string name="printer_connect">اتصال</string>
+    <string name="printer_disconnect">قطع الاتصال</string>
+    <string name="printer_cancel">إلغاء</string>
+    <string name="printer_refresh">تحديث</string>
+    <string name="printer_devices">الأجهزة المتاحة</string>
+    <string name="printer_no_devices">لا توجد أجهزة</string>
+    <string name="printer_type_usb">USB</string>
+    <string name="printer_type_bluetooth">بلوتوث</string>
+    <string name="printer_type_serial">منفذ تسلسلي</string>
+    <string name="printer_type_network">شبكة</string>
+    <string name="printer_address_bluetooth_hint">عنوان البلوتوث (MAC)</string>
+    <string name="printer_address_network_hint">عنوان الـ IP</string>
+    <string name="printer_status_connected">متصلة: %1$s</string>
+    <string name="printer_status_disconnected">الطابعة غير متصلة</string>
+    <string name="printer_status_connecting">جارٍ الاتصال…</string>
+    <string name="printer_status_error">خطأ في الاتصال بالطابعة</string>
+    <string name="printer_printing">جارٍ الطباعة…</string>
+    <string name="printer_print_success">تمت الطباعة بنجاح</string>
+    <string name="printer_print_failed">فشلت الطباعة</string>
+
+    <!-- i18n sweep: extracted hardcoded strings -->
+    <string name="action_exit">خروج</string>
+    <string name="common_retry">إعادة المحاولة</string>
+    <string name="dlg_leave_reason_title">سبب عدم الشراء</string>
+    <string name="dlg_leave_confirm_title">تأكيد الخروج</string>
+    <string name="dlg_leave_reason_hint">اكتب سبب الزيارة دون عملية بيع</string>
+    <string name="dlg_leave_confirm_msg">هل تريد الخروج من هذا العميل دون تسجيل عملية؟</string>
+    <string name="login_user_number_hint">رقم المستخدم</string>
+    <string name="login_brand">كاش فلو</string>
+    <string name="login_brand_subtitle">CashFlow — نظام مندوب الفان</string>
+    <string name="settings_server_section">خادم النظام</string>
+    <string name="settings_server_url_label">عنوان الخادم (API)</string>
+    <string name="settings_refreshing">جارٍ التحديث…</string>
+    <string name="settings_refresh_desc">تحديث العملاء والأصناف من الخادم</string>
+    <string name="settings_enter_server_first">أدخل عنوان الخادم أولاً</string>
+    <string name="settings_refresh_success">تم التحديث: %1$d عميل، %2$d صنف</string>
+    <string name="settings_refresh_failed">فشل الاتصال بالخادم</string>
+    <string name="route_today_title">خط سير اليوم</string>
+    <string name="route_no_visits_today">لا توجد زيارات مجدولة اليوم</string>
+    <string name="route_note_prefix">ملاحظة: %1$s</string>
+    <string name="route_done_check">تم ✓</string>
+    <string name="route_complete">إنجاز</string>
+
+    <!-- Voucher labels -->
+    <string name="tax_label_inclusive">الضريبة (مضمّنة)</string>
+    <string name="tax_label_default">الضريبة</string>
+    <string name="voucher_title_sale">فاتورة بيع</string>
+    <string name="voucher_title_return">فاتورة مرتجع</string>
+    <string name="voucher_title_order">طلب مسبق</string>
+    <string name="voucher_save_sale">حفظ الفاتورة</string>
+    <string name="voucher_save_return_approval">طلب موافقة المدير</string>
+    <string name="voucher_save_discount_approval">طلب موافقة المدير على الخصم</string>
+    <string name="voucher_save_return">حفظ المرتجع</string>
+    <string name="voucher_save_order">حفظ الطلب</string>
+    <string name="voucher_confirm_return">سيتم تسجيل المرتجع وإعادة المخزون وتعديل الرصيد</string>
+    <string name="voucher_confirm_order">سيتم تسجيل الطلب للمراجعة</string>
+    <string name="return_reason_wrong_order">خطأ في الطلب</string>
+    <string name="return_reason_other">آخر</string>
+
+    <!-- Voucher / collection errors -->
+    <string name="err_unexpected">حدث خطأ غير متوقع</string>
+    <string name="err_cart_empty">السلة فارغة</string>
+    <string name="err_select_source_invoice">اختر فاتورة البيع المرجعية أولاً</string>
+    <string name="err_select_return_reason">اختر سبب الإرجاع</string>
+    <string name="err_source_invoice_not_found">لم يتم العثور على فاتورة بيع بهذا الرقم لهذا العميل</string>
+    <string name="err_stock_unavailable">الكمية غير متوفرة في الفان (%1$d متاح من %2$d)</string>
+    <string name="err_approval_send_failed">تعذّر إرسال طلب الموافقة</string>
+    <string name="err_approved_local_save_failed">تمت الموافقة لكن تعذّر حفظ المرتجع محليًا</string>
+    <string name="err_return_rejected_note">تم رفض طلب المرتجع من قبل المدير: %1$s</string>
+    <string name="err_return_rejected">تم رفض طلب المرتجع من قبل المدير</string>
+    <string name="err_enter_valid_amount">أدخل مبلغ صحيح</string>
+    <string name="err_enter_valid_cheque_amount">أدخل مبلغ صحيح للشيك %1$d</string>
+    <string name="err_enter_cheque_number">أدخل رقم الشيك %1$d</string>
+    <string name="err_select_cheque_bank">اختر البنك للشيك %1$d</string>
+
+    <!-- Daily / cash-flow summary breakdown -->
+    <string name="cash_flow_section_sales">المبيعات</string>
+    <string name="cash_flow_section_returns">المرتجعات</string>
+    <string name="cash_flow_section_collections">التحصيلات</string>
+    <string name="cash_flow_sales_cash">مبيعات نقد</string>
+    <string name="cash_flow_sales_credit">مبيعات ذمم</string>
+    <string name="cash_flow_returns_cash">مرتجع نقد</string>
+    <string name="cash_flow_returns_credit">مرتجع ذمم</string>
+    <string name="cash_flow_collection_cash">تحصيل نقد</string>
+    <string name="cash_flow_collection_cheque">تحصيل شيكات</string>
+    <string name="cash_flow_total_cash">إجمالي النقد</string>
+    <string name="cash_flow_additional_info">معلومات إضافية</string>
+    <string name="cash_flow_total_cheque_collection">إجمالي شيكات التحصيل</string>
+    <string name="cash_flow_total_credit_sales">إجمالي مبيعات الذمم</string>
+</resources>
