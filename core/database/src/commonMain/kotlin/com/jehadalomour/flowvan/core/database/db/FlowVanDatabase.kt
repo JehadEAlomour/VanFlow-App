@@ -42,7 +42,7 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         RouteStopEntity::class,
         AppSettingsEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -51,6 +51,8 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         AutoMigration(from = 4, to = 5),
         // v6: invoices.chosenFreeItemsCsv (nullable) for ITEM_QTY_REWARD gift picks.
         AutoMigration(from = 5, to = 6),
+        // v7: app_settings company profile columns (companyNameAr/En, companyTaxNumber).
+        AutoMigration(from = 6, to = 7),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)

@@ -1,5 +1,6 @@
 package com.jehadalomour.flowvan.core.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -17,4 +18,8 @@ data class AppSettingsEntity(
     val branch: String = "",
     val canEditPrice: Boolean = false,
     val offlineModeEnabled: Boolean = false,
+    // v7: company profile cached from GET /company-info, used by the printed voucher header.
+    @ColumnInfo(defaultValue = "''") val companyNameAr: String = "",
+    @ColumnInfo(defaultValue = "''") val companyNameEn: String = "",
+    @ColumnInfo(defaultValue = "''") val companyTaxNumber: String = "",
 )

@@ -9,7 +9,7 @@ fun printModule(): Module = module {
         VoucherDetailViewModel(invoiceId, get(), get())
     }
     viewModel { (invoiceId: String) ->
-        VoucherPrintViewModel(invoiceId, get(), get(), get(), get(), get(), get())
+        VoucherPrintViewModel(invoiceId, get(), get(), get(), get(), get(), get(), get(), get())
     }
     viewModel { (paymentId: String) ->
         ReceiptDetailViewModel(paymentId, get())

@@ -1,6 +1,7 @@
 package com.jehadalomour.flowvan.feature.print
 
 import com.jehadalomour.flowvan.core.model.InvoiceLine
+import com.jehadalomour.flowvan.core.model.VoucherTemplate
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
 import com.jehadalomour.flowvan.core.domain.printer.PrinterTarget
 import com.jehadalomour.flowvan.core.domain.printer.PrinterType
@@ -17,12 +18,22 @@ data class VoucherPrintState(
     val customerTaxNumber: String? = null,
     val salesmanNameAr: String = "",
     val lines: List<InvoiceLine> = emptyList(),
+    /** Gift/free items (ITEM_QTY_REWARD picks) resolved for display; unitPrice/lineTotal = 0. */
+    val freeLines: List<InvoiceLine> = emptyList(),
     val subtotal: Double = 0.0,
     val discountAmount: Double = 0.0,
     val taxAmount: Double = 0.0,
     val total: Double = 0.0,
     val notes: String? = null,
     val branch: String = "",
+    // Company header — server-first (GET /company-info) when online, else DB cache.
+    val companyNameAr: String = "",
+    val companyNameEn: String = "",
+    val companyTaxNumber: String = "",
+    /** Tax-QR payload. Null → no QR available, so the QR block is omitted entirely. */
+    val qrData: String? = null,
+    /** Render configuration. Jordan defaults today; server-fed in the next step. */
+    val template: VoucherTemplate = VoucherTemplate(),
 
     // ── Thermal printer ──────────────────────────────────────────────────────
     val printerState: PrinterState = PrinterState.Disconnected,

@@ -50,6 +50,7 @@ import org.koin.core.parameter.parametersOf
 fun VoucherDetailScreen(
     invoiceId: String,
     onBack: () -> Unit,
+    onPrint: (invoiceId: String) -> Unit,
     viewModel: VoucherDetailViewModel = koinViewModel { parametersOf(invoiceId) },
 ) {
     val state by viewModel.state.collectAsState()
@@ -58,7 +59,7 @@ fun VoucherDetailScreen(
     Surface(modifier = Modifier.fillMaxSize(), color = Fv.BgDeepest) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
@@ -80,6 +81,18 @@ fun VoucherDetailScreen(
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
+                Spacer(Modifier.weight(1f))
+                // Print the voucher — opens the print/preview screen.
+                if (entity != null) {
+                    IconButton(onClick = { onPrint(invoiceId) }) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_receipt),
+                            contentDescription = stringResource(Res.string.print_action_print),
+                            tint = Fv.Blue,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                }
             }
 
             when {
