@@ -18,6 +18,9 @@ fun AppSettingsEntity.toDomain(): AppSettings = AppSettings(
     branch = branch,
     canEditPrice = canEditPrice,
     offlineModeEnabled = offlineModeEnabled,
+    companyNameAr = companyNameAr,
+    companyNameEn = companyNameEn,
+    companyTaxNumber = companyTaxNumber,
 )
 
 fun AppSettings.toEntity(): AppSettingsEntity = AppSettingsEntity(
@@ -33,4 +36,7 @@ fun AppSettings.toEntity(): AppSettingsEntity = AppSettingsEntity(
     branch = branch,
     canEditPrice = canEditPrice,
     offlineModeEnabled = offlineModeEnabled,
+    companyNameAr = companyNameAr,
+    companyNameEn = companyNameEn,
+    companyTaxNumber = companyTaxNumber,
 )

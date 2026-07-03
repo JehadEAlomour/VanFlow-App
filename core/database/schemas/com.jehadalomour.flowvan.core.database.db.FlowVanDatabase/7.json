@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 6,
-    "identityHash": "2b21bf3fd8868e4218e21c67696eb7b3",
+    "version": 7,
+    "identityHash": "32758add1af7ab3cf173dbfffd85fc14",
     "entities": [
       {
         "tableName": "users",
@@ -756,7 +756,7 @@
       },
       {
         "tableName": "app_settings",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `theme` TEXT NOT NULL, `language` TEXT NOT NULL, `taxType` TEXT NOT NULL, `ipAddress` TEXT NOT NULL, `salesmanNumber` TEXT NOT NULL, `maxSaleVoucherNumber` INTEGER NOT NULL, `maxReturnVoucherNumber` INTEGER NOT NULL, `maxOrderVoucherNumber` INTEGER NOT NULL, `branch` TEXT NOT NULL, `canEditPrice` INTEGER NOT NULL, `offlineModeEnabled` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `theme` TEXT NOT NULL, `language` TEXT NOT NULL, `taxType` TEXT NOT NULL, `ipAddress` TEXT NOT NULL, `salesmanNumber` TEXT NOT NULL, `maxSaleVoucherNumber` INTEGER NOT NULL, `maxReturnVoucherNumber` INTEGER NOT NULL, `maxOrderVoucherNumber` INTEGER NOT NULL, `branch` TEXT NOT NULL, `canEditPrice` INTEGER NOT NULL, `offlineModeEnabled` INTEGER NOT NULL, `companyNameAr` TEXT NOT NULL DEFAULT '', `companyNameEn` TEXT NOT NULL DEFAULT '', `companyTaxNumber` TEXT NOT NULL DEFAULT '', PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -829,6 +829,27 @@
             "columnName": "offlineModeEnabled",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "companyNameAr",
+            "columnName": "companyNameAr",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "companyNameEn",
+            "columnName": "companyNameEn",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "companyTaxNumber",
+            "columnName": "companyTaxNumber",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
           }
         ],
         "primaryKey": {
@@ -841,7 +862,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2b21bf3fd8868e4218e21c67696eb7b3')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '32758add1af7ab3cf173dbfffd85fc14')"
     ]
   }
 }

@@ -44,8 +44,8 @@ class RefreshCatalogUseCase(
 
     suspend operator fun invoke(): Result<CatalogRefresh> {
         if (!apiConfig.isEnabled) return Result.success(CatalogRefresh(0, 0, 0, skipped = true))
-        syncPermissions()
         syncCompanyTaxMode()
+        syncPermissions()
         return try {
             coroutineScope {
                 val customersJob = async {

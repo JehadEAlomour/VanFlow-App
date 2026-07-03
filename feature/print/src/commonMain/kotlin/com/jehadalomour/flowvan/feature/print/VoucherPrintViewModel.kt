@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jehadalomour.flowvan.core.database.dao.InvoiceDao
 import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
+import com.jehadalomour.flowvan.core.data.repository.CompanyInfoRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
+import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.UserRepository
 import com.jehadalomour.flowvan.core.model.InvoiceLine
 import com.jehadalomour.flowvan.core.domain.printer.PaperWidth
@@ -28,6 +30,8 @@ class VoucherPrintViewModel(
     private val customers: CustomerRepository,
     private val users: UserRepository,
     private val appSettings: AppSettingsRepository,
+    private val companyInfo: CompanyInfoRepository,
+    private val products: ProductRepository,
     private val json: Json,
     private val printer: ReceiptPrinter,
 ) : ViewModel() {
@@ -54,6 +58,7 @@ class VoucherPrintViewModel(
                 val customer = customers.findById(entity.customerId)
                 val salesman = users.findById(entity.salesmanId)
                 val settings = appSettings.get()
+                val freeLines = resolveFreeLines(entity.chosenFreeItemsCsv)
 
                 _state.update {
                     it.copy(
@@ -68,6 +73,7 @@ class VoucherPrintViewModel(
                         customerTaxNumber = customer?.taxNumber,
                         salesmanNameAr = salesman?.nameAr.orEmpty(),
                         lines = lines,
+                        freeLines = freeLines,
                         subtotal = entity.subtotal,
                         discountAmount = entity.discountAmount,
                         taxAmount = entity.taxAmount,
@@ -83,6 +89,48 @@ class VoucherPrintViewModel(
         printer.state
             .onEach { s -> _state.update { it.copy(printerState = s) } }
             .launchIn(viewModelScope)
+
+        // Company header: server-first when online, else the DB cache. Best-effort.
+        viewModelScope.launch {
+            val info = companyInfo.getForPrint()
+            _state.update {
+                it.copy(
+                    companyNameAr = info.nameAr,
+                    companyNameEn = info.nameEn,
+                    companyTaxNumber = info.taxNumber,
+                )
+            }
+        }
+    }
+
+    /**
+     * Gift picks are stored only as a CSV of item numbers (SKUs); the server expands them into
+     * free lines on sync. For the printed copy we resolve them locally from the product cache —
+     * duplicates in the CSV become quantity — as zero-priced display lines.
+     */
+    private suspend fun resolveFreeLines(csv: String?): List<InvoiceLine> {
+        val counts = csv?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?.groupingBy { it }
+            ?.eachCount()
+            .orEmpty()
+        return counts.map { (sku, qty) ->
+            val product = products.findBySku(sku)
+            InvoiceLine(
+                productId = product?.id.orEmpty(),
+                sku = sku,
+                nameAr = product?.nameAr ?: sku,
+                qty = qty.toDouble(),
+                unitPrice = 0.0,
+                discountPct = 0.0,
+                lineTotal = 0.0,
+                taxType = "EXEMPT",
+                taxAmount = 0.0,
+                unit = product?.unit.orEmpty(),
+                taxRate = 0.0,
+            )
+        }
     }
 
     fun onEvent(event: VoucherPrintEvent) {

@@ -16,6 +16,8 @@ class ProductRepository(private val dao: ProductDao) {
 
     suspend fun findById(id: String): Product? = dao.findById(id)?.toDomain()
 
+    suspend fun findBySku(sku: String): Product? = dao.findBySku(sku)?.toDomain()
+
     suspend fun adjustStock(id: String, delta: Int) = dao.adjustStock(id, delta)
 
     /** Set absolute van quantity (used when pulling per-rep stock from the backend). */

@@ -17,4 +17,8 @@ data class AppSettings(
     val branch: String = "",
     val canEditPrice: Boolean = false,
     val offlineModeEnabled: Boolean = false,
+    // Company profile cached from GET /company-info, used by the printed voucher header.
+    val companyNameAr: String = "",
+    val companyNameEn: String = "",
+    val companyTaxNumber: String = "",
 )

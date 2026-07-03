@@ -42,14 +42,19 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         RouteStopEntity::class,
         AppSettingsEntity::class,
     ],
-    version = 6,
+    version = 8,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
         AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5),
-        AutoMigration(from = 5, to = 6), // products.imageUrl (nullable)
+        // v6: invoices.chosenFreeItemsCsv (nullable) for ITEM_QTY_REWARD gift picks.
+        AutoMigration(from = 5, to = 6),
+        // v7: app_settings company profile columns (companyNameAr/En, companyTaxNumber).
+        AutoMigration(from = 6, to = 7),
+        // v8: products.imageUrl (nullable) for catalog/cart thumbnails.
+        AutoMigration(from = 7, to = 8),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)

@@ -13,6 +13,7 @@ import com.jehadalomour.flowvan.core.network.http.jodToFils
 import com.jehadalomour.flowvan.core.network.http.toAmountString
 import com.jehadalomour.flowvan.core.network.http.toPercentString
 import com.jehadalomour.flowvan.core.model.InvoiceLine
+import kotlin.math.roundToLong
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import kotlinx.serialization.json.Json
@@ -106,6 +107,7 @@ fun InvoiceEntity.toVoucherRequest(userCode: String, customerNumber: String?, js
                 unitName = line.unit.ifBlank { null },
                 unitCode = line.unit.ifBlank { null },
                 unitBaseQty = line.unitConversionQty.roundToInt().takeIf { it > 0 },
+
             )
         },
         payments = payments,

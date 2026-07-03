@@ -69,6 +69,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.jehadalomour.flowvan.feature.voucher.AppBackHandler
 import com.jehadalomour.flowvan.core.designsystem.components.CartItemCard
 import com.jehadalomour.flowvan.core.designsystem.components.Fv
+import com.jehadalomour.flowvan.core.designsystem.components.ProductAvatar
 import com.jehadalomour.flowvan.core.designsystem.components.ProductThumb
 import com.jehadalomour.flowvan.core.designsystem.components.ProductImageViewerDialog
 import co.touchlab.kermit.Logger

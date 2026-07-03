@@ -307,7 +307,11 @@ fun FlowVanNavHost(
             arguments = listOf(navArgument("invoiceId") { type = NavType.StringType }),
         ) { entry ->
             val id = entry.arguments?.getString("invoiceId").orEmpty()
-            VoucherDetailScreen(invoiceId = id, onBack = { navController.popBackStack() })
+            VoucherDetailScreen(
+                invoiceId = id,
+                onBack = { navController.popBackStack() },
+                onPrint = { iid -> navController.navigate(Routes.voucherPrint(iid)) },
+            )
         }
         composable(
             Routes.RECEIPT_DETAIL,

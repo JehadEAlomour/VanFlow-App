@@ -3,6 +3,7 @@ package com.jehadalomour.flowvan.shared.di
 import com.jehadalomour.flowvan.core.database.db.FlowVanDatabase
 import com.jehadalomour.flowvan.core.database.db.buildFlowVanDatabase
 import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
+import com.jehadalomour.flowvan.core.data.repository.CompanyInfoRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.data.repository.PaymentRepository
@@ -88,6 +89,7 @@ fun sharedModule(): Module = module {
     single { UserRepository(get()) }
     single { CustomerRepository(get()) }
     single { AppSettingsRepository(get()) }
+    single { CompanyInfoRepository(get(), get(), get()) }
     single { ProductRepository(get()) }
     single { ProductUnitRepository(get()) }
     single { InvoiceRepository(get()) }

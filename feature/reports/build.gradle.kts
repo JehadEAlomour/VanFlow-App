@@ -21,6 +21,7 @@ dependencies {
     "commonMainImplementation"(libs.kotlinx.serialization.json)
 
     "commonMainImplementation"(projects.core.model)
+    "commonMainImplementation"(projects.core.domain)
     "commonMainImplementation"(projects.core.common)
     "commonMainImplementation"(projects.core.data)
     "commonMainImplementation"(projects.core.database)
