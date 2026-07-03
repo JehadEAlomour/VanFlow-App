@@ -7,14 +7,12 @@ import com.jehadalomour.flowvan.core.network.api.ProductApi
 import com.jehadalomour.flowvan.core.network.api.RepApi
 import com.jehadalomour.flowvan.core.network.mapper.toEntity
 import com.jehadalomour.flowvan.core.network.http.ApiConfig
-import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.core.network.http.OffsetPage
 import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
-import com.jehadalomour.flowvan.core.model.TaxType
 import com.jehadalomour.flowvan.core.model.ProductUnit
 import com.jehadalomour.flowvan.core.model.TaxType
 import kotlinx.coroutines.async
