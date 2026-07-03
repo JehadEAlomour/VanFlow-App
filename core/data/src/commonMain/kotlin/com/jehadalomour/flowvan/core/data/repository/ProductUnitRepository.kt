@@ -22,4 +22,6 @@ class ProductUnitRepository(private val dao: ProductUnitDao) {
     suspend fun deleteById(id: String) = dao.deleteById(id)
 
     suspend fun deleteByProduct(productId: String) = dao.deleteByProduct(productId)
+
+    suspend fun deleteAll() = dao.deleteAll()
 }

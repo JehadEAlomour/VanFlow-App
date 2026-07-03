@@ -33,10 +33,20 @@ data class CashFlowReportState(
     val from: Long = 0L,
     val to: Long = 0L,
     val entries: List<CashEntry> = emptyList(),
+    // Sales split by payment method.
+    val salesCashTotal: Double = 0.0,
+    val salesCreditTotal: Double = 0.0,
     val salesTotal: Double = 0.0,
+    // Returns split. All returns are treated as cash refunds (the return flow records no method).
+    val returnsCashTotal: Double = 0.0,
+    val returnsCreditTotal: Double = 0.0,
     val returnsTotal: Double = 0.0,
+    // Collections split by method.
+    val collectionsCashTotal: Double = 0.0,
+    val collectionsChequeTotal: Double = 0.0,
     val collectionsTotal: Double = 0.0,
-    val netCash: Double = 0.0,
+    // Net cash in the drawer = cash sales + cash collections − cash returns.
+    val totalCash: Double = 0.0,
 )
 
 class CashFlowReportViewModel(
@@ -83,18 +93,44 @@ class CashFlowReportViewModel(
                     payments.forEach { pay -> add(CashEntry.Collection(pay)) }
                 }.sortedByDescending { it.timestampMs }
 
-                val sales = invoices.filter { it.type == "SALE" }.sumOf { it.total }
-                val returns = invoices.filter { it.type == "RETURN" }.sumOf { it.total }
-                val collections = payments.sumOf { it.amount }
+                val saleInvoices = invoices.filter { it.type == "SALE" }
+                val returnInvoices = invoices.filter { it.type == "RETURN" }
+
+                // Sales: cash vs credit (a null method counts as credit — see CreateSaleVoucherUseCase).
+                val salesCash = saleInvoices.filter { it.paymentMethod == "CASH" }.sumOf { it.total }
+                val salesCredit = saleInvoices
+                    .filter { it.paymentMethod == "CREDIT" || it.paymentMethod == null }
+                    .sumOf { it.total }
+                val salesTotal = saleInvoices.sumOf { it.total }
+
+                // Returns: split by refund method. A CREDIT return is a credit note;
+                // anything else (CASH, or older returns saved without a method) is cash.
+                val returnsTotal = returnInvoices.sumOf { it.total }
+                val returnsCredit = returnInvoices.filter { it.paymentMethod == "CREDIT" }.sumOf { it.total }
+                val returnsCash = returnInvoices.filter { it.paymentMethod != "CREDIT" }.sumOf { it.total }
+
+                // Collections: cash vs cheque (other methods still roll into the overall total).
+                val collectionsCash = payments.filter { it.method == "CASH" }.sumOf { it.amount }
+                val collectionsCheque = payments.filter { it.method == "CHEQUE" }.sumOf { it.amount }
+                val collectionsTotal = payments.sumOf { it.amount }
+
+                // Net cash in the drawer.
+                val totalCash = salesCash + collectionsCash - returnsCash
 
                 _state.update {
                     it.copy(
                         from = _from.value, to = _to.value,
                         entries = entries,
-                        salesTotal = sales,
-                        returnsTotal = returns,
-                        collectionsTotal = collections,
-                        netCash = collections - returns,
+                        salesCashTotal = salesCash,
+                        salesCreditTotal = salesCredit,
+                        salesTotal = salesTotal,
+                        returnsCashTotal = returnsCash,
+                        returnsCreditTotal = returnsCredit,
+                        returnsTotal = returnsTotal,
+                        collectionsCashTotal = collectionsCash,
+                        collectionsChequeTotal = collectionsCheque,
+                        collectionsTotal = collectionsTotal,
+                        totalCash = totalCash,
                     )
                 }
             }

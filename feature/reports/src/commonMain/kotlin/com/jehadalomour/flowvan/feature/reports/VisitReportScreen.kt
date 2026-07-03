@@ -142,7 +142,24 @@ private fun VisitedCustomerRow(vc: VisitedCustomer) {
             }
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(vc.customer.nameAr, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(vc.customer.nameAr, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    if (!vc.onRoute) {
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .background(Fv.Amber.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                        ) {
+                            Text(
+                                stringResource(Res.string.visits_off_route),
+                                color = Fv.Amber,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                }
                 Text(vc.customer.area, color = Fv.TextMid, fontSize = 11.sp)
             }
             if (vc.visited) {

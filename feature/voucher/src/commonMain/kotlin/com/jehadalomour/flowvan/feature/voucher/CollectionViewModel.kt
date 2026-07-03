@@ -7,6 +7,9 @@ import com.jehadalomour.flowvan.core.datastore.SessionStore
 import com.jehadalomour.flowvan.core.model.PaymentMethod
 import com.jehadalomour.flowvan.core.domain.usecase.CollectionValidationException
 import com.jehadalomour.flowvan.core.domain.usecase.RecordCollectionUseCase
+import com.jehadalomour.flowvan.core.designsystem.resources.Res
+import com.jehadalomour.flowvan.core.designsystem.resources.*
+import org.jetbrains.compose.resources.getString
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,11 +28,28 @@ class CollectionViewModel(
     private val _state = MutableStateFlow(CollectionState())
     val state: StateFlow<CollectionState> = _state.asStateFlow()
 
+    // Pre-fill the amount with the customer's outstanding balance once, on first load.
+    private var didPrefillAmount = false
+
     init {
         customers.observeById(customerId)
-            .onEach { c -> _state.update { it.copy(customer = c) } }
+            .onEach { c ->
+                val prefill = !didPrefillAmount && c != null && _state.value.amountText.isBlank()
+                if (c != null) didPrefillAmount = true
+                _state.update {
+                    it.copy(
+                        customer = c,
+                        amountText = if (prefill && c!!.balance > 0.0) amountToText(c.balance) else it.amountText,
+                    )
+                }
+            }
             .launchIn(viewModelScope)
     }
+
+    /** Render a balance as a clean editable amount string (whole numbers without ".0", else up to fils). */
+    private fun amountToText(a: Double): String =
+        if (a == a.toLong().toDouble()) a.toLong().toString()
+        else (kotlin.math.round(a * 1000) / 1000.0).toString()
 
     fun onEvent(event: CollectionEvent) {
         when (event) {
@@ -90,7 +110,8 @@ class CollectionViewModel(
     private suspend fun saveSingle(s: CollectionState) {
         val amount = s.amountText.toDoubleOrNull()
         if (amount == null) {
-            _state.update { it.copy(isSaving = false, errorAr = "أدخل مبلغ صحيح") }; return
+            val msg = getString(Res.string.err_enter_valid_amount)
+            _state.update { it.copy(isSaving = false, errorAr = msg) }; return
         }
         val result = recordCollection(
             customerId = customerId,
@@ -106,7 +127,7 @@ class CollectionViewModel(
         result.fold(
             onSuccess = { entity -> _state.update { it.copy(isSaving = false, savedNumber = entity.number) } },
             onFailure = { ex ->
-                val msg = (ex as? CollectionValidationException)?.messageAr ?: "حدث خطأ غير متوقع"
+                val msg = (ex as? CollectionValidationException)?.messageAr ?: getString(Res.string.err_unexpected)
                 _state.update { it.copy(isSaving = false, errorAr = msg) }
             },
         )
@@ -116,13 +137,16 @@ class CollectionViewModel(
         val cheques = s.cheques
         cheques.forEachIndexed { idx, c ->
             if (c.amount == null || c.amount!! <= 0) {
-                _state.update { it.copy(isSaving = false, errorAr = "أدخل مبلغ صحيح للشيك ${idx + 1}") }; return
+                val msg = getString(Res.string.err_enter_valid_cheque_amount, idx + 1)
+                _state.update { it.copy(isSaving = false, errorAr = msg) }; return
             }
             if (c.number.isBlank()) {
-                _state.update { it.copy(isSaving = false, errorAr = "أدخل رقم الشيك ${idx + 1}") }; return
+                val msg = getString(Res.string.err_enter_cheque_number, idx + 1)
+                _state.update { it.copy(isSaving = false, errorAr = msg) }; return
             }
             if (c.bank == null) {
-                _state.update { it.copy(isSaving = false, errorAr = "اختر البنك للشيك ${idx + 1}") }; return
+                val msg = getString(Res.string.err_select_cheque_bank, idx + 1)
+                _state.update { it.copy(isSaving = false, errorAr = msg) }; return
             }
         }
         var lastNumber: String? = null
@@ -141,7 +165,7 @@ class CollectionViewModel(
             result.fold(
                 onSuccess = { lastNumber = it.number },
                 onFailure = { ex ->
-                    val msg = (ex as? CollectionValidationException)?.messageAr ?: "حدث خطأ غير متوقع"
+                    val msg = (ex as? CollectionValidationException)?.messageAr ?: getString(Res.string.err_unexpected)
                     _state.update { it.copy(isSaving = false, errorAr = msg) }; return
                 },
             )

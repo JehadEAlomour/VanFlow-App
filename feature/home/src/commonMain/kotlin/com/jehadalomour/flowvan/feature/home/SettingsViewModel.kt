@@ -6,6 +6,11 @@ import com.jehadalomour.flowvan.core.network.http.ApiConfig
 import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.core.model.AppSettings
 import com.jehadalomour.flowvan.core.domain.usecase.RefreshCatalogUseCase
+import com.jehadalomour.flowvan.core.designsystem.resources.Res
+import com.jehadalomour.flowvan.core.designsystem.resources.settings_enter_server_first
+import com.jehadalomour.flowvan.core.designsystem.resources.settings_refresh_failed
+import com.jehadalomour.flowvan.core.designsystem.resources.settings_refresh_success
+import org.jetbrains.compose.resources.getString
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -71,21 +76,20 @@ class SettingsViewModel(
         // Persist the URL first so the API client uses it immediately.
         apiConfig.baseUrl = _state.value.apiBaseUrl
         if (!apiConfig.isEnabled) {
-            _state.update { it.copy(refreshMessage = "أدخل عنوان الخادم أولاً") }
+            viewModelScope.launch {
+                val msg = getString(Res.string.settings_enter_server_first)
+                _state.update { it.copy(refreshMessage = msg) }
+            }
             return
         }
         _state.update { it.copy(isRefreshing = true, refreshMessage = null) }
         viewModelScope.launch {
             val result = refreshCatalog()
-            _state.update {
-                it.copy(
-                    isRefreshing = false,
-                    refreshMessage = result.fold(
-                        onSuccess = { r -> "تم التحديث: ${r.customers} عميل، ${r.products} صنف" },
-                        onFailure = { "فشل الاتصال بالخادم" },
-                    ),
-                )
-            }
+            val message = result.fold(
+                onSuccess = { r -> getString(Res.string.settings_refresh_success, r.customers, r.products) },
+                onFailure = { getString(Res.string.settings_refresh_failed) },
+            )
+            _state.update { it.copy(isRefreshing = false, refreshMessage = message) }
         }
     }
 

@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.core.designsystem.components.Fv
+import com.jehadalomour.flowvan.core.designsystem.components.ProductThumb
 import com.jehadalomour.flowvan.core.designsystem.resources.Res
 import com.jehadalomour.flowvan.core.designsystem.resources.*
 import org.jetbrains.compose.resources.painterResource
@@ -342,21 +343,30 @@ private fun StockCard(product: Product, nowMs: Long, onClick: () -> Unit) {
                 modifier = Modifier.padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Category avatar
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(avatarBg)
-                        .border(0.5.dp, Fv.Border, RoundedCornerShape(14.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painterResource(Res.drawable.ic_inventory),
-                        contentDescription = null,
-                        tint = avatarFg,
-                        modifier = Modifier.size(22.dp),
+                // Product image when available, else the category icon avatar.
+                if (!product.imageUrl.isNullOrBlank()) {
+                    ProductThumb(
+                        imageUrl = product.imageUrl,
+                        seed = product.category,
+                        letter = product.nameAr.firstOrNull()?.toString() ?: "؟",
+                        size = 48.dp,
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(avatarBg)
+                            .border(0.5.dp, Fv.Border, RoundedCornerShape(14.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painterResource(Res.drawable.ic_inventory),
+                            contentDescription = null,
+                            tint = avatarFg,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                 }
                 Spacer(Modifier.width(12.dp))
                 // Product info

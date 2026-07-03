@@ -14,6 +14,8 @@ import com.jehadalomour.flowvan.core.network.http.toAmountString
 import com.jehadalomour.flowvan.core.network.http.toPercentString
 import com.jehadalomour.flowvan.core.model.InvoiceLine
 import kotlin.math.roundToLong
+import kotlin.math.roundToInt
+import kotlin.math.roundToLong
 import kotlinx.serialization.json.Json
 
 /**
@@ -100,6 +102,12 @@ fun InvoiceEntity.toVoucherRequest(userCode: String, customerNumber: String?, js
                 // EXACT value, not a rounded percentage (see note above).
                 discountPercentage = "0",
                 discountValue = if (discFils > 0L) (discFils / 1000.0).toAmountString() else null,
+                // The line's chosen unit — name + pieces-per-unit, so the server
+                // moves the right base stock and the ERP gets the per-piece price.
+                unitName = line.unit.ifBlank { null },
+                unitCode = line.unit.ifBlank { null },
+                unitBaseQty = line.unitConversionQty.roundToInt().takeIf { it > 0 },
+
             )
         },
         payments = payments,

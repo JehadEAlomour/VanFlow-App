@@ -1,5 +1,6 @@
 package com.jehadalomour.flowvan.feature.reports
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -80,15 +81,42 @@ fun CashFlowReportScreen(
                     colors = CardDefaults.cardColors(containerColor = Fv.Surface),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Sales — cash vs credit
+                        SectionLabel(stringResource(Res.string.cash_flow_section_sales))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SummaryPill(stringResource(Res.string.all_sales_filter_sales), state.salesTotal.formatJod(AppLanguage.AR), Fv.Blue, Modifier.weight(1f))
-                            SummaryPill(stringResource(Res.string.all_sales_filter_returns), state.returnsTotal.formatJod(AppLanguage.AR), Fv.Red, Modifier.weight(1f))
+                            SummaryPill(stringResource(Res.string.cash_flow_sales_cash), state.salesCashTotal.formatJod(AppLanguage.AR), Fv.Blue, Modifier.weight(1f))
+                            SummaryPill(stringResource(Res.string.cash_flow_sales_credit), state.salesCreditTotal.formatJod(AppLanguage.AR), Fv.Amber, Modifier.weight(1f))
                         }
+                        // Returns — cash vs credit (all returns treated as cash)
+                        SectionLabel(stringResource(Res.string.cash_flow_section_returns))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SummaryPill(stringResource(Res.string.cash_flow_pill_collections), state.collectionsTotal.formatJod(AppLanguage.AR), Fv.Green, Modifier.weight(1f))
-                            SummaryPill(stringResource(Res.string.cash_flow_net), state.netCash.formatJod(AppLanguage.AR),
-                                if (state.netCash >= 0) Fv.Amber else Fv.Red, Modifier.weight(1f))
+                            SummaryPill(stringResource(Res.string.cash_flow_returns_cash), state.returnsCashTotal.formatJod(AppLanguage.AR), Fv.Red, Modifier.weight(1f))
+                            SummaryPill(stringResource(Res.string.cash_flow_returns_credit), state.returnsCreditTotal.formatJod(AppLanguage.AR), Fv.Red, Modifier.weight(1f))
+                        }
+                        // Collections — cash vs cheque
+                        SectionLabel(stringResource(Res.string.cash_flow_section_collections))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SummaryPill(stringResource(Res.string.cash_flow_collection_cash), state.collectionsCashTotal.formatJod(AppLanguage.AR), Fv.Green, Modifier.weight(1f))
+                            SummaryPill(stringResource(Res.string.cash_flow_collection_cheque), state.collectionsChequeTotal.formatJod(AppLanguage.AR), Fv.Teal, Modifier.weight(1f))
+                        }
+                        // Net cash = cash sales + cash collections − cash returns
+                        TotalCashRow(state.totalCash.formatJod(AppLanguage.AR), state.totalCash >= 0)
+                    }
+                }
+            }
+            item {
+                // Additional information
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Fv.Surface),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SectionLabel(stringResource(Res.string.cash_flow_additional_info))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SummaryPill(stringResource(Res.string.cash_flow_total_cheque_collection), state.collectionsChequeTotal.formatJod(AppLanguage.AR), Fv.Teal, Modifier.weight(1f))
+                            SummaryPill(stringResource(Res.string.cash_flow_total_credit_sales), state.salesCreditTotal.formatJod(AppLanguage.AR), Fv.Amber, Modifier.weight(1f))
                         }
                     }
                 }
@@ -116,6 +144,33 @@ fun CashFlowReportScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(text, color = Fv.TextMid, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+}
+
+@Composable
+private fun TotalCashRow(value: String, positive: Boolean) {
+    val accent = if (positive) Fv.Green else Fv.Red
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 2.dp)
+            .background(accent.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            stringResource(Res.string.cash_flow_total_cash),
+            color = Fv.TextHigh,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.weight(1f),
+        )
+        Text(value, color = accent, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
     }
 }
 

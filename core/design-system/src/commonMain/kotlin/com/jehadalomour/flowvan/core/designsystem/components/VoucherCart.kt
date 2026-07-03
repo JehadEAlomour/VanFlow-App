@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -35,11 +36,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.Product
@@ -114,7 +119,12 @@ private fun ProductRow(
             modifier = Modifier.padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ProductAvatar(seed = product.category, letter = product.nameAr.firstOrNull()?.toString() ?: "؟", size = 46.dp)
+            ProductThumb(
+                imageUrl = product.imageUrl,
+                seed = product.category,
+                letter = product.nameAr.firstOrNull()?.toString() ?: "؟",
+                size = 46.dp,
+            )
             Spacer(Modifier.size(10.dp))
 
             Column(modifier = Modifier.weight(1f)) {
@@ -203,7 +213,7 @@ fun CartLineRow(
             modifier = Modifier.padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ProductAvatar(seed = line.nameAr, letter = line.nameAr.firstOrNull()?.toString() ?: "؟", size = 40.dp)
+            ProductThumb(imageUrl = line.imageUrl, seed = line.nameAr, letter = line.nameAr.firstOrNull()?.toString() ?: "؟", size = 40.dp)
             Spacer(Modifier.size(10.dp))
 
             Column(modifier = Modifier.weight(1f)) {
@@ -286,7 +296,8 @@ fun CartItemCard(line: CartLine, onTap: () -> Unit) {
                 modifier = Modifier.padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                ProductAvatar(
+                ProductThumb(
+                    imageUrl = line.imageUrl,
                     seed = line.nameAr,
                     letter = line.nameAr.firstOrNull()?.toString() ?: "؟",
                     size = 50.dp,
@@ -451,6 +462,44 @@ private fun TotalsRow(
             fontSize = fontSize,
             fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium,
         )
+    }
+}
+
+/** Product image when available (Coil async), else the generated letter avatar. */
+@Composable
+fun ProductThumb(imageUrl: String?, seed: String, letter: String, size: Dp) {
+    if (imageUrl.isNullOrBlank()) {
+        ProductAvatar(seed = seed, letter = letter, size = size)
+    } else {
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(size)
+                .clip(RoundedCornerShape((size.value * 0.25f).dp)),
+        )
+    }
+}
+
+/** Full-screen, tap-anywhere-to-dismiss viewer for a product image. */
+@Composable
+fun ProductImageViewerDialog(imageUrl: String, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.92f))
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center,
+        ) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+            )
+        }
     }
 }
 

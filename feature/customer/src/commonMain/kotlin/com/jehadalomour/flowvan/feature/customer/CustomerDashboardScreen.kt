@@ -22,10 +22,19 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,6 +74,14 @@ fun CustomerDashboardScreen(
     viewModel: CustomerDashboardViewModel = koinViewModel { parametersOf(customerId) },
 ) {
     val state by viewModel.state.collectAsState()
+    // The salesman "started a transaction" if they opened any create action this visit.
+    var startedTxn by remember { mutableStateOf(false) }
+    // Pop back once the visit has been recorded.
+    LaunchedEffect(state.navigateBack) { if (state.navigateBack) onBack() }
+    // Refresh the board every time it becomes visible again (e.g. returning from a
+    // sale/return/collection or the invoice print screen) so balances/totals are current.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
+    val requestLeave = { viewModel.onEvent(CustomerDashboardEvent.LeaveRequested(startedTxn)) }
 
     Column(modifier = Modifier.fillMaxSize()) {
 
@@ -83,7 +100,7 @@ fun CustomerDashboardScreen(
                         .size(36.dp)
                         .clip(RoundedCornerShape(11.dp))
                         .background(Fv.SurfaceTop)
-                        .clickable(onClick = onBack),
+                        .clickable(onClick = requestLeave),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -139,12 +156,54 @@ fun CustomerDashboardScreen(
 
         // ── Bottom Action Bar ─────────────────────────────────────────────────
         BottomActionBar(
-            onSale = { onOpenSale(customerId) },
-            onReturn = { onOpenReturn(customerId) },
-            onRequest = { onOpenRequest(customerId) },
-            onCollection = { onOpenCollection(customerId) },
+            onSale = { startedTxn = true; onOpenSale(customerId) },
+            onReturn = { startedTxn = true; onOpenReturn(customerId) },
+            onRequest = { startedTxn = true; onOpenRequest(customerId) },
+            onCollection = { startedTxn = true; onOpenCollection(customerId) },
         )
     }
+
+    // Leaving a customer with no transaction → reason note (if required) or confirm.
+    LeaveCustomerDialog(
+        dialog = state.leaveDialog,
+        onConfirm = { reason -> viewModel.onEvent(CustomerDashboardEvent.ConfirmLeave(reason)) },
+        onDismiss = { viewModel.onEvent(CustomerDashboardEvent.DismissLeave) },
+    )
+}
+
+@Composable
+private fun LeaveCustomerDialog(
+    dialog: LeaveDialog,
+    onConfirm: (String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    if (dialog == LeaveDialog.NONE) return
+    var reason by remember(dialog) { mutableStateOf("") }
+    val needsReason = dialog == LeaveDialog.REASON
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (needsReason) stringResource(Res.string.dlg_leave_reason_title) else stringResource(Res.string.dlg_leave_confirm_title)) },
+        text = {
+            if (needsReason) {
+                OutlinedTextField(
+                    value = reason,
+                    onValueChange = { reason = it },
+                    placeholder = { Text(stringResource(Res.string.dlg_leave_reason_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2,
+                )
+            } else {
+                Text(stringResource(Res.string.dlg_leave_confirm_msg))
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(if (needsReason) reason else null) },
+                enabled = !needsReason || reason.isNotBlank(),
+            ) { Text(stringResource(Res.string.action_exit)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel)) } },
+    )
 }
 
 // ── Hero Card ─────────────────────────────────────────────────────────────────

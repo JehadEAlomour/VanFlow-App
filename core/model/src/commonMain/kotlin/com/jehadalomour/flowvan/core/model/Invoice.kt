@@ -18,6 +18,7 @@ data class InvoiceLine(
     val taxType: String = "TAXABLE",    // LineTaxType.name — defaults to TAXABLE for old records
     val taxAmount: Double = 0.0,        // per-line tax (before invoice discount)
     val unit: String = "",              // unit name (حبة, كرتونة, etc.)
+    val unitConversionQty: Double = 1.0, // pieces per unit (base = 1) — for stock + ERP per-piece
     val taxRate: Double = 0.0,          // per-product rate used when the line was created
 )
 

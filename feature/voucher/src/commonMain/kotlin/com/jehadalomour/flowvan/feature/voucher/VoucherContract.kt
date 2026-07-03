@@ -16,6 +16,11 @@ import com.jehadalomour.flowvan.core.model.ProductUnit
 import com.jehadalomour.flowvan.core.model.ServerLine
 import com.jehadalomour.flowvan.core.model.VoucherSummary
 import com.jehadalomour.flowvan.feature.voucher.ReturnReason
+import com.jehadalomour.flowvan.feature.voucher.DiscountType
+import com.jehadalomour.flowvan.feature.voucher.VoucherView
+import com.jehadalomour.flowvan.core.designsystem.resources.Res
+import com.jehadalomour.flowvan.core.designsystem.resources.*
+import org.jetbrains.compose.resources.StringResource
 
 enum class VoucherView { PICKER, CART }
 
@@ -47,6 +52,20 @@ data class VoucherState(
     val errorAr: String? = null,
     /** Driven from AppSettings — stamps each new CartLine at add-time. */
     val taxType: LineTaxType = LineTaxType.TAXABLE,
+    /** Salesman permission: may apply discounts directly (else discount fields hidden). */
+    val canDiscount: Boolean = false,
+    /** Salesman permission: may ENTER a discount that needs admin approval before saving. */
+    val canRequestDiscount: Boolean = false,
+    /** Salesman permission: may change an item's unit price when selling. */
+    val canEditPrice: Boolean = false,
+    /** Salesman permission: may create returns at all. */
+    val canCreateReturn: Boolean = false,
+    /** Salesman permission: returns require admin approval (Save → Request approval). */
+    val returnNeedsApproval: Boolean = false,
+    /** A return approval request is pending a manager decision — cart is blocked from print. */
+    val pendingApprovalId: String? = null,
+    /** Manager's note when a request was rejected (shown to the salesman). */
+    val approvalDecisionNote: String? = null,
 
     // ── RETURN: source sale invoice this return is issued against ──────────────
     /** The customer's confirmed SALE invoices, offered as return sources. */
@@ -119,33 +138,54 @@ data class VoucherState(
         if (useServerOffers) serverTotals.grandTotalJod else summary.grandTotal
 
     /** Label shown next to the tax row — clarifies inclusive vs additive. */
-    val taxLabelAr: String get() = when (taxType) {
-        LineTaxType.INCLUSIVE -> "الضريبة (مضمّنة)"
-        LineTaxType.TAXABLE   -> "الضريبة"
-        LineTaxType.EXEMPT    -> "الضريبة"
+    val taxLabelRes: StringResource get() = when (taxType) {
+        LineTaxType.INCLUSIVE -> Res.string.tax_label_inclusive
+        LineTaxType.TAXABLE   -> Res.string.tax_label_default
+        LineTaxType.EXEMPT    -> Res.string.tax_label_default
     }
 
-    val canSave: Boolean get() = cart.isNotEmpty() && !isSaving &&
-        (type != VoucherType.RETURN || (reason != null && referenceInvoiceId != null))
+    /** True while a return request is awaiting a manager decision — the cart is locked. */
+    val isAwaitingApproval: Boolean get() = pendingApprovalId != null
+
+    /** Any discount present — on a line or voucher-level. */
+    val hasDiscount: Boolean get() =
+        cart.any { it.discountPct > 0.0 } || (voucherDiscountInput.toDoubleOrNull() ?: 0.0) > 0.0
+
+    /** Discount inputs are shown when the salesman may apply OR request a discount. */
+    val showDiscountInputs: Boolean get() = canDiscount || canRequestDiscount
+
+    /** SALE with a discount that the salesman may only request → blocks for approval. */
+    val needsDiscountApproval: Boolean get() =
+        type == VoucherType.SALE && hasDiscount && !canDiscount && canRequestDiscount
+
+    // A salesman may build a RETURN if they can create directly OR if returns need
+    // approval (the button becomes "request approval"). Either flag enables it.
+    // While a request is pending, the action is locked (waiting on the manager).
+    val canSave: Boolean get() = cart.isNotEmpty() && !isSaving && !isAwaitingApproval &&
+        (type != VoucherType.RETURN ||
+            (reason != null && referenceInvoiceId != null && (canCreateReturn || returnNeedsApproval)))
 
     /** RETURN must be issued against a real sale invoice of the same customer. */
     val requiresSourceInvoice: Boolean get() = type == VoucherType.RETURN
 
     // ── UI helpers — screen reads these, no when(type) logic in the screen ──
-    val titleAr: String get() = when (type) {
-        VoucherType.SALE   -> "فاتورة بيع"
-        VoucherType.RETURN -> "فاتورة مرتجع"
-        VoucherType.ORDER  -> "طلب مسبق"
+    val titleRes: StringResource get() = when (type) {
+        VoucherType.SALE   -> Res.string.voucher_title_sale
+        VoucherType.RETURN -> Res.string.voucher_title_return
+        VoucherType.ORDER  -> Res.string.voucher_title_order
     }
-    val saveLabelAr: String get() = when (type) {
-        VoucherType.SALE   -> "حفظ الفاتورة"
-        VoucherType.RETURN -> "حفظ المرتجع"
-        VoucherType.ORDER  -> "حفظ الطلب"
+    val saveLabelRes: StringResource get() = when (type) {
+        // A discounted SALE the salesman may only request → "request manager approval".
+        VoucherType.SALE   -> if (needsDiscountApproval) Res.string.voucher_save_discount_approval else Res.string.voucher_save_sale
+        // Returns that need approval: the button becomes "request manager approval".
+        VoucherType.RETURN -> if (returnNeedsApproval) Res.string.voucher_save_return_approval else Res.string.voucher_save_return
+        VoucherType.ORDER  -> Res.string.voucher_save_order
     }
-    val confirmTextAr: String get() = when (type) {
-        VoucherType.SALE   -> ""
-        VoucherType.RETURN -> "سيتم تسجيل المرتجع وإعادة المخزون وتعديل الرصيد"
-        VoucherType.ORDER  -> "سيتم تسجيل الطلب للمراجعة"
+    /** Confirm-dialog body; null for SALE (uses the payment dialog instead). */
+    val confirmTextRes: StringResource? get() = when (type) {
+        VoucherType.SALE   -> null
+        VoucherType.RETURN -> Res.string.voucher_confirm_return
+        VoucherType.ORDER  -> Res.string.voucher_confirm_order
     }
     val deliveryDate: Long? = null
     val showDeliveryDate: Boolean get() = type == VoucherType.ORDER
@@ -158,18 +198,17 @@ data class VoucherState(
      * and are applied server-side (authoritative). RETURN/ORDER unchanged (they never
      * showed it; the [DiscountType] enum / voucher-discount state remain for the contract).
      */
-    val showDiscountSection: Boolean get() = false
-
-    /** SALE only: confirm-save flow shows the in-line payment picker. */
-    val showPaymentDialog: Boolean get() = type == VoucherType.SALE
 
     /** SALE only: show the opening blocking Cash/Credit chooser until chosen. */
     val showPaymentChooser: Boolean get() = type == VoucherType.SALE && !paymentChosen
 
     /** SALE only: offer banners / free-line UI are relevant. */
     val offersEnabled: Boolean get() = type == VoucherType.SALE
+    val showDiscountSection: Boolean get() = type == VoucherType.SALE
+    // SALE and RETURN both ask cash vs credit before saving — for a return the choice
+    // drives the balance change (cash refund vs credit note). ORDER keeps a plain confirm.
+    val showPaymentDialog: Boolean get() = type == VoucherType.SALE || type == VoucherType.RETURN
 }
-
 sealed interface VoucherEvent {
     data class SearchChanged(val q: String) : VoucherEvent
     data class StepItem(val product: Product, val delta: Int) : VoucherEvent
@@ -192,6 +231,7 @@ sealed interface VoucherEvent {
     data object ToggleView : VoucherEvent
     data object Save : VoucherEvent
     data object ConfirmSave : VoucherEvent
+    data object CancelApproval : VoucherEvent
     data object DismissSaveSheet : VoucherEvent
     data class ReasonSelected(val reason: ReturnReason) : VoucherEvent
     data object DismissError : VoucherEvent

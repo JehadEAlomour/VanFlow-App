@@ -218,6 +218,7 @@
     <string name="visits_title">Visit Report</string>
     <string name="visits_visited">Visited</string>
     <string name="visits_not_visited">Not Visited</string>
+    <string name="visits_off_route">Off route</string>
     <string name="visits_rate">Visit Rate</string>
     <string name="visits_total_customers">Total Customers</string>
 
@@ -645,4 +646,74 @@
     <string name="printer_printing">Printing…</string>
     <string name="printer_print_success">Printed successfully</string>
     <string name="printer_print_failed">Print failed</string>
+
+    <!-- i18n sweep: extracted hardcoded strings -->
+    <string name="action_exit">Exit</string>
+    <string name="common_retry">Retry</string>
+    <string name="dlg_leave_reason_title">Reason for no purchase</string>
+    <string name="dlg_leave_confirm_title">Confirm exit</string>
+    <string name="dlg_leave_reason_hint">Enter the reason for the visit without a sale</string>
+    <string name="dlg_leave_confirm_msg">Leave this customer without recording a transaction?</string>
+    <string name="login_user_number_hint">User number</string>
+    <string name="login_brand">CashFlow</string>
+    <string name="login_brand_subtitle">CashFlow — Van Sales System</string>
+    <string name="settings_server_section">System server</string>
+    <string name="settings_server_url_label">Server address (API)</string>
+    <string name="settings_refreshing">Refreshing…</string>
+    <string name="settings_refresh_desc">Refresh customers and items from the server</string>
+    <string name="settings_enter_server_first">Enter the server address first</string>
+    <string name="settings_refresh_success">Updated: %1$d customers, %2$d items</string>
+    <string name="settings_refresh_failed">Failed to connect to the server</string>
+    <string name="route_today_title">Today's route</string>
+    <string name="route_no_visits_today">No visits scheduled today</string>
+    <string name="route_note_prefix">Note: %1$s</string>
+    <string name="route_done_check">Done ✓</string>
+    <string name="route_complete">Complete</string>
+
+    <!-- Voucher labels -->
+    <string name="tax_label_inclusive">Tax (included)</string>
+    <string name="tax_label_default">Tax</string>
+    <string name="voucher_title_sale">Sale invoice</string>
+    <string name="voucher_title_return">Return invoice</string>
+    <string name="voucher_title_order">Pre-order</string>
+    <string name="voucher_save_sale">Save invoice</string>
+    <string name="voucher_save_return_approval">Request manager approval</string>
+    <string name="voucher_save_discount_approval">Request approval for discount</string>
+    <string name="voucher_save_return">Save return</string>
+    <string name="voucher_save_order">Save order</string>
+    <string name="voucher_confirm_return">The return will be recorded, stock restored and the balance adjusted</string>
+    <string name="voucher_confirm_order">The order will be recorded for review</string>
+    <string name="return_reason_wrong_order">Wrong order</string>
+    <string name="return_reason_other">Other</string>
+
+    <!-- Voucher / collection errors -->
+    <string name="err_unexpected">An unexpected error occurred</string>
+    <string name="err_cart_empty">The cart is empty</string>
+    <string name="err_select_source_invoice">Select the reference sale invoice first</string>
+    <string name="err_select_return_reason">Select a return reason</string>
+    <string name="err_source_invoice_not_found">No sale invoice found with this number for this customer</string>
+    <string name="err_stock_unavailable">Quantity not available in the van (%1$d available of %2$d)</string>
+    <string name="err_approval_send_failed">Failed to send the approval request</string>
+    <string name="err_approved_local_save_failed">Approved, but failed to save the return locally</string>
+    <string name="err_return_rejected_note">The return request was rejected by the manager: %1$s</string>
+    <string name="err_return_rejected">The return request was rejected by the manager</string>
+    <string name="err_enter_valid_amount">Enter a valid amount</string>
+    <string name="err_enter_valid_cheque_amount">Enter a valid amount for cheque %1$d</string>
+    <string name="err_enter_cheque_number">Enter the number for cheque %1$d</string>
+    <string name="err_select_cheque_bank">Select the bank for cheque %1$d</string>
+
+    <!-- Daily / cash-flow summary breakdown -->
+    <string name="cash_flow_section_sales">Sales</string>
+    <string name="cash_flow_section_returns">Returns</string>
+    <string name="cash_flow_section_collections">Collections</string>
+    <string name="cash_flow_sales_cash">Cash sales</string>
+    <string name="cash_flow_sales_credit">Credit sales</string>
+    <string name="cash_flow_returns_cash">Cash returns</string>
+    <string name="cash_flow_returns_credit">Credit returns</string>
+    <string name="cash_flow_collection_cash">Cash collection</string>
+    <string name="cash_flow_collection_cheque">Cheque collection</string>
+    <string name="cash_flow_total_cash">Total cash</string>
+    <string name="cash_flow_additional_info">Additional information</string>
+    <string name="cash_flow_total_cheque_collection">Total cheque collection</string>
+    <string name="cash_flow_total_credit_sales">Total credit sales</string>
 </resources>

@@ -22,6 +22,19 @@ data class ProductDto(
     val taxType: String = "TAXABLE",
     val taxCategory: String = "S",
     val taxRate: String = "0.1600",
+    /** The item's real sellable units (base + larger), from the dashboard/ERP. */
+    val units: List<ProductUnitDto> = emptyList(),
+)
+
+/** One sellable unit of an item, as served by GET /products. */
+@Serializable
+data class ProductUnitDto(
+    val name: String = "",
+    val code: String = "",
+    val conversionQty: Double = 1.0,
+    val priceFils: Long = 0,
+    val barcode: String = "",
+    val isBase: Boolean = false,
 )
 
 @Serializable

@@ -69,7 +69,9 @@ import androidx.compose.ui.window.DialogProperties
 import com.jehadalomour.flowvan.feature.voucher.AppBackHandler
 import com.jehadalomour.flowvan.core.designsystem.components.CartItemCard
 import com.jehadalomour.flowvan.core.designsystem.components.Fv
-import com.jehadalomour.flowvan.core.designsystem.components.ProductAvatar
+import com.jehadalomour.flowvan.core.designsystem.components.ProductThumb
+import com.jehadalomour.flowvan.core.designsystem.components.ProductImageViewerDialog
+import co.touchlab.kermit.Logger
 import com.jehadalomour.flowvan.core.designsystem.components.fvFieldColors
 import com.jehadalomour.flowvan.core.designsystem.components.standardUnits
 import com.jehadalomour.flowvan.core.model.AppliedOffer
@@ -114,6 +116,7 @@ fun VoucherScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var dialogProduct by remember { mutableStateOf<Product?>(null) }
+    var expandedImage by remember { mutableStateOf<String?>(null) }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
 
     val displayProducts = remember(state.visibleProducts, selectedCategory) {
@@ -161,7 +164,7 @@ fun VoucherScreen(
                         )
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(state.titleAr, color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(state.titleRes), color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         state.customer?.let { Text(it.nameAr, color = Fv.TextMid, fontSize = 11.sp) }
                     }
                     CartToggle(state.view, state.cart.size) { viewModel.onEvent(VoucherEvent.ToggleView) }
@@ -189,6 +192,7 @@ fun VoucherScreen(
                         onSearch = { viewModel.onEvent(VoucherEvent.SearchChanged(it)) },
                         onSelectCategory = { selectedCategory = it },
                         onTapProduct = { dialogProduct = it },
+                        onExpandImage = { expandedImage = it },
                         modifier = Modifier.weight(1f),
                     )
                     if (state.cart.isNotEmpty()) {
@@ -212,37 +216,72 @@ fun VoucherScreen(
                         onDiscountTypeToggle = { viewModel.onEvent(VoucherEvent.VoucherDiscountTypeToggled) },
                         modifier = Modifier.padding(horizontal = 16.dp).padding(top = 6.dp),
                     )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 32.dp, vertical = 12.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
+                    if (state.isAwaitingApproval) {
+                        // Blocked: a return request is waiting on the manager. The
+                        // salesman can only wait (auto-prints on approve) or cancel.
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 32.dp, vertical = 12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Fv.SurfaceTop),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    "بانتظار موافقة المدير على المرتجع…",
+                                    color = Fv.TextMid,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                            TextButton(onClick = { viewModel.onEvent(VoucherEvent.CancelApproval) }) {
+                                Text("إلغاء الطلب", color = Fv.Red, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    } else {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(52.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .then(
-                                    if (state.canSave) Modifier.background(Brush.linearGradient(saveGradient))
-                                    else Modifier.background(Fv.SurfaceTop),
-                                )
-                                .clickable(enabled = state.canSave) {
-                                    viewModel.onEvent(VoucherEvent.Save)
-                                },
+                                .padding(horizontal = 32.dp, vertical = 12.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(
-                                state.saveLabelAr,
-                                color = if (state.canSave) Color.White else Fv.TextMid,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .then(
+                                        if (state.canSave) Modifier.background(Brush.linearGradient(saveGradient))
+                                        else Modifier.background(Fv.SurfaceTop),
+                                    )
+                                    .clickable(enabled = state.canSave) {
+                                        viewModel.onEvent(VoucherEvent.Save)
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    stringResource(state.saveLabelRes),
+                                    color = if (state.canSave) Color.White else Fv.TextMid,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    // ── Full-screen product image viewer (tap a list thumbnail) ───────────────
+    expandedImage?.let { url ->
+        ProductImageViewerDialog(imageUrl = url, onDismiss = { expandedImage = null })
     }
 
     // ── Item bottom sheet ─────────────────────────────────────────────────────
@@ -261,6 +300,8 @@ fun VoucherScreen(
             offerDiscountPct = offerDiscountPct,
             dbUnits = state.productUnits[product.id] ?: emptyList(),
             enforceStock = state.showStockBadge,
+            canDiscount = state.showDiscountInputs,
+            canEditPrice = state.canEditPrice,
             onConfirm = { qty, unit, unitPrice, unitConversionQty, discountPct ->
                 viewModel.onEvent(
                     VoucherEvent.ConfirmItemDialog(product, qty, unit, unitPrice, unitConversionQty, discountPct),
@@ -315,7 +356,7 @@ fun VoucherScreen(
             AlertDialog(
                 onDismissRequest = { viewModel.onEvent(VoucherEvent.DismissSaveSheet) },
                 title = { Text(stringResource(Res.string.voucher_confirm_save_title), color = Fv.TextHigh) },
-                text = { Text(state.confirmTextAr, color = Fv.TextHigh) },
+                text = { Text(state.confirmTextRes?.let { stringResource(it) } ?: "", color = Fv.TextHigh) },
                 confirmButton = {
                     TextButton(onClick = { viewModel.onEvent(VoucherEvent.ConfirmSave) }) {
                         Text(
@@ -406,6 +447,7 @@ private fun ProductListPicker(
     onSearch: (String) -> Unit,
     onSelectCategory: (String?) -> Unit,
     onTapProduct: (Product) -> Unit,
+    onExpandImage: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val categories = remember(allProducts) {
@@ -455,6 +497,7 @@ private fun ProductListPicker(
                     unitPrice = baseUnit?.price ?: product.salePrice,
                     showStockBadge = showStockBadge,
                     onTap = { onTapProduct(product) },
+                    onExpandImage = onExpandImage,
                 )
             }
             if (products.isEmpty()) {
@@ -473,7 +516,16 @@ private fun ProductListCard(
     unitPrice: Double,
     showStockBadge: Boolean,
     onTap: () -> Unit,
+    onExpandImage: (String) -> Unit,
 ) {
+    // DIAGNOSTIC: log each product's image state so we can see, in logcat, whether the
+    // item actually carries an imageUrl (data problem) or it's present but not rendering.
+    LaunchedEffect(product.id, product.imageUrl) {
+        Logger.withTag("ProductImage").d(
+            "list item id=${product.id} sku=${product.sku} name=${product.nameAr} " +
+                "imageUrl=${product.imageUrl ?: "<null>"} blank=${product.imageUrl.isNullOrBlank()}",
+        )
+    }
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onTap),
         shape = RoundedCornerShape(14.dp),
@@ -481,11 +533,22 @@ private fun ProductListCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            ProductAvatar(
-                seed = product.category,
-                letter = product.nameAr.firstOrNull()?.toString() ?: "؟",
-                size = 54.dp,
-            )
+            // Show the product image when present, falling back to the letter avatar.
+            // Tapping the image (only when one exists) opens the full-screen viewer
+            // instead of the add-item sheet.
+            val hasImage = !product.imageUrl.isNullOrBlank()
+            Box(
+                modifier = Modifier.clickable(enabled = hasImage) {
+                    product.imageUrl?.let(onExpandImage)
+                },
+            ) {
+                ProductThumb(
+                    imageUrl = product.imageUrl,
+                    seed = product.category,
+                    letter = product.nameAr.firstOrNull()?.toString() ?: "؟",
+                    size = 54.dp,
+                )
+            }
             Spacer(Modifier.size(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -1025,7 +1088,7 @@ private fun ReasonRow(selected: ReturnReason?, onSelect: (ReturnReason) -> Unit)
                         .clickable { onSelect(reason) }
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                 ) {
-                    Text(reason.labelAr, color = if (active) Color.White else Fv.TextMid, fontSize = 12.sp, fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium)
+                    Text(stringResource(reason.labelRes), color = if (active) Color.White else Fv.TextMid, fontSize = 12.sp, fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium)
                 }
             }
         }
@@ -1108,7 +1171,7 @@ private fun CartSummaryCard(
                     SummaryDetailRow(stringResource(Res.string.voucher_detail_subtotal), state.subtotal.formatJod(AppLanguage.AR), Fv.TextMid)
                     if (state.lineDiscountTotal > 0)
                         SummaryDetailRow(stringResource(Res.string.voucher_line_discount_total), "- ${state.lineDiscountTotal.formatJod(AppLanguage.AR)}", Fv.Red)
-                    if (state.showDiscountSection) {
+                    if (state.showDiscountSection && state.showDiscountInputs) {
                         Spacer(Modifier.height(8.dp))
                         VoucherDiscountSection(
                             type = state.voucherDiscountType,
@@ -1120,7 +1183,7 @@ private fun CartSummaryCard(
                     }
                     if (state.taxAmount > 0) {
                         Spacer(Modifier.height(6.dp))
-                        SummaryDetailRow(state.taxLabelAr, state.taxAmount.formatJod(AppLanguage.AR), Fv.TextMid)
+                        SummaryDetailRow(stringResource(state.taxLabelRes), state.taxAmount.formatJod(AppLanguage.AR), Fv.TextMid)
                     }
                     Spacer(Modifier.height(12.dp))
                     Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(Fv.Border))
@@ -1198,15 +1261,33 @@ private fun AddItemBottomSheet(
     offerDiscountPct: Double? = null,
     dbUnits: List<ProductUnit>,
     enforceStock: Boolean,
+    canDiscount: Boolean,
+    canEditPrice: Boolean,
     onConfirm: (qty: Double, unit: String, unitPrice: Double, unitConversionQty: Double, discountPct: Double) -> Unit,
     onDelete: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
+    // Use the item's OWN units (synced from the dashboard/ERP). No hardcoded list —
+    // if an item somehow has none, fall back to just its base unit.
     val effectiveUnits: List<ProductUnit> = remember(product.id, dbUnits) {
-        if (dbUnits.isNotEmpty()) dbUnits
-        else (listOf(product.unit) + standardUnits)
-            .filter { it.isNotBlank() }.distinct()
-            .map { name -> ProductUnit(id = name, productId = product.id, name = name, price = product.salePrice, conversionQty = 1.0) }
+        val raw = if (dbUnits.isNotEmpty()) dbUnits
+        else listOf(
+            ProductUnit(
+                id = product.unit.ifBlank { product.id },
+                productId = product.id,
+                name = product.unit,
+                price = product.salePrice,
+                conversionQty = 1.0,
+            ),
+        )
+        // Any unit the ERP didn't price gets one derived from the base (piece) price:
+        //   unit price = conversionQty × price-per-base-piece.
+        val base = raw.minByOrNull { it.conversionQty }
+        val baseConv = base?.conversionQty?.takeIf { it > 0.0 } ?: 1.0
+        val perBasePrice = (base?.price?.takeIf { it > 0.0 } ?: product.salePrice) / baseConv
+        raw.map { u ->
+            if (u.price > 0.0) u else u.copy(price = perBasePrice * u.conversionQty)
+        }
     }
     val initialUnit: ProductUnit = remember(product.id, currentLine) {
         val cartUnitName = currentLine?.unit?.takeIf { it.isNotBlank() }
@@ -1224,8 +1305,21 @@ private fun AddItemBottomSheet(
         mutableStateOf(if (initial > 0) (initial * 100).toInt().toString() else "")
     }
     var unitDropdownExpanded by remember { mutableStateOf(false) }
+    // Editable price (only when the salesman has canEditPrice). Resets per unit.
+    var priceText by remember(selectedUnit) {
+        mutableStateOf((currentLine?.unitPrice?.takeIf { it > 0 } ?: selectedUnit.price).toString())
+    }
+    val effectivePrice = if (canEditPrice) (priceText.toDoubleOrNull() ?: selectedUnit.price) else selectedUnit.price
 
-    val gross = selectedUnit.price * qty
+    // DIAGNOSTIC: dump the unit list (with derived prices) once when the sheet opens.
+    LaunchedEffect(product.id, dbUnits) {
+        val dump = effectiveUnits.joinToString { "${it.name}(conv=${it.conversionQty}, price=${it.price})" }
+        Logger.withTag("UnitPrice").d(
+            "sheet open id=${product.id} name=${product.nameAr} salePrice=${product.salePrice} units=[$dump]",
+        )
+    }
+
+    val gross = effectivePrice * qty
     val discountPct = when (lineDiscountType) {
         DiscountType.PERCENT -> discountText.toDoubleOrNull()?.div(100.0)?.coerceIn(0.0, 1.0) ?: 0.0
         DiscountType.VALUE -> if (gross > 0) (discountText.toDoubleOrNull() ?: 0.0).coerceIn(0.0, gross) / gross else 0.0
@@ -1336,7 +1430,13 @@ private fun AddItemBottomSheet(
                                 effectiveUnits.forEach { unit ->
                                     DropdownMenuItem(
                                         text = { Text(unitLabel(unit), fontWeight = FontWeight.SemiBold) },
-                                        onClick = { selectedUnit = unit; unitDropdownExpanded = false },
+                                        onClick = {
+                                            Logger.withTag("UnitPrice").d(
+                                                "unit changed ${selectedUnit.name}(price=${selectedUnit.price}) -> " +
+                                                    "${unit.name}(conv=${unit.conversionQty}, price=${unit.price})",
+                                            )
+                                            selectedUnit = unit; unitDropdownExpanded = false
+                                        },
                                     )
                                 }
                             }
@@ -1380,17 +1480,38 @@ private fun AddItemBottomSheet(
                             }
                         }
 
-                        // Unit price display
-                        Row(
-                            modifier = Modifier.fillMaxWidth().background(Color(0xFFF5F8FC), RoundedCornerShape(14.dp)).border(0.5.dp, Color(0xFFDDE8F5), RoundedCornerShape(14.dp)).padding(horizontal = 16.dp, vertical = 14.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(selectedUnit.price.formatJod(AppLanguage.AR), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF185FA5))
-                            Text("· ${stringResource(Res.string.voucher_unit_price)}", fontSize = 13.sp, color = Color(0xFF5A7399))
+                        // Unit price — editable only when the salesman has canEditPrice.
+                        if (canEditPrice) {
+                            OutlinedTextField(
+                                value = priceText,
+                                onValueChange = { v ->
+                                    priceText = v.filter { it.isDigit() || it == '.' }.take(10)
+                                    Logger.withTag("UnitPrice").d(
+                                        "price edited unit=${selectedUnit.name} text='$priceText' " +
+                                            "parsed=${priceText.toDoubleOrNull()} unitDefault=${selectedUnit.price}",
+                                    )
+                                },
+                                label = { Text(stringResource(Res.string.voucher_unit_price)) },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                suffix = { Text("د.أ", color = Color(0xFF185FA5), fontSize = 15.sp, fontWeight = FontWeight.Bold) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = fvFieldColors(),
+                            )
+                        } else {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().background(Color(0xFFF5F8FC), RoundedCornerShape(14.dp)).border(0.5.dp, Color(0xFFDDE8F5), RoundedCornerShape(14.dp)).padding(horizontal = 16.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(selectedUnit.price.formatJod(AppLanguage.AR), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF185FA5))
+                                Text("· ${stringResource(Res.string.voucher_unit_price)}", fontSize = 13.sp, color = Color(0xFF5A7399))
+                            }
                         }
 
-                        // Line discount
+                        // Line discount — hidden when the salesman lacks the discount permission.
+                        if (canDiscount) {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Row(modifier = Modifier.clip(RoundedCornerShape(10.dp)).border(0.5.dp, Color(0xFFC8D8EC), RoundedCornerShape(10.dp))) {
@@ -1417,6 +1538,7 @@ private fun AddItemBottomSheet(
                                 shape = RoundedCornerShape(12.dp),
                                 colors = fvFieldColors(),
                             )
+                        }
                         }
 
                         // Total card
@@ -1446,7 +1568,11 @@ private fun AddItemBottomSheet(
                             modifier = Modifier.weight(if (onDelete != null) 1.8f else 2f).height(52.dp).clip(RoundedCornerShape(16.dp))
                                 .then(if (canConfirm) Modifier.background(greenGradient) else Modifier.background(Fv.SurfaceTop))
                                 .clickable(enabled = canConfirm) {
-                                    onConfirm(qty, selectedUnit.name, selectedUnit.price, selectedUnit.conversionQty, discountPct)
+                                    Logger.withTag("UnitPrice").d(
+                                        "confirm qty=$qty unit=${selectedUnit.name} conv=${selectedUnit.conversionQty} " +
+                                            "effectivePrice=$effectivePrice discountPct=$discountPct lineTotal=$lineTotal",
+                                    )
+                                    onConfirm(qty, selectedUnit.name, effectivePrice, selectedUnit.conversionQty, discountPct)
                                 },
                             contentAlignment = Alignment.Center,
                         ) {

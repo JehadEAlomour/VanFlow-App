@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 6,
-    "identityHash": "2b21bf3fd8868e4218e21c67696eb7b3",
+    "identityHash": "825316c94b3fa4a501752983d8699388",
     "entities": [
       {
         "tableName": "users",
@@ -187,7 +187,7 @@
       },
       {
         "tableName": "products",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `sku` TEXT NOT NULL, `nameAr` TEXT NOT NULL, `nameEn` TEXT NOT NULL, `category` TEXT NOT NULL, `unit` TEXT NOT NULL, `salePrice` REAL NOT NULL, `costPrice` REAL NOT NULL, `vanStock` INTEGER NOT NULL, `minStock` INTEGER NOT NULL, `expiryDate` INTEGER, `brand` TEXT, `taxRate` REAL NOT NULL DEFAULT 0.16, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `sku` TEXT NOT NULL, `nameAr` TEXT NOT NULL, `nameEn` TEXT NOT NULL, `category` TEXT NOT NULL, `unit` TEXT NOT NULL, `salePrice` REAL NOT NULL, `costPrice` REAL NOT NULL, `vanStock` INTEGER NOT NULL, `minStock` INTEGER NOT NULL, `expiryDate` INTEGER, `brand` TEXT, `taxRate` REAL NOT NULL DEFAULT 0.16, `imageUrl` TEXT, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -265,6 +265,11 @@
             "affinity": "REAL",
             "notNull": true,
             "defaultValue": "0.16"
+          },
+          {
+            "fieldPath": "imageUrl",
+            "columnName": "imageUrl",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -342,7 +347,7 @@
       },
       {
         "tableName": "invoices",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `number` TEXT NOT NULL, `type` TEXT NOT NULL, `status` TEXT NOT NULL, `customerId` TEXT NOT NULL, `salesmanId` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `linesJson` TEXT NOT NULL, `subtotal` REAL NOT NULL, `discountAmount` REAL NOT NULL, `taxAmount` REAL NOT NULL, `total` REAL NOT NULL, `paymentMethod` TEXT, `notes` TEXT, `syncedAt` INTEGER, `referenceInvoiceId` TEXT, `referenceNumber` TEXT, `chosenFreeItemsCsv` TEXT, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `number` TEXT NOT NULL, `type` TEXT NOT NULL, `status` TEXT NOT NULL, `customerId` TEXT NOT NULL, `salesmanId` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `linesJson` TEXT NOT NULL, `subtotal` REAL NOT NULL, `discountAmount` REAL NOT NULL, `taxAmount` REAL NOT NULL, `total` REAL NOT NULL, `paymentMethod` TEXT, `notes` TEXT, `syncedAt` INTEGER, `referenceInvoiceId` TEXT, `referenceNumber` TEXT, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -841,7 +846,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2b21bf3fd8868e4218e21c67696eb7b3')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '825316c94b3fa4a501752983d8699388')"
     ]
   }
 }

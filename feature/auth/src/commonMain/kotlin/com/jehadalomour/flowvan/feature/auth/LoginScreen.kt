@@ -97,7 +97,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = state.phone,
                         onValueChange = { viewModel.onEvent(LoginEvent.PhoneChanged(it)) },
-                        placeholder = { Text("رقم المستخدم", color = Color(0xFF7B8BAA)) },
+                        placeholder = { Text(stringResource(Res.string.login_user_number_hint), color = Color(0xFF7B8BAA)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                         modifier = Modifier.fillMaxWidth(),
@@ -205,14 +205,14 @@ private fun LogoBlock() {
     }
     Spacer(Modifier.height(16.dp))
     Text(
-        text = "كاش فلو",
+        text = stringResource(Res.string.login_brand),
         color = Color(0xFFEDF0FA),
         fontSize = 26.sp,
         fontWeight = FontWeight.Bold,
     )
     Spacer(Modifier.height(4.dp))
     Text(
-        text = "CashFlow — نظام مندوب الفان",
+        text = stringResource(Res.string.login_brand_subtitle),
         color = Color(0xFF7B8BAA),
         fontSize = 13.sp,
         textAlign = TextAlign.Center,

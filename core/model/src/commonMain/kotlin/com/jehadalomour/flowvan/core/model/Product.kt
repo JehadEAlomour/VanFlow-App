@@ -14,4 +14,5 @@ data class Product(
     val expiryDate: Long?,
     val brand: String?,
     val taxRate: Double = 0.16,
+    val imageUrl: String? = null,
 )

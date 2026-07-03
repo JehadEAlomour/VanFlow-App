@@ -144,12 +144,12 @@ fun SettingsScreen(
                 }
 
                 // ── Backend server (VanFlow API) ────────────────────────────
-                item { SectionHeader("خادم النظام") }
+                item { SectionHeader(stringResource(Res.string.settings_server_section)) }
 
                 item {
                     SettingsCard {
                         SettingsTextField(
-                            label = "عنوان الخادم (API)",
+                            label = stringResource(Res.string.settings_server_url_label),
                             value = state.apiBaseUrl,
                             placeholder = "http://10.0.2.2:3000/api/v1",
                             keyboardType = KeyboardType.Uri,
@@ -169,7 +169,7 @@ fun SettingsScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                if (state.isRefreshing) "جارٍ التحديث…" else "تحديث العملاء والأصناف من الخادم",
+                                if (state.isRefreshing) stringResource(Res.string.settings_refreshing) else stringResource(Res.string.settings_refresh_desc),
                                 color = Color.White,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,

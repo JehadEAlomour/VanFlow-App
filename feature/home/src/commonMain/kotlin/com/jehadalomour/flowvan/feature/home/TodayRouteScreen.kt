@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.core.designsystem.components.Fv
 import com.jehadalomour.flowvan.core.designsystem.resources.Res
 import com.jehadalomour.flowvan.core.designsystem.resources.*
+import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.core.network.dto.MyRouteStopDto
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -74,7 +75,7 @@ fun TodayRouteScreen(
                     )
                 }
                 Text(
-                    "خط سير اليوم",
+                    stringResource(Res.string.route_today_title),
                     color = Fv.TextHigh,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.ExtraBold,
@@ -111,12 +112,12 @@ fun TodayRouteScreen(
                             .clickable(onClick = viewModel::load)
                             .padding(horizontal = 18.dp, vertical = 9.dp),
                     ) {
-                        Text("إعادة المحاولة", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(Res.string.common_retry), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
             state.stops.isEmpty() -> CenterBox {
-                Text("لا توجد زيارات مجدولة اليوم", color = Fv.TextMid, fontSize = 14.sp)
+                Text(stringResource(Res.string.route_no_visits_today), color = Fv.TextMid, fontSize = 14.sp)
             }
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -223,7 +224,7 @@ private fun TodayStopCard(
                         .background(Fv.SurfaceTop)
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                 ) {
-                    Text("ملاحظة: ${stop.note}", color = Fv.TextMid, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Text(stringResource(Res.string.route_note_prefix, stop.note ?: ""), color = Fv.TextMid, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 }
             }
 
@@ -256,7 +257,7 @@ private fun TodayStopCard(
                                 .background(Fv.Green.copy(alpha = 0.15f))
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                         ) {
-                            Text("تم ✓", color = Fv.Green, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(Res.string.route_done_check), color = Fv.Green, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     } else {
                         Box(
@@ -274,7 +275,7 @@ private fun TodayStopCard(
                                     modifier = Modifier.size(14.dp),
                                 )
                             } else {
-                                Text("إنجاز", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(stringResource(Res.string.route_complete), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }

@@ -19,4 +19,5 @@ data class ProductEntity(
     val expiryDate: Long?,
     val brand: String?,
     @ColumnInfo(defaultValue = "0.16") val taxRate: Double = 0.16,
+    val imageUrl: String? = null,
 )
