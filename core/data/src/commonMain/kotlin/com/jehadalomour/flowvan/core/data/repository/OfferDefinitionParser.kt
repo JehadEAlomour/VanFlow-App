@@ -45,6 +45,13 @@ internal fun OfferEntity.toDefinition(json: Json): OfferDefinition? {
             itemsPerStep = r.itemsPerStep,
             maxPercent = r.maxPercent,
         )
+        "LINE_AMOUNT_DISCOUNT" -> OfferReward.LineAmount(
+            baseAmountFils = r.baseAmountFils ?: 0.0,
+            dynamic = r.mode == "DYNAMIC",
+            multiplier = r.multiplier,
+            itemsPerStep = r.itemsPerStep,
+            maxAmountFils = r.maxAmountFils,
+        )
         "GIFT" -> OfferReward.Gift(
             giftItems = r.giftItems ?: emptyList(),
             itemsPerGift = r.itemsPerGift ?: return null,

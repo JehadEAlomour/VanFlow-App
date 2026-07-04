@@ -42,6 +42,19 @@ class OfferDefinitionParserTest {
     }
 
     @Test
+    fun parsesLineAmountDiscount() {
+        val d = entity(
+            "PAYMENT_METHOD_DISCOUNT",
+            """{"paymentCondition":"CASH"}""",
+            """{"kind":"LINE_AMOUNT_DISCOUNT","mode":"STATIC","baseAmountFils":300}""",
+        ).toDefinition(json)
+        assertNotNull(d, "line-amount offer parsed to null — offline cache unreadable")
+        val r = d.reward as OfferReward.LineAmount
+        assertEquals(300.0, r.baseAmountFils)
+        assertTrue(!r.dynamic)
+    }
+
+    @Test
     fun parsesItemQtyGift() {
         val d = entity(
             "ITEM_QTY_REWARD",

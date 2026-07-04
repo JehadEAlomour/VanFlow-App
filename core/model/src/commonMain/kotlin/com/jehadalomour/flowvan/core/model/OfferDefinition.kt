@@ -59,6 +59,19 @@ sealed interface OfferReward {
         val maxPercent: Double?,
     ) : OfferReward
 
+    /**
+     * A fixed amount (fils) off EVERY line of the order — the amount-off twin of [LinePercent],
+     * for a PAYMENT_METHOD_DISCOUNT. Each line gets [baseAmountFils] off (flat per line,
+     * independent of qty), clamped to the line gross by the evaluator.
+     */
+    data class LineAmount(
+        val baseAmountFils: Double,
+        val dynamic: Boolean,
+        val multiplier: Double?,
+        val itemsPerStep: Int?,
+        val maxAmountFils: Double?,
+    ) : OfferReward
+
     /** A gift the rep picks from [giftItems]; count derived from the trigger qty. */
     data class Gift(
         val giftItems: List<String>,

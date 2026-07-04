@@ -59,12 +59,17 @@ object LocalOfferEvaluator {
         val offers: MutableList<LineOfferDto>,
     )
 
-    /** [amountPerUnitFils] set → ITEM_AMOUNT_DISCOUNT (fils off per unit); null → percent via [pct]. */
+    /**
+     * [amountPerUnitFils] set → ITEM_AMOUNT_DISCOUNT (fils off per unit);
+     * [amountPerLineFils] set → LINE_AMOUNT_DISCOUNT (flat fils off the line);
+     * both null → percent via [pct].
+     */
     private class Disc(
         val offer: OfferDefinition,
         val pct: Double,
         val items: Set<String>?,
         val amountPerUnitFils: Double? = null,
+        val amountPerLineFils: Double? = null,
     )
     private class GiftEntry(val offer: OfferDefinition, val reward: OfferReward.Gift, val freeQty: Int)
 
@@ -114,15 +119,24 @@ object LocalOfferEvaluator {
             when (offer.type) {
                 OfferType.PAYMENT_METHOD_DISCOUNT -> {
                     val t = offer.trigger as? OfferTrigger.PaymentMethod ?: continue
-                    val reward = offer.reward as? OfferReward.LinePercent ?: continue
                     val minTotal = t.minOrderTotalFils
                     val minCount = t.minItemCount
                     val payOk = if (t.paymentCondition == "CREDIT") isCredit else !isCredit
                     val totalOk = minTotal == null || subtotalFils >= minTotal
                     val countOk = minCount == null || itemCount >= minCount
                     if (payOk && totalOk && countOk) {
-                        val pct = effectivePercent(reward, itemCount, (minCount ?: 0).toDouble())
-                        if (pct > 0) payOffers.add(Disc(offer, pct, null))
+                        val anchor = (minCount ?: 0).toDouble()
+                        when (val reward = offer.reward) {
+                            is OfferReward.LinePercent -> {
+                                val pct = effectivePercent(reward, itemCount, anchor)
+                                if (pct > 0) payOffers.add(Disc(offer, pct, null))
+                            }
+                            is OfferReward.LineAmount -> {
+                                val amt = effectiveAmount(reward, itemCount, anchor)
+                                if (amt > 0) payOffers.add(Disc(offer, 0.0, null, amountPerLineFils = amt))
+                            }
+                            else -> {}
+                        }
                     }
                 }
                 OfferType.ITEM_QTY_REWARD -> {
@@ -151,18 +165,27 @@ object LocalOfferEvaluator {
             }
         }
 
-        // Highest payment-method % is the same on every line → a single global winner.
-        val bestPay = payOffers.reduceOrNull { b, c -> if (c.pct > b.pct) c else b }
-
         val contrib = LinkedHashMap<String, Long>()
         for ((itemNumber, l) in work) {
             val gross = roundFils(l.qty * l.unitPriceFils)
             if (gross <= 0) continue
-            // Candidate's discount for this line: percent → % of gross; amount → per-unit
-            // fils × line qty. Highest fils wins (mixing percent and amount is fine).
-            fun discFor(c: Disc): Long =
-                if (c.amountPerUnitFils != null) roundFils(l.qty * c.amountPerUnitFils)
-                else roundFils(gross * c.pct / 100.0)
+            // Candidate's discount for this line: percent → % of gross; per-unit amount →
+            // fils × line qty; per-line amount → flat fils. Highest fils wins per line, so a
+            // percent and a flat-amount payment offer compare correctly (same as items).
+            fun discFor(c: Disc): Long = when {
+                c.amountPerUnitFils != null -> roundFils(l.qty * c.amountPerUnitFils)
+                c.amountPerLineFils != null -> roundFils(c.amountPerLineFils)
+                else -> roundFils(gross * c.pct / 100.0)
+            }
+            var bestPay: Disc? = null
+            var bestPayFils = 0L
+            for (c in payOffers) {
+                val d = discFor(c)
+                if (bestPay == null || d > bestPayFils) {
+                    bestPay = c
+                    bestPayFils = d
+                }
+            }
             var bestItem: Disc? = null
             var bestItemFils = 0L
             for (c in itemOffers) {
@@ -173,7 +196,7 @@ object LocalOfferEvaluator {
                     bestItemFils = d
                 }
             }
-            var payFils = if (bestPay != null) roundFils(gross * bestPay.pct / 100.0) else 0L
+            var payFils = if (bestPay != null) bestPayFils else 0L
             var itemFils = if (bestItem != null) bestItemFils else 0L
             if (payFils > gross) payFils = gross
             if (payFils + itemFils > gross) itemFils = gross - payFils // never below 0
@@ -305,18 +328,31 @@ object LocalOfferEvaluator {
     }
 
     /**
-     * Per-unit amount (fils) for an amount-off reward — the fils twin of [effectivePercent].
-     * Base applies at [anchor] (minQty); each full itemsPerStep above it adds one step. STATIC
+     * Effective amount (fils) for an amount-off reward — the fils twin of [effectivePercent],
+     * shared by LINE_AMOUNT_DISCOUNT (per line) and ITEM_AMOUNT_DISCOUNT (per unit). Base applies
+     * at [anchor] (minItemCount or minQty); each full itemsPerStep above it adds one step. STATIC
      * ignores the multiplier. Capped at maxAmountFils (no natural bound otherwise); the per-line
      * clamp to the line gross still prevents a negative net.
      */
-    private fun effectiveAmount(reward: OfferReward.ItemAmount, count: Double, anchor: Double): Double {
-        // Local val — cross-module nullable properties don't smart-cast (see build notes).
-        val step = reward.itemsPerStep
-        val steps = if (reward.dynamic && step != null && step > 0)
-            floor(max(0.0, count - anchor) / step) else 0.0
-        val amt = reward.baseAmountFils * (1 + (reward.multiplier ?: 0.0) * steps)
-        val cap = reward.maxAmountFils ?: Double.POSITIVE_INFINITY
+    private fun effectiveAmount(reward: OfferReward.ItemAmount, count: Double, anchor: Double): Double =
+        effectiveAmount(reward.baseAmountFils, reward.dynamic, reward.multiplier, reward.itemsPerStep, reward.maxAmountFils, count, anchor)
+
+    private fun effectiveAmount(reward: OfferReward.LineAmount, count: Double, anchor: Double): Double =
+        effectiveAmount(reward.baseAmountFils, reward.dynamic, reward.multiplier, reward.itemsPerStep, reward.maxAmountFils, count, anchor)
+
+    private fun effectiveAmount(
+        baseAmountFils: Double,
+        dynamic: Boolean,
+        multiplier: Double?,
+        itemsPerStep: Int?,
+        maxAmountFils: Double?,
+        count: Double,
+        anchor: Double,
+    ): Double {
+        val steps = if (dynamic && itemsPerStep != null && itemsPerStep > 0)
+            floor(max(0.0, count - anchor) / itemsPerStep) else 0.0
+        val amt = baseAmountFils * (1 + (multiplier ?: 0.0) * steps)
+        val cap = maxAmountFils ?: Double.POSITIVE_INFINITY
         return max(0.0, min(amt, cap))
     }
 
@@ -393,12 +429,21 @@ object LocalOfferEvaluator {
             }
         }
         val t = offer.trigger as? OfferTrigger.PaymentMethod
-        val r = offer.reward as? OfferReward.LinePercent
         val cond = if (t?.paymentCondition == "CREDIT") "Credit" else "Cash"
         val mins = mutableListOf<String>()
         t?.minOrderTotalFils?.takeIf { it != 0L }?.let { mins.add("≥ ${jodString(it)} JOD") }
         t?.minItemCount?.takeIf { it != 0 }?.let { mins.add("≥ $it items") }
         val suffix = if (mins.isNotEmpty()) " (${mins.joinToString(", ")})" else ""
+        val amount = offer.reward as? OfferReward.LineAmount
+        if (amount != null) {
+            if (amount.dynamic) {
+                val cap = amount.maxAmountFils?.let { " up to ${jodString(it.roundToLong())} JOD" } ?: ""
+                val step = amount.itemsPerStep?.toString() ?: "?"
+                return "$cond · ${jodString(amount.baseAmountFils.roundToLong())} JOD per line, ×${numStr(amount.multiplier ?: 0.0)} per $step items$cap$suffix"
+            }
+            return "$cond · ${jodString(amount.baseAmountFils.roundToLong())} JOD off each line$suffix"
+        }
+        val r = offer.reward as? OfferReward.LinePercent
         if (r?.dynamic == true) {
             val cap = r.maxPercent?.let { " up to ${numStr(it)}%" } ?: ""
             val step = r.itemsPerStep?.toString() ?: "?"
