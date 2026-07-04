@@ -30,4 +30,10 @@ data class Customer(
     val visitOrder: Int,
     val lat: Double?,
     val lng: Double?,
+    /** Server category — drives SEGMENT offer eligibility (null until a catalog refresh fills it). */
+    val category: String? = null,
+    /** Server region id — drives regionIds offer eligibility. */
+    val regionId: String? = null,
+    /** Server rep id — repIds offer eligibility fallback (ctx.repId ?? customer.repId). */
+    val repId: String? = null,
 )

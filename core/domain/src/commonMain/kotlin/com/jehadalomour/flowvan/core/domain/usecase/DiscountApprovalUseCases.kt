@@ -61,7 +61,7 @@ private fun buildSaleEntity(
         )
     }
     return InvoiceEntity(
-        id = number,
+        id = newVoucherClientRef(),   // unique clientRef; server assigns the real number
         number = number,
         type = "SALE",
         status = status,

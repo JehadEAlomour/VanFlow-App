@@ -40,6 +40,18 @@ data class LocationBulkResultDto(
 )
 
 @Serializable
+data class HeartbeatRequest(
+    val gpsEnabled: Boolean,
+    val appState: String = "active",   // "active" | "signed_out"
+    val batteryPct: Int? = null,
+)
+
+@Serializable
+data class HeartbeatResultDto(
+    val ok: Boolean = true,
+)
+
+@Serializable
 data class LocationPingDto(
     val id: String = "",
     val repId: String = "",

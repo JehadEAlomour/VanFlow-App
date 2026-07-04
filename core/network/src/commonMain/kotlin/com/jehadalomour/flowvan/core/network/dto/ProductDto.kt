@@ -12,6 +12,8 @@ data class ProductDto(
     val nameAr: String = "",
     val nameEn: String? = null,
     val categoryId: String? = null,
+    /** Human category label (Arabic) resolved server-side; null when uncategorised. */
+    val categoryName: String? = null,
     val unit: String = "carton",
     val unitOfMeasure: String = "PCE",
     val price: Long = 0,                 // fils

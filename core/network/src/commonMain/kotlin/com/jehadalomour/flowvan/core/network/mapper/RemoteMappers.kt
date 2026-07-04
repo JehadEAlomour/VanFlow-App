@@ -68,6 +68,9 @@ fun CustomerDto.toEntity(): CustomerEntity = CustomerEntity(
     visitOrder = 0,
     lat = latitude?.toDoubleOrNull(),
     lng = longitude?.toDoubleOrNull(),
+    category = category,
+    regionId = regionId,
+    repId = repId,
 )
 
 // ---- Products ----
@@ -77,7 +80,10 @@ fun ProductDto.toEntity(): ProductEntity = ProductEntity(
     sku = sku.ifBlank { itemNumber },
     nameAr = nameAr.ifBlank { name },
     nameEn = nameEn ?: name,
-    category = categoryId ?: "",
+    // Prefer the human category name; fall back to the id so the category filter
+    // still works before the backend (categoryName) is deployed. Blank only when
+    // the product is genuinely uncategorised.
+    category = categoryName ?: categoryId ?: "",
     unit = unit,
     salePrice = price.filsToJod(),
     costPrice = (cost ?: 0L).filsToJod(),

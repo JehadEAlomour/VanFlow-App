@@ -24,11 +24,16 @@ data class OfferEvaluation(
     val serverLines: List<ServerLine> = emptyList(),
     /** The server's authoritative totals — preferred over on-device calculation when online. */
     val totals: OfferTotals = OfferTotals.ZERO,
+    /** Whether this evaluation came from the server or the on-device offline evaluator. */
+    val source: OfferSource = OfferSource.SERVER,
 ) {
     companion object {
         val EMPTY = OfferEvaluation()
     }
 }
+
+/** Where an [OfferEvaluation] was computed. LOCAL results are provisional — the server re-applies on sync. */
+enum class OfferSource { SERVER, LOCAL }
 
 /** A line of the server-fed cart: server-computed unit price, discount, and net (JOD). */
 data class ServerLine(

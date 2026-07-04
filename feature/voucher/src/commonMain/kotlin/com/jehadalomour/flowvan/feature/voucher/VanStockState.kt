@@ -24,7 +24,8 @@ data class VanStockState(
     val nowMs: Long = 0L,
     val isLoading: Boolean = true,
 ) {
-    val categories: List<String> get() = allProducts.map { it.category }.distinct().sorted()
+    val categories: List<String> get() =
+        allProducts.map { it.category }.filter { it.isNotBlank() }.distinct().sorted()
 
     val visibleProducts: List<Product> get() {
         var list = allProducts

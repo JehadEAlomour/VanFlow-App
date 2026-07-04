@@ -10,6 +10,7 @@ import com.jehadalomour.flowvan.core.database.dao.AppSettingsDao
 import com.jehadalomour.flowvan.core.database.dao.CustomerDao
 import com.jehadalomour.flowvan.core.database.dao.InvoiceDao
 import com.jehadalomour.flowvan.core.database.dao.LocationPointDao
+import com.jehadalomour.flowvan.core.database.dao.OfferDao
 import com.jehadalomour.flowvan.core.database.dao.PaymentDao
 import com.jehadalomour.flowvan.core.database.dao.ProductDao
 import com.jehadalomour.flowvan.core.database.dao.ProductUnitDao
@@ -21,6 +22,7 @@ import com.jehadalomour.flowvan.core.database.entity.AppSettingsEntity
 import com.jehadalomour.flowvan.core.database.entity.CustomerEntity
 import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
 import com.jehadalomour.flowvan.core.database.entity.LocationPointEntity
+import com.jehadalomour.flowvan.core.database.entity.OfferEntity
 import com.jehadalomour.flowvan.core.database.entity.PaymentEntity
 import com.jehadalomour.flowvan.core.database.entity.ProductEntity
 import com.jehadalomour.flowvan.core.database.entity.ProductUnitEntity
@@ -41,8 +43,9 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         AiMessageEntity::class,
         RouteStopEntity::class,
         AppSettingsEntity::class,
+        OfferEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -55,6 +58,8 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         AutoMigration(from = 6, to = 7),
         // v8: products.imageUrl (nullable) for catalog/cart thumbnails.
         AutoMigration(from = 7, to = 8),
+        // v9: offers cache table + customers.category/regionId/repId for offline offer eligibility.
+        AutoMigration(from = 8, to = 9),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)
@@ -70,6 +75,7 @@ abstract class FlowVanDatabase : RoomDatabase() {
     abstract fun routeStopDao(): RouteStopDao
     abstract fun aiMessageDao(): AiMessageDao
     abstract fun appSettingsDao(): AppSettingsDao
+    abstract fun offerDao(): OfferDao
 }
 
 @Suppress("KotlinNoActualForExpect", "NO_ACTUAL_FOR_EXPECT")

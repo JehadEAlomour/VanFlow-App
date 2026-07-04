@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -317,17 +318,26 @@ fun VoucherScreen(
     }
 
     // ── SALE: choose-free-item sheet (ITEM_QTY_REWARD gift picks) ───────────────
-    if (state.offersEnabled && state.pendingChoices.isNotEmpty()) {
+    // A gift is an entitlement, so the sheet is MANDATORY: it shows whenever any offer still
+    // has an unfilled gift quota and can't be dismissed until every quota is picked, after
+    // which it closes automatically.
+    val giftQuotaUnmet = state.pendingChoices.any { choice ->
+        val pool = choice.choices.toSet()
+        state.chosenFreeItems.count { it in pool } < choice.qty
+    }
+    if (state.offersEnabled && giftQuotaUnmet) {
         ChooseFreeItemSheet(
             choices = state.pendingChoices,
             selectedItems = state.chosenFreeItems,
             productNameFor = { itemNumber ->
                 state.products.firstOrNull { it.sku == itemNumber }?.nameAr ?: itemNumber
             },
-            onPick = { offerId, itemNumber ->
+            onAdd = { offerId, itemNumber ->
                 viewModel.onEvent(VoucherEvent.ChooseFreeItem(offerId, itemNumber))
             },
-            onDismiss = { viewModel.onEvent(VoucherEvent.DismissFreeItemSheet) },
+            onRemove = { offerId, itemNumber ->
+                viewModel.onEvent(VoucherEvent.RemoveFreeItem(offerId, itemNumber))
+            },
         )
     }
 
@@ -644,7 +654,7 @@ private fun CartView(
         }
         // ── SALE: offline banner ──────────────────────────────────────────────
         if (state.isOffline) {
-            item(key = "offline-banner") { OfflineBanner() }
+            item(key = "offline-banner") { OfflineBanner(text = state.offlineBannerTextAr) }
         }
         // ── Cart lines (per-line offer discount shown on each line) ────────────
         // SALE online: render the server-fed result (per-line server discount + net).
@@ -664,10 +674,28 @@ private fun CartView(
                 CartItemCard(line = line, onTap = { onTapLine(line.productId) })
             }
         }
-        // ── SALE: FREE lines (read-only, net 0) ───────────────────────────────
+        // ── SALE: FREE lines — a free item is a NORMAL cart line at its real price with a
+        // 100% discount (net 0). The engine emits one qty-1 line per pick, so N picks of the
+        // same gift merge by ITEM into one "× N" line (e.g. 3 water + 2 pepsi → two lines).
         if (state.offersEnabled) {
-            items(state.freeLines, key = { "free-${it.itemNumber}-${it.offerId}" }) { free ->
-                FreeLineCard(free)
+            val mergedFree = state.freeLines
+                .groupBy { it.itemNumber }
+                .map { (_, lines) -> lines.first().copy(qty = lines.sumOf { it.qty }) }
+            items(mergedFree, key = { "free-${it.itemNumber}" }) { free ->
+                val gross = free.unitPriceJod * free.qty
+                ServerCartLineCard(
+                    line = ServerLine(
+                        itemNumber = free.itemNumber,
+                        qty = free.qty,
+                        unitPriceJod = free.unitPriceJod,
+                        lineDiscountJod = gross,   // 100% off → net 0
+                        lineNetJod = 0.0,
+                        offers = listOf(LineOffer(offerId = free.offerId, name = "هدية", pct = 100.0, discountJod = gross)),
+                    ),
+                    nameAr = state.products.firstOrNull { it.sku == free.itemNumber }?.nameAr ?: free.itemNumber,
+                    unit = state.cart.firstOrNull { it.sku == free.itemNumber }?.unit ?: "",
+                    onTap = {},   // offer-driven, read-only
+                )
             }
         }
         if (state.cart.isEmpty() && state.freeLines.isEmpty()) {
@@ -731,7 +759,7 @@ private fun PaymentToggle(current: PaymentMethod, onSelect: (PaymentMethod) -> U
 // ── SALE: offline banner ──────────────────────────────────────────────────────
 
 @Composable
-private fun OfflineBanner() {
+private fun OfflineBanner(text: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -741,7 +769,7 @@ private fun OfflineBanner() {
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Text(
-            "غير متصل — الإجماليات محلية، يعاد تطبيق العروض عند المزامنة",
+            text,
             color = Fv.Amber,
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
@@ -902,60 +930,6 @@ private fun formatPct(pct: Double): String {
     return "$text%"
 }
 
-// ── SALE: FREE line card (read-only, net 0) ───────────────────────────────────
-
-@Composable
-private fun FreeLineCard(free: FreeLine) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Fv.Green.copy(alpha = 0.06f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(0.5.dp, Fv.Green.copy(alpha = 0.35f)),
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ProductAvatar(
-                seed = free.itemNumber,
-                letter = "🎁",
-                size = 50.dp,
-            )
-            Spacer(Modifier.size(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    free.itemNumber,
-                    color = Fv.TextHigh,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(3.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        free.unitPriceJod.formatJod(AppLanguage.AR),
-                        color = Fv.TextMid,
-                        fontSize = 11.sp,
-                        textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
-                    )
-                    Text("× ${free.qty.toInt()}", color = Fv.TextMid, fontSize = 11.sp)
-                }
-            }
-            Spacer(Modifier.size(8.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Fv.Green)
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-            ) {
-                Text("هدية / FREE", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
 // ── SALE: choose-free-item bottom sheet ───────────────────────────────────────
 
 @Composable
@@ -963,17 +937,20 @@ private fun ChooseFreeItemSheet(
     choices: List<OfferChoice>,
     selectedItems: List<String>,
     productNameFor: (String) -> String,
-    onPick: (offerId: String, itemNumber: String) -> Unit,
-    onDismiss: () -> Unit,
+    onAdd: (offerId: String, itemNumber: String) -> Unit,
+    onRemove: (offerId: String, itemNumber: String) -> Unit,
 ) {
     if (choices.isEmpty()) return
-    // Whether every pending choice has its full quota of gifts picked → enables "Done".
-    val allChosen = choices.all { choice ->
-        val picksForChoice = choice.choices.count { it in selectedItems }
-        choice.qty <= 0 || picksForChoice >= choice.qty
+    fun picksFor(choice: OfferChoice): Int {
+        val pool = choice.choices.toSet()
+        return selectedItems.count { it in pool }
     }
+    val totalPicked = choices.sumOf { picksFor(it) }
+    val totalQuota = choices.sumOf { it.qty }
     Dialog(
-        onDismissRequest = onDismiss,
+        // Mandatory: not dismissible. The caller hides the sheet automatically once every
+        // gift quota is filled, so the offer is always applied.
+        onDismissRequest = {},
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
@@ -996,80 +973,118 @@ private fun ChooseFreeItemSheet(
                     Text("اختر هديتك", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(12.dp))
                     choices.forEach { choice ->
-                        val picksForChoice = choice.choices.count { it in selectedItems }
-                        if (choice.qty > 1) {
-                            Text(
-                                "اختر ${choice.qty} ($picksForChoice/${choice.qty})",
-                                color = Fv.TextMid,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(bottom = 4.dp, top = 2.dp),
-                            )
-                        }
+                        val picks = picksFor(choice)
+                        val atQuota = picks >= choice.qty
+                        Text(
+                            "اختر ${choice.qty} ($picks/${choice.qty})",
+                            color = if (atQuota) Fv.Green else Fv.TextMid,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(bottom = 4.dp, top = 2.dp),
+                        )
                         choice.choices.forEach { itemNumber ->
-                            val selected = itemNumber in selectedItems
+                            val count = selectedItems.count { it == itemNumber }
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(
-                                        if (selected) Fv.Green.copy(alpha = 0.22f)
-                                        else Fv.Green.copy(alpha = 0.10f)
+                                        if (count > 0) Fv.Green.copy(alpha = 0.18f)
+                                        else Fv.Green.copy(alpha = 0.08f)
                                     )
                                     .border(
-                                        if (selected) 1.5.dp else 0.5.dp,
-                                        Fv.Green.copy(alpha = if (selected) 0.7f else 0.35f),
+                                        if (count > 0) 1.5.dp else 0.5.dp,
+                                        Fv.Green.copy(alpha = if (count > 0) 0.7f else 0.30f),
                                         RoundedCornerShape(12.dp),
                                     )
-                                    .clickable { onPick(choice.offerId, itemNumber) }
-                                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
                                         Text("🎁", fontSize = 14.sp)
                                         Text(
                                             productNameFor(itemNumber),
                                             color = Fv.TextHigh,
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
                                         )
                                     }
-                                    if (selected) {
-                                        Text("✓", color = Fv.Green, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                    // Quantity stepper: − count + (so a single-item pool like
+                                    // "3 free water" can be picked as water ×3).
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    ) {
+                                        StepperButton(symbol = "−", enabled = count > 0) {
+                                            onRemove(choice.offerId, itemNumber)
+                                        }
+                                        Text(
+                                            "$count",
+                                            color = Fv.TextHigh,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.widthIn(min = 16.dp),
+                                            textAlign = TextAlign.Center,
+                                        )
+                                        StepperButton(symbol = "+", enabled = !atQuota) {
+                                            onAdd(choice.offerId, itemNumber)
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(12.dp))
+                    // Progress hint. The sheet closes on its own once this reaches the quota.
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .height(44.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .then(
-                                if (allChosen)
-                                    Modifier.background(Brush.linearGradient(listOf(Color(0xFF1D9E75), Color(0xFF0F6E56))))
-                                else Modifier.border(0.5.dp, Color(0xFFC8D8EC), RoundedCornerShape(14.dp))
-                            )
-                            .clickable { onDismiss() },
+                            .background(Color(0xFFEDF2F8)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            if (allChosen) stringResource(Res.string.confirm) else stringResource(Res.string.cancel),
-                            color = if (allChosen) Color.White else Fv.TextMid,
-                            fontSize = 14.sp,
+                            "اختر كل الهدايا للمتابعة ($totalPicked/$totalQuota)",
+                            color = Fv.TextMid,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
                 }
             }
         }
+    }
+}
+
+/** Small round +/− control for the gift-quantity stepper. Greys out when [enabled] is false. */
+@Composable
+private fun StepperButton(symbol: String, enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (enabled) Fv.Green.copy(alpha = 0.16f) else Color(0xFFF0F3F7))
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            symbol,
+            color = if (enabled) Fv.Green else Color(0xFFB6C2D2),
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 

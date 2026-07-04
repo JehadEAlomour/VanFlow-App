@@ -59,7 +59,7 @@ class CreateRequestVoucherUseCase(
         )
 
         val entity = InvoiceEntity(
-            id             = number,
+            id             = newVoucherClientRef(),   // unique clientRef; server assigns the real number
             number         = number,
             type           = "REQUEST",
             status         = "CONFIRMED",

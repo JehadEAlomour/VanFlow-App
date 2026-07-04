@@ -55,6 +55,7 @@ kotlin {
             implementation(projects.core.common)
             implementation(projects.core.database)
             implementation(projects.core.datastore)
+            implementation(projects.core.data)
             implementation(projects.core.domain)
             implementation(projects.feature.ai)
             implementation(projects.feature.auth)

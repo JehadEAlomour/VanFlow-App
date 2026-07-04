@@ -11,6 +11,7 @@ dependencies {
     "commonMainImplementation"(projects.core.datastore)
     "commonMainImplementation"(libs.kotlinx.coroutines.core)
     "commonMainImplementation"(libs.kotlinx.serialization.json)
+    "commonMainImplementation"(libs.kotlinx.datetime)
     "commonMainImplementation"(libs.kermit)
     // createHttpClient() returns an HttpClient in the public API → api so consumers
     // (e.g. :shared DI) can see the type

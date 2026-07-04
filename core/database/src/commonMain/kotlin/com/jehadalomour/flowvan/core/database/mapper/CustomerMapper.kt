@@ -24,4 +24,7 @@ fun CustomerEntity.toDomain(): Customer = Customer(
     visitOrder = visitOrder,
     lat = lat,
     lng = lng,
+    category = category,
+    regionId = regionId,
+    repId = repId,
 )
