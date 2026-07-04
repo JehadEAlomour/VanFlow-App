@@ -196,3 +196,13 @@ private fun ReceiptRow(label: String, value: String) {
         Text(value, color = Fv.TextHigh, fontSize = 12.sp, fontWeight = FontWeight.Medium)
     }
 }
+
+@Composable
+private fun Dashed() {
+    HorizontalDivider(color = Hair, thickness = 1.dp)
+}
+
+@Composable
+private fun Thick() {
+    HorizontalDivider(color = Ink, thickness = 3.dp)
+}
