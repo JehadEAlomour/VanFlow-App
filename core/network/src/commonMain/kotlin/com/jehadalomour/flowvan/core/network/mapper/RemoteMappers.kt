@@ -80,7 +80,8 @@ fun ProductDto.toEntity(): ProductEntity = ProductEntity(
     sku = sku.ifBlank { itemNumber },
     nameAr = nameAr.ifBlank { name },
     nameEn = nameEn ?: name,
-    category = categoryId ?: "",
+    // Show the human category name, not the raw UUID. Blank when uncategorised.
+    category = categoryName ?: "",
     unit = unit,
     salePrice = price.filsToJod(),
     costPrice = (cost ?: 0L).filsToJod(),
