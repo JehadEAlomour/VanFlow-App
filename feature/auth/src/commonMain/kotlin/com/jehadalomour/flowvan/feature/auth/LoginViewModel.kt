@@ -8,6 +8,7 @@ import com.jehadalomour.flowvan.core.network.http.ApiConfig
 import com.jehadalomour.flowvan.core.common.error.CashFlowError
 import com.jehadalomour.flowvan.core.domain.usecase.AuthException
 import com.jehadalomour.flowvan.core.domain.usecase.BackendLoginUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.BackupDatabaseUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.LoginUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,7 @@ class LoginViewModel(
     private val backendLogin: BackendLoginUseCase,
     private val apiConfig: ApiConfig,
     private val locationProvider: LocationProvider,
+    private val backupDatabase: BackupDatabaseUseCase,
 ) : ViewModel() {
 
     private val log = Logger.withTag("LoginViewModel")
@@ -77,6 +79,8 @@ class LoginViewModel(
             }
             result.fold(
                 onSuccess = { user ->
+                    // Snapshot the local db into Documents on every successful login (best-effort).
+                    backupDatabase()
                     _state.update { it.copy(isSubmitting = false, error = null, password = "") }
                     _effects.tryEmit(LoginEffect.NavigateHome(user))
                 },

@@ -40,6 +40,7 @@ data class CollectionState(
     val notes: String = "",
     val isSaving: Boolean = false,
     val savedNumber: String? = null,
+    val savedPaymentId: String? = null,
     val errorAr: String? = null,
 ) {
     val amount: Double? get() = when (method) {

@@ -6,12 +6,12 @@ import org.koin.dsl.module
 
 fun printModule(): Module = module {
     viewModel { (invoiceId: String) ->
-        VoucherDetailViewModel(invoiceId, get(), get())
+        VoucherDetailViewModel(invoiceId, get(), get(), get())
     }
     viewModel { (invoiceId: String) ->
         VoucherPrintViewModel(invoiceId, get(), get(), get(), get(), get(), get(), get(), get())
     }
     viewModel { (paymentId: String) ->
-        ReceiptDetailViewModel(paymentId, get())
+        ReceiptDetailViewModel(paymentId, get(), get(), get(), get(), get())
     }
 }

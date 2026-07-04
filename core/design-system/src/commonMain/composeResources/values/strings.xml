@@ -442,7 +442,7 @@
     <string name="items_sales_total_qty">إجمالي الكمية</string>
     <string name="items_sales_unit_count">%1$d وحدة</string>
     <string name="login_demo_credentials">بيانات تجريبية: admin / 1234</string>
-    <string name="login_phone_label">رقم الهاتف</string>
+    <string name="login_phone_label">رقم المندوب</string>
     <string name="map_locating">جاري تحديد الموقع…</string>
     <string name="map_navigation_fallback">تعذّر فتح الملاحة</string>
     <string name="map_step_of">الخطوة %1$d من %2$d</string>

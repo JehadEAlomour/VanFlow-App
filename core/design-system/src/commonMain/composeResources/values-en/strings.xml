@@ -442,7 +442,7 @@
     <string name="items_sales_total_qty">Total Qty</string>
     <string name="items_sales_unit_count">%1$d units</string>
     <string name="login_demo_credentials">Demo credentials: admin / 1234</string>
-    <string name="login_phone_label">Phone Number</string>
+    <string name="login_phone_label">Salesman Number</string>
     <string name="map_locating">Locating…</string>
     <string name="map_navigation_fallback">Could not open navigation</string>
     <string name="map_step_of">Step %1$d of %2$d</string>
