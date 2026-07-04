@@ -84,6 +84,8 @@
     <string name="customer_action_request">طلب</string>
     <string name="customer_action_collection">تحصيل</string>
     <string name="customer_action_ai">سؤال الذكاء الاصطناعي</string>
+    <string name="proximity_blocked_gps">فعّل خدمة الموقع (GPS) لتتمكن من البيع في موقع هذا العميل</string>
+    <string name="proximity_blocked_far">يجب أن تكون في موقع العميل (ضمن 1 كم) لإتمام أي عملية</string>
 
     <!-- Sale Voucher -->
     <string name="sale_title">فاتورة بيع</string>

@@ -1,6 +1,7 @@
 package com.jehadalomour.flowvan.core.domain.usecase
 
 import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
+import com.jehadalomour.flowvan.core.data.location.LocationProvider
 import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.InvoiceDiscountInput
@@ -17,6 +18,7 @@ class CreateRequestVoucherUseCase(
     private val json: Json,
     private val syncScheduler: SyncScheduler,
     private val voucherNumbers: VoucherNumberGenerator,
+    private val location: LocationProvider,
 ) {
     @OptIn(ExperimentalTime::class)
     suspend operator fun invoke(
@@ -36,6 +38,7 @@ class CreateRequestVoucherUseCase(
 
         val number = voucherNumbers.next("ORD", "REQUEST")
         val now = Clock.System.now().toEpochMilliseconds()
+        val loc = location.lastLocation()
         val invoiceLines = cart.map {
             InvoiceLine(
                 productId   = it.productId,
@@ -74,6 +77,8 @@ class CreateRequestVoucherUseCase(
             paymentMethod  = null,
             notes          = if (noteParts.isEmpty()) null else noteParts.joinToString(" — "),
             syncedAt       = null,
+            repLat = loc?.lat,
+            repLng = loc?.lng,
         )
         invoices.save(entity)
         // No stock or balance change — intentional for pre-orders.

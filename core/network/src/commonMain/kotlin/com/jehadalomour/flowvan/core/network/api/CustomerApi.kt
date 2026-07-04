@@ -3,6 +3,7 @@ package com.jehadalomour.flowvan.core.network.api
 import com.jehadalomour.flowvan.core.network.dto.CreateCustomerRequest
 import com.jehadalomour.flowvan.core.network.dto.CustomerDto
 import com.jehadalomour.flowvan.core.network.dto.LogVisitRequest
+import com.jehadalomour.flowvan.core.network.dto.SeedLocationRequest
 import com.jehadalomour.flowvan.core.network.http.FlowVanApiClient
 import com.jehadalomour.flowvan.core.network.http.OffsetPage
 import com.jehadalomour.flowvan.core.network.http.getData
@@ -31,6 +32,14 @@ class CustomerApi(private val client: FlowVanApiClient) {
     suspend fun getById(id: String): CustomerDto = client.getData("customers/$id")
 
     suspend fun create(body: CreateCustomerRequest): CustomerDto = client.postData("customers", body)
+
+    /**
+     * Seed a customer's GPS location (seed-once server-side: only fills an empty
+     * pin). Used to bootstrap a store that has no coordinates when a location-locked
+     * rep opens it. Returns the customer (with the location if it took effect).
+     */
+    suspend fun seedLocation(customerId: String, lat: Double, lng: Double): CustomerDto =
+        client.postData("customers/$customerId/location", SeedLocationRequest(lat, lng))
 
     suspend fun logVisit(customerId: String, body: LogVisitRequest) {
         client.execute(

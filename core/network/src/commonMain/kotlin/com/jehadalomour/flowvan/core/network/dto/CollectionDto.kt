@@ -39,6 +39,9 @@ data class CreateCollectionRequest(
     val method: String,                   // cash | cheque
     val collectedAt: String? = null,
     val note: String? = null,
+    /** Rep's GPS when recorded — enforces the per-rep location lock. Omitted when null. */
+    val repLat: Double? = null,
+    val repLng: Double? = null,
     val cheque: CreateChequeRequest? = null,
 )
 

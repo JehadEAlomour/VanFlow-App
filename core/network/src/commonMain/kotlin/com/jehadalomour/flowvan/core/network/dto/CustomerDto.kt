@@ -44,6 +44,13 @@ data class CreateCustomerRequest(
     val regionId: String? = null,
 )
 
+/** Body for `POST /customers/:id/location` — a rep seeding a missing store pin. */
+@Serializable
+data class SeedLocationRequest(
+    val lat: Double,
+    val lng: Double,
+)
+
 @Serializable
 data class LogVisitRequest(
     val repId: String,

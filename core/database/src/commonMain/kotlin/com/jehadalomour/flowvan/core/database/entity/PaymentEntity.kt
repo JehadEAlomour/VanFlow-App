@@ -19,4 +19,7 @@ data class PaymentEntity(
     val transferRef: String?,
     val notes: String?,
     val syncedAt: Long?,
+    /** Rep's GPS when recorded (location-locked reps); see InvoiceEntity.repLat. */
+    val repLat: Double? = null,
+    val repLng: Double? = null,
 )

@@ -3,6 +3,9 @@ package com.jehadalomour.flowvan.feature.voucher
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jehadalomour.flowvan.core.database.dao.InvoiceDao
+import com.jehadalomour.flowvan.core.data.location.LatLng
+import com.jehadalomour.flowvan.core.data.location.LocationProvider
+import com.jehadalomour.flowvan.core.data.location.isWithinProximity
 import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.OfferRepository
@@ -73,6 +76,7 @@ class VoucherViewModel(
     private val requestDiscountApproval: RequestDiscountApprovalUseCase,
     private val commitApprovedSale: CommitApprovedSaleUseCase,
     private val offerRepository: OfferRepository,
+    private val location: LocationProvider,
 ) : ViewModel() {
 
     /** Which pending approval is in flight, so the poll commits the right voucher. */
@@ -521,6 +525,13 @@ class VoucherViewModel(
         }
         _state.update { it.copy(isSaving = true, showSaveSheet = false) }
         viewModelScope.launch {
+            // Location lock: a restricted rep must be at the customer to create the
+            // voucher. Blocks a rep who opened the screen in range then drifted away,
+            // so we never create a local sale the backend will reject on sync.
+            proximityBlockMessage(s)?.let { msg ->
+                _state.update { it.copy(isSaving = false, errorAr = msg) }
+                return@launch
+            }
             val salesmanId = session.currentUserId.orEmpty()
             val result = when (type) {
                 VoucherType.SALE -> createSale(
@@ -565,6 +576,24 @@ class VoucherViewModel(
                 },
             )
         }
+    }
+
+    /**
+     * Location lock (customers.requireProximity). Returns a localized error when the
+     * rep may not act here, else null. Fail closed: no GPS fix → blocked. When the
+     * customer has no saved location the create use case seeds it from the rep's fix,
+     * so we only require a fix (not proximity) in that case.
+     */
+    private suspend fun proximityBlockMessage(s: VoucherState): String? {
+        if (!session.can("customers.requireProximity")) return null
+        val fix = location.lastLocation()
+            ?: return getString(Res.string.proximity_blocked_gps)
+        val lat = s.customer?.lat
+        val lng = s.customer?.lng
+        if (lat != null && lng != null && !isWithinProximity(fix, LatLng(lat, lng))) {
+            return getString(Res.string.proximity_blocked_far)
+        }
+        return null
     }
 
     /** File the return as a manager approval request, then poll until decided. */

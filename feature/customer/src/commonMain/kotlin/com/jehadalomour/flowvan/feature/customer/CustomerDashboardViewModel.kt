@@ -3,6 +3,9 @@ package com.jehadalomour.flowvan.feature.customer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
+import com.jehadalomour.flowvan.core.data.location.LatLng
+import com.jehadalomour.flowvan.core.data.location.LocationProvider
+import com.jehadalomour.flowvan.core.data.location.isWithinProximity
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.data.repository.PaymentRepository
@@ -13,6 +16,8 @@ import com.jehadalomour.flowvan.core.network.mapper.toEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
@@ -25,15 +30,24 @@ class CustomerDashboardViewModel(
     payments: PaymentRepository,
     private val customerApi: CustomerApi,
     private val session: SessionStore,
+    private val location: LocationProvider,
 ) : ViewModel() {
 
+    /** This rep may only act on a customer while at its location (~1 km). */
+    private val locationLocked = session.can("customers.requireProximity")
+
     private val _state = MutableStateFlow(
-        CustomerDashboardState(requireVisitReason = session.can("customers.visitReason")),
+        CustomerDashboardState(
+            requireVisitReason = session.can("customers.visitReason"),
+            locationLocked = locationLocked,
+        ),
     )
     val state: StateFlow<CustomerDashboardState> = _state.asStateFlow()
     private val log = Logger.withTag("CustomerVisit")
 
     init {
+        if (locationLocked) viewModelScope.launch { setUpProximity() }
+
         customers.observeById(customerId)
             .onEach { c -> _state.update { it.copy(customer = c, isLoading = c == null) } }
             .launchIn(viewModelScope)
@@ -68,6 +82,48 @@ class CustomerDashboardViewModel(
             } catch (e: Exception) {
                 log.w("customer refresh failed: ${e.message}")
             }
+        }
+    }
+
+    /**
+     * Location lock (customers.requireProximity). On open: if the customer has no
+     * saved location, seed it from the rep's current GPS (the rep is here); then
+     * decide whether actions are allowed. Fail closed — no GPS fix ⇒ blocked.
+     */
+    private suspend fun setUpProximity() {
+        // Wait for the customer to load from the local cache.
+        val customer = customers.observeById(customerId).filterNotNull().first()
+        val fix = location.lastLocation()
+        if (fix == null) {
+            _state.update { it.copy(proximityBlock = ProximityBlock.NO_GPS) }
+            return
+        }
+
+        val cLat = customer.lat
+        val cLng = customer.lng
+        val pin: Pair<Double, Double> = if (cLat != null && cLng != null) {
+            cLat to cLng
+        } else {
+            // Bootstrap the missing store location from the rep's position.
+            val seeded = runCatching { customerApi.seedLocation(customerId, fix.lat, fix.lng) }
+                .getOrElse {
+                    log.w("seedLocation failed (offline?): ${it.message}")
+                    null
+                }
+            if (seeded != null) {
+                customers.cacheAll(listOf(seeded.toEntity()))
+                (seeded.latitude?.toDoubleOrNull() ?: fix.lat) to
+                    (seeded.longitude?.toDoubleOrNull() ?: fix.lng)
+            } else {
+                // Couldn't reach the server — the rep IS here, so allow. The voucher
+                // carries the coords and the backend seeds on sync.
+                fix.lat to fix.lng
+            }
+        }
+
+        val within = isWithinProximity(fix, LatLng(pin.first, pin.second))
+        _state.update {
+            it.copy(proximityBlock = if (within) ProximityBlock.NONE else ProximityBlock.TOO_FAR)
         }
     }
 

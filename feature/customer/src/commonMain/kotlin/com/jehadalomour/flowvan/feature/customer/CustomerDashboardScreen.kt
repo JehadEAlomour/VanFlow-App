@@ -37,6 +37,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -155,7 +156,14 @@ fun CustomerDashboardScreen(
         }
 
         // ── Bottom Action Bar ─────────────────────────────────────────────────
+        // Location-locked reps can't act unless they're at the customer (~1 km).
         BottomActionBar(
+            enabled = state.actionsEnabled,
+            blockReason = when (state.proximityBlock) {
+                ProximityBlock.NO_GPS -> stringResource(Res.string.proximity_blocked_gps)
+                ProximityBlock.TOO_FAR -> stringResource(Res.string.proximity_blocked_far)
+                ProximityBlock.NONE -> null
+            },
             onSale = { startedTxn = true; onOpenSale(customerId) },
             onReturn = { startedTxn = true; onOpenReturn(customerId) },
             onRequest = { startedTxn = true; onOpenRequest(customerId) },
@@ -611,6 +619,8 @@ private fun StatementCard(onOpenAccountStatement: () -> Unit) {
 
 @Composable
 private fun BottomActionBar(
+    enabled: Boolean,
+    blockReason: String?,
     onSale: () -> Unit,
     onReturn: () -> Unit,
     onRequest: () -> Unit,
@@ -620,6 +630,33 @@ private fun BottomActionBar(
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
+            // Location-lock banner: explains why the actions below are disabled.
+            if (!enabled && blockReason != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Fv.Red.copy(alpha = 0.12f))
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                        .padding(bottom = 0.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painterResource(Res.drawable.ic_map),
+                        contentDescription = null,
+                        tint = Fv.Red,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        blockReason,
+                        color = Fv.Red,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+            }
             Text(
                 stringResource(Res.string.customer_quick_actions),
                 color = Fv.TextMid,
@@ -633,6 +670,7 @@ private fun BottomActionBar(
                     iconGradient = Brush.linearGradient(listOf(Color(0xFF0FA968), Color(0xFF0A7A4B))),
                     label = stringResource(Res.string.customer_action_sale),
                     labelColor = Fv.Green,
+                    enabled = enabled,
                     modifier = Modifier.weight(1f),
                     onClick = onSale,
                 )
@@ -641,6 +679,7 @@ private fun BottomActionBar(
                     iconGradient = Brush.linearGradient(listOf(Color(0xFFD63B3B), Color(0xFF992828))),
                     label = stringResource(Res.string.customer_action_return),
                     labelColor = Fv.Red,
+                    enabled = enabled,
                     modifier = Modifier.weight(1f),
                     onClick = onReturn,
                 )
@@ -649,6 +688,7 @@ private fun BottomActionBar(
                     iconGradient = Brush.linearGradient(listOf(Color(0xFF0E9E91), Color(0xFF0A6E66))),
                     label = stringResource(Res.string.customer_action_request),
                     labelColor = Fv.Teal,
+                    enabled = enabled,
                     modifier = Modifier.weight(1f),
                     onClick = onRequest,
                 )
@@ -657,6 +697,7 @@ private fun BottomActionBar(
                     iconGradient = Brush.linearGradient(listOf(Color(0xFFB36C00), Color(0xFF7A4A00))),
                     label = stringResource(Res.string.customer_action_collection),
                     labelColor = Fv.Amber,
+                    enabled = enabled,
                     modifier = Modifier.weight(1f),
                     onClick = onCollection,
                 )
@@ -671,11 +712,14 @@ private fun ActionTile(
     iconGradient: Brush,
     label: String,
     labelColor: Color,
+    enabled: Boolean,
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
     Column(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier
+            .clickable(enabled = enabled, onClick = onClick)
+            .then(if (enabled) Modifier else Modifier.alpha(0.4f)),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {

@@ -45,7 +45,7 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         AppSettingsEntity::class,
         OfferEntity::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -60,6 +60,9 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         AutoMigration(from = 7, to = 8),
         // v9: offers cache table + customers.category/regionId/repId for offline offer eligibility.
         AutoMigration(from = 8, to = 9),
+        // v10: invoices/payments repLat/repLng (nullable) — sale-time GPS for the
+        // per-rep location lock (customers.requireProximity).
+        AutoMigration(from = 9, to = 10),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)

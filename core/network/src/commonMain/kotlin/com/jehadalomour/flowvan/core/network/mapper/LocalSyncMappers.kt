@@ -99,6 +99,10 @@ fun InvoiceEntity.toVoucherRequest(userCode: String, customerNumber: String?, js
         // jump to the processing date and hide from the Operations day it was actually sold.
         inDate = Instant.fromEpochMilliseconds(createdAt).toString(),
         isPosted = true,
+        // Sale-time GPS (location-locked reps) — the backend re-validates proximity
+        // against these, so an offline sale is checked against where the rep was.
+        repLat = repLat,
+        repLng = repLng,
         totalDiscountValue = if (voucherDiscountFils > 0L) (voucherDiscountFils / 1000.0).toAmountString() else null,
         transactions = lines.map { line ->
             val discFils = lineDiscountFils(line)
@@ -137,6 +141,8 @@ fun PaymentEntity.toCreateCollectionRequest(repId: String): CreateCollectionRequ
         amount = amount.jodToFils().toLong(),
         method = if (isCheque) "cheque" else "cash",     // backend supports cash | cheque
         note = notes,
+        repLat = repLat,
+        repLng = repLng,
         cheque = if (isCheque) {
             CreateChequeRequest(bankName = chequeBank, chequeNumber = chequeNumber)
         } else {

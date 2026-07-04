@@ -29,4 +29,12 @@ data class InvoiceEntity(
      * server on sync so it adds the free lines and records the redemption.
      */
     val chosenFreeItemsCsv: String? = null,
+    /**
+     * Rep's GPS at the moment the voucher was created (location-locked reps).
+     * Persisted so an offline sale that syncs later is validated by the backend
+     * against where the rep actually was, not where they are at sync time. Null
+     * for unrestricted reps / when no fix was available.
+     */
+    val repLat: Double? = null,
+    val repLng: Double? = null,
 )

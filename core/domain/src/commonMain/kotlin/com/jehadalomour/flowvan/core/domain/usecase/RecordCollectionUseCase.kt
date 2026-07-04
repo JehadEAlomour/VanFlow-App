@@ -1,6 +1,7 @@
 package com.jehadalomour.flowvan.core.domain.usecase
 
 import com.jehadalomour.flowvan.core.database.entity.PaymentEntity
+import com.jehadalomour.flowvan.core.data.location.LocationProvider
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.PaymentRepository
 import com.jehadalomour.flowvan.core.model.PaymentMethod
@@ -14,6 +15,7 @@ class RecordCollectionUseCase(
     private val payments: PaymentRepository,
     private val customers: CustomerRepository,
     private val syncScheduler: SyncScheduler,
+    private val location: LocationProvider,
 ) {
     @OptIn(ExperimentalTime::class)
     suspend operator fun invoke(
@@ -41,6 +43,7 @@ class RecordCollectionUseCase(
 
         val number = VoucherNumber.next("RCP")
         val now = Clock.System.now().toEpochMilliseconds()
+        val loc = location.lastLocation()
         val entity = PaymentEntity(
             id = "PMT-$number",
             number = number,
@@ -56,6 +59,8 @@ class RecordCollectionUseCase(
             transferRef = transferRef,
             notes = notes,
             syncedAt = null,
+            repLat = loc?.lat,
+            repLng = loc?.lng,
         )
         payments.save(entity)
         customers.adjustBalance(customerId, -amount)

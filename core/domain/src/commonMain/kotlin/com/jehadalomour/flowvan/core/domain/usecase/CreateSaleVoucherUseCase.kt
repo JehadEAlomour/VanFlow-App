@@ -1,6 +1,7 @@
 package com.jehadalomour.flowvan.core.domain.usecase
 
 import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
+import com.jehadalomour.flowvan.core.data.location.LocationProvider
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
@@ -28,6 +29,7 @@ class CreateSaleVoucherUseCase(
     private val json: Json,
     private val syncScheduler: SyncScheduler,
     private val voucherNumbers: VoucherNumberGenerator,
+    private val location: LocationProvider,
 ) {
     @OptIn(ExperimentalTime::class)
     suspend operator fun invoke(
@@ -59,6 +61,9 @@ class CreateSaleVoucherUseCase(
 
         val number = voucherNumbers.next("INV", "SALE")
         val now = Clock.System.now().toEpochMilliseconds()
+        // Capture the rep's position at sale time for the location lock. Persisted on
+        // the entity so it survives an offline delay and reaches the backend on sync.
+        val loc = location.lastLocation()
         val invoiceLines = cart.map {
             InvoiceLine(
                 productId   = it.productId,
@@ -96,6 +101,8 @@ class CreateSaleVoucherUseCase(
                 .filter { it.isNotBlank() }
                 .takeIf { it.isNotEmpty() }
                 ?.joinToString(","),
+            repLat = loc?.lat,
+            repLng = loc?.lng,
         )
 
         invoices.save(entity)

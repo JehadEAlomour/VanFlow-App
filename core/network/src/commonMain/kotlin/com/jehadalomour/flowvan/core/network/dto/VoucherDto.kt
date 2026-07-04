@@ -24,6 +24,10 @@ data class CreateVoucherRequest(
     val totalDiscountValue: String? = null,
     val totalDiscountPercentage: String? = null,
     val isPosted: Boolean = true,
+    /** Rep's GPS at sale time — lets the backend enforce the per-rep location lock
+     *  (customers.requireProximity) and seed a missing customer pin. Omitted when null. */
+    val repLat: Double? = null,
+    val repLng: Double? = null,
     val transactions: List<VoucherTxn>,
     val payments: List<VoucherPayment> = emptyList(),
     /**

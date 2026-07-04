@@ -8,7 +8,7 @@ fun customerModule(): Module = module {
     viewModel { CustomerListViewModel(get()) }
     viewModel { CreateCustomerViewModel(get(), get(), get(), get()) }
     viewModel { (customerId: String) ->
-        CustomerDashboardViewModel(customerId, get(), get(), get(), get(), get())
+        CustomerDashboardViewModel(customerId, get(), get(), get(), get(), get(), get())
     }
     viewModel { (customerId: String) ->
         AccountStatementViewModel(customerId, get(), get(), get())

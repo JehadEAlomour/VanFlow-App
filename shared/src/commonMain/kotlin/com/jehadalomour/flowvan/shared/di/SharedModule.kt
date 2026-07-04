@@ -140,10 +140,10 @@ fun sharedModule(): Module = module {
     factory { LogoutUseCase(get(), get(), get()) }
     factory { GetDailyKpiUseCase(get(), get(), get()) }
     factory { VoucherNumberGenerator(get(), get()) }
-    factory { CreateSaleVoucherUseCase(get(), get(), get(), get(), get(), get()) }
+    factory { CreateSaleVoucherUseCase(get(), get(), get(), get(), get(), get(), get()) }
     factory { EvaluateOffersOfflineUseCase(get(), get(), get(), get()) }
     factory { EvaluateOffersUseCase(get(), get(), get()) }
-    factory { CreateReturnVoucherUseCase(get(), get(), get(), get(), get(), get()) }
+    factory { CreateReturnVoucherUseCase(get(), get(), get(), get(), get(), get(), get()) }
     factory { RequestReturnApprovalUseCase(get(), get(), get()) }
     factory { PollApprovalUseCase(get()) }
     factory { CancelApprovalUseCase(get()) }
@@ -151,8 +151,8 @@ fun sharedModule(): Module = module {
     factory { RequestDiscountApprovalUseCase(get(), get(), get()) }
     factory { CommitApprovedSaleUseCase(get(), get(), get(), get()) }
     factory { GetCustomerSalesUseCase(get()) }
-    factory { CreateRequestVoucherUseCase(get(), get(), get(), get()) }
-    factory { RecordCollectionUseCase(get(), get(), get()) }
+    factory { CreateRequestVoucherUseCase(get(), get(), get(), get(), get()) }
+    factory { RecordCollectionUseCase(get(), get(), get(), get()) }
     factory { EndShiftUseCase(get()) }
     factory { StartShiftUseCase(get(), get()) }
     factory { BackendLoginUseCase(get(), get(), get()) }
