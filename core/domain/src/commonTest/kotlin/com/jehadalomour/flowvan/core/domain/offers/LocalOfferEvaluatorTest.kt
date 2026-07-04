@@ -83,6 +83,24 @@ class LocalOfferEvaluatorTest {
         totalRedemptionLimit = null, perCustomerLimit = null, priority = 0, redemptionCount = 0, createdAtMs = 0,
     )
 
+    private fun itemAmtOffer(
+        id: String = "itemamt",
+        itemNumbers: List<String>,
+        minQty: Int,
+        baseAmountFils: Double,
+        dynamic: Boolean = false,
+        multiplier: Double? = null,
+        itemsPerStep: Int? = null,
+        maxAmountFils: Double? = null,
+    ) = OfferDefinition(
+        id = id, name = id, type = OfferType.ITEM_QTY_REWARD,
+        trigger = OfferTrigger.ItemSet(itemNumbers),
+        reward = OfferReward.ItemAmount(minQty, baseAmountFils, dynamic, multiplier, itemsPerStep, maxAmountFils),
+        eligibility = allEligibility,
+        validFromMs = null, validToMs = null, daysOfWeek = null, timeFrom = null, timeTo = null,
+        totalRedemptionLimit = null, perCustomerLimit = null, priority = 0, redemptionCount = 0, createdAtMs = 0,
+    )
+
     private fun EvaluationResultDto.disc(item: String) = lines.first { it.itemNumber == item }.lineDiscountFils
 
     // ── PAYMENT_METHOD_DISCOUNT ──────────────────────────────────────────────
@@ -196,6 +214,48 @@ class LocalOfferEvaluatorTest {
         val r = LocalOfferEvaluator.evaluate(listOf("A" to 6.0, "B" to 5.0), listOf(offer), items, ctx())
         assertEquals(600, r.disc("A"))
         assertEquals(250, r.disc("B"))
+    }
+
+    // ── ITEM_QTY_REWARD (amount) ─────────────────────────────────────────────
+
+    @Test
+    fun itemAmountTakesFlatAmountOffEachUnitAboveMinQty() {
+        val offer = itemAmtOffer(itemNumbers = listOf("A"), minQty = 12, baseAmountFils = 200.0)
+        val r = LocalOfferEvaluator.evaluate(listOf("A" to 12.0, "B" to 5.0), listOf(offer), items, ctx())
+        assertEquals(2400, r.disc("A")) // 200 × 12
+        assertEquals(0, r.disc("B"))
+        assertTrue(LocalOfferEvaluator.evaluate(listOf("A" to 11.0), listOf(offer), items, ctx()).appliedOffers.isEmpty())
+    }
+
+    @Test
+    fun itemAmountClampsToLineGross() {
+        val offer = itemAmtOffer(itemNumbers = listOf("A"), minQty = 1, baseAmountFils = 2000.0)
+        val r = LocalOfferEvaluator.evaluate(listOf("A" to 3.0), listOf(offer), items, ctx())
+        assertEquals(3000, r.disc("A")) // gross, not 6000
+        assertEquals(0, r.lines.first { it.itemNumber == "A" }.lineNetFils)
+    }
+
+    @Test
+    fun itemAmountDynamicStepsAndCaps() {
+        val offer = itemAmtOffer(
+            itemNumbers = listOf("A"), minQty = 12, baseAmountFils = 100.0,
+            dynamic = true, multiplier = 0.5, itemsPerStep = 6, maxAmountFils = 250.0,
+        )
+        fun d(q: Double) = LocalOfferEvaluator.evaluate(listOf("A" to q), listOf(offer), items, ctx()).disc("A")
+        assertEquals(1200, d(12.0)) // 100/unit × 12
+        assertEquals(2700, d(18.0)) // 150/unit × 18
+        assertEquals(15000, d(60.0)) // capped 250/unit × 60
+    }
+
+    @Test
+    fun amountBeatsPercentWhenHigherFils() {
+        val offers = listOf(
+            itemAmtOffer(id = "amt", itemNumbers = listOf("A"), minQty = 1, baseAmountFils = 300.0),
+            itemPctOffer(id = "pct", itemNumbers = listOf("A"), minQty = 1, base = 10.0),
+        )
+        val r = LocalOfferEvaluator.evaluate(listOf("A" to 4.0), offers, items, ctx())
+        assertEquals(1200, r.disc("A")) // 300 × 4 beats 100 × 4
+        assertEquals(listOf("amt"), r.appliedOffers.map { it.offerId })
     }
 
     // ── conflict resolution (max within, add across) ─────────────────────────

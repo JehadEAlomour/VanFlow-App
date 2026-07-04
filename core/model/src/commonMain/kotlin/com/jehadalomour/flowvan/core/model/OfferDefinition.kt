@@ -76,6 +76,20 @@ sealed interface OfferReward {
         val itemsPerStep: Int?,
         val maxPercent: Double?,
     ) : OfferReward
+
+    /**
+     * A fixed amount (fils) off EACH UNIT of the SELECTED items once their combined qty ≥ [minQty]
+     * — the amount-off twin of [ItemPercent]. Per-line discount = amount × line qty, clamped to
+     * the line gross by the evaluator.
+     */
+    data class ItemAmount(
+        val minQty: Int,
+        val baseAmountFils: Double,
+        val dynamic: Boolean,
+        val multiplier: Double?,
+        val itemsPerStep: Int?,
+        val maxAmountFils: Double?,
+    ) : OfferReward
 }
 
 data class OfferEligibilityRule(

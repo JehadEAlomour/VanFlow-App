@@ -59,6 +59,14 @@ internal fun OfferEntity.toDefinition(json: Json): OfferDefinition? {
             itemsPerStep = r.itemsPerStep,
             maxPercent = r.maxPercent,
         )
+        "ITEM_AMOUNT_DISCOUNT" -> OfferReward.ItemAmount(
+            minQty = r.minQty ?: 0,
+            baseAmountFils = r.baseAmountFils ?: 0.0,
+            dynamic = r.mode == "DYNAMIC",
+            multiplier = r.multiplier,
+            itemsPerStep = r.itemsPerStep,
+            maxAmountFils = r.maxAmountFils,
+        )
         else -> return null
     }
 
@@ -116,6 +124,8 @@ private data class RewardJson(
     val giftsPerStep: Int? = null,
     val maxFreeQty: Int? = null,
     val minQty: Int? = null,
+    val baseAmountFils: Double? = null,
+    val maxAmountFils: Double? = null,
 )
 
 @Serializable

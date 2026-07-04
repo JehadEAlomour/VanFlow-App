@@ -55,4 +55,20 @@ class OfferDefinitionParserTest {
         assertEquals(10, r.itemsPerGift)
         assertEquals(3, r.giftsPerStep)
     }
+
+    @Test
+    fun parsesItemAmountDiscount() {
+        val d = entity(
+            "ITEM_QTY_REWARD",
+            """{"itemNumbers":["COLA-330"]}""",
+            """{"kind":"ITEM_AMOUNT_DISCOUNT","minQty":12,"baseAmountFils":200,"mode":"STATIC"}""",
+        ).toDefinition(json)
+        assertNotNull(d, "amount-off offer parsed to null — offline cache unreadable")
+        val t = d.trigger as OfferTrigger.ItemSet
+        assertEquals(listOf("COLA-330"), t.itemNumbers)
+        val r = d.reward as OfferReward.ItemAmount
+        assertEquals(12, r.minQty)
+        assertEquals(200.0, r.baseAmountFils)
+        assertTrue(!r.dynamic)
+    }
 }

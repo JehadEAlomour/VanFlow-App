@@ -59,7 +59,13 @@ object LocalOfferEvaluator {
         val offers: MutableList<LineOfferDto>,
     )
 
-    private class Disc(val offer: OfferDefinition, val pct: Double, val items: Set<String>?)
+    /** [amountPerUnitFils] set → ITEM_AMOUNT_DISCOUNT (fils off per unit); null → percent via [pct]. */
+    private class Disc(
+        val offer: OfferDefinition,
+        val pct: Double,
+        val items: Set<String>?,
+        val amountPerUnitFils: Double? = null,
+    )
     private class GiftEntry(val offer: OfferDefinition, val reward: OfferReward.Gift, val freeQty: Int)
 
     /**
@@ -133,6 +139,12 @@ object LocalOfferEvaluator {
                                 if (pct > 0) itemOffers.add(Disc(offer, pct, t.itemNumbers.toSet()))
                             }
                         }
+                        is OfferReward.ItemAmount -> {
+                            if (qty >= reward.minQty) {
+                                val amt = effectiveAmount(reward, qty, reward.minQty.toDouble())
+                                if (amt > 0) itemOffers.add(Disc(offer, 0.0, t.itemNumbers.toSet(), amt))
+                            }
+                        }
                         else -> {}
                     }
                 }
@@ -146,14 +158,23 @@ object LocalOfferEvaluator {
         for ((itemNumber, l) in work) {
             val gross = roundFils(l.qty * l.unitPriceFils)
             if (gross <= 0) continue
+            // Candidate's discount for this line: percent → % of gross; amount → per-unit
+            // fils × line qty. Highest fils wins (mixing percent and amount is fine).
+            fun discFor(c: Disc): Long =
+                if (c.amountPerUnitFils != null) roundFils(l.qty * c.amountPerUnitFils)
+                else roundFils(gross * c.pct / 100.0)
             var bestItem: Disc? = null
+            var bestItemFils = 0L
             for (c in itemOffers) {
-                if (c.items!!.contains(itemNumber) && (bestItem == null || c.pct > bestItem.pct)) {
+                if (!c.items!!.contains(itemNumber)) continue
+                val d = discFor(c)
+                if (bestItem == null || d > bestItemFils) {
                     bestItem = c
+                    bestItemFils = d
                 }
             }
             var payFils = if (bestPay != null) roundFils(gross * bestPay.pct / 100.0) else 0L
-            var itemFils = if (bestItem != null) roundFils(gross * bestItem.pct / 100.0) else 0L
+            var itemFils = if (bestItem != null) bestItemFils else 0L
             if (payFils > gross) payFils = gross
             if (payFils + itemFils > gross) itemFils = gross - payFils // never below 0
             l.discountFils = payFils + itemFils
@@ -283,6 +304,22 @@ object LocalOfferEvaluator {
         return max(0.0, min(pct, cap))
     }
 
+    /**
+     * Per-unit amount (fils) for an amount-off reward — the fils twin of [effectivePercent].
+     * Base applies at [anchor] (minQty); each full itemsPerStep above it adds one step. STATIC
+     * ignores the multiplier. Capped at maxAmountFils (no natural bound otherwise); the per-line
+     * clamp to the line gross still prevents a negative net.
+     */
+    private fun effectiveAmount(reward: OfferReward.ItemAmount, count: Double, anchor: Double): Double {
+        // Local val — cross-module nullable properties don't smart-cast (see build notes).
+        val step = reward.itemsPerStep
+        val steps = if (reward.dynamic && step != null && step > 0)
+            floor(max(0.0, count - anchor) / step) else 0.0
+        val amt = reward.baseAmountFils * (1 + (reward.multiplier ?: 0.0) * steps)
+        val cap = reward.maxAmountFils ?: Double.POSITIVE_INFINITY
+        return max(0.0, min(amt, cap))
+    }
+
     private fun isWithinSchedule(offer: OfferDefinition, ctx: Context): Boolean {
         val from = offer.validFromMs
         if (from != null && ctx.nowMs < from) return false
@@ -345,6 +382,12 @@ object LocalOfferEvaluator {
                         "${numStr(r.basePercent)}%→${numStr(r.maxPercent ?: r.basePercent)}% dynamic"
                     else "${numStr(r.basePercent)}%"
                     "Buy ${r.minQty}× $on → $base off those items"
+                }
+                is OfferReward.ItemAmount -> {
+                    val base = if (r.dynamic)
+                        "${jodString(r.baseAmountFils.roundToLong())}→${jodString((r.maxAmountFils ?: r.baseAmountFils).roundToLong())} JOD dynamic"
+                    else "${jodString(r.baseAmountFils.roundToLong())} JOD"
+                    "Buy ${r.minQty}× $on → $base off each unit"
                 }
                 else -> offer.name
             }
