@@ -86,6 +86,16 @@ class TrackingForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // The rep swiped the app away. The foreground service keeps tracking, but
+        // report an immediate "app closed" heartbeat (best-effort, one-shot) so the
+        // admin is alerted right away instead of waiting for the offline watchdog.
+        GlobalContext.getOrNull()?.get<HeartbeatReporter>()?.let { reporter ->
+            scope.launch { reporter.send(appState = "closed") }
+        }
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         runCatching { unregisterReceiver(gpsChangeReceiver) }
