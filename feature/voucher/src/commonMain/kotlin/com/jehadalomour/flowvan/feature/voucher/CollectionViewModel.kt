@@ -125,7 +125,7 @@ class CollectionViewModel(
             notes = s.notes.takeIf { it.isNotBlank() },
         )
         result.fold(
-            onSuccess = { entity -> _state.update { it.copy(isSaving = false, savedNumber = entity.number) } },
+            onSuccess = { entity -> _state.update { it.copy(isSaving = false, savedNumber = entity.number, savedPaymentId = entity.id) } },
             onFailure = { ex ->
                 val msg = (ex as? CollectionValidationException)?.messageAr ?: getString(Res.string.err_unexpected)
                 _state.update { it.copy(isSaving = false, errorAr = msg) }
@@ -150,6 +150,7 @@ class CollectionViewModel(
             }
         }
         var lastNumber: String? = null
+        var lastId: String? = null
         for (c in cheques) {
             val result = recordCollection(
                 customerId = customerId,
@@ -163,13 +164,13 @@ class CollectionViewModel(
                 notes = s.notes.takeIf { it.isNotBlank() },
             )
             result.fold(
-                onSuccess = { lastNumber = it.number },
+                onSuccess = { lastNumber = it.number; lastId = it.id },
                 onFailure = { ex ->
                     val msg = (ex as? CollectionValidationException)?.messageAr ?: getString(Res.string.err_unexpected)
                     _state.update { it.copy(isSaving = false, errorAr = msg) }; return
                 },
             )
         }
-        _state.update { it.copy(isSaving = false, savedNumber = lastNumber) }
+        _state.update { it.copy(isSaving = false, savedNumber = lastNumber, savedPaymentId = lastId) }
     }
 }

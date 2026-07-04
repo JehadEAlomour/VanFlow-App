@@ -24,4 +24,7 @@ class CustomerRepository(private val dao: CustomerDao) {
 
     /** Offline-first cache refill from the backend. */
     suspend fun cacheAll(customers: List<CustomerEntity>) = dao.upsertAll(customers)
+
+    /** Insert/replace a single customer (e.g. one just created on the backend). */
+    suspend fun save(customer: CustomerEntity) = dao.upsertAll(listOf(customer))
 }

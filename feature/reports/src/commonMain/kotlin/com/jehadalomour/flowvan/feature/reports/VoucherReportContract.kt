@@ -7,6 +7,7 @@ enum class VoucherKindFilter { ALL, CASH, CHEQUE, TRANSFER, CREDIT }
 
 data class VoucherReportState(
     val customerId: String = "",
+    val customerName: String = "",
     val invoices: List<InvoiceEntity> = emptyList(),
     val typeFilter: VoucherTypeFilter = VoucherTypeFilter.ALL,
     val kindFilter: VoucherKindFilter = VoucherKindFilter.ALL,

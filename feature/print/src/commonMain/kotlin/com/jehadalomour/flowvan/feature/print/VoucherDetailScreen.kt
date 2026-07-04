@@ -39,6 +39,7 @@ import com.jehadalomour.flowvan.core.designsystem.resources.*
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
+import com.jehadalomour.flowvan.core.model.Customer
 import com.jehadalomour.flowvan.core.model.InvoiceLine
 import com.jehadalomour.flowvan.feature.print.VoucherDetailViewModel
 import com.jehadalomour.flowvan.core.common.format.formatJod
@@ -102,14 +103,14 @@ fun VoucherDetailScreen(
                 entity == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(stringResource(Res.string.voucher_detail_not_found), color = Fv.TextMid)
                 }
-                else -> VoucherContent(entity, state.lines)
+                else -> VoucherContent(entity, state.lines, state.customer)
             }
         }
     }
 }
 
 @Composable
-private fun VoucherContent(entity: InvoiceEntity, lines: List<InvoiceLine>) {
+private fun VoucherContent(entity: InvoiceEntity, lines: List<InvoiceLine>, customer: Customer?) {
     val (typeLabel, typeColor) = when (entity.type) {
         "SALE" -> stringResource(Res.string.voucher_type_sale) to Fv.Green
         "RETURN" -> stringResource(Res.string.voucher_type_return) to Fv.Red
@@ -128,6 +129,10 @@ private fun VoucherContent(entity: InvoiceEntity, lines: List<InvoiceLine>) {
         contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (customer != null) {
+            item { CustomerCard(customer) }
+        }
+
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -173,6 +178,47 @@ private fun VoucherContent(entity: InvoiceEntity, lines: List<InvoiceLine>) {
                         TotalRow(stringResource(Res.string.voucher_detail_tax), entity.taxAmount.formatJod(AppLanguage.AR))
                     HorizontalDivider(color = Fv.SurfaceHigh)
                     TotalRow(stringResource(Res.string.voucher_detail_total), entity.total.formatJod(AppLanguage.AR), Fv.TextHigh, isBold = true)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CustomerCard(customer: Customer) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ProductAvatar(
+                seed = customer.nameAr,
+                letter = customer.nameAr.firstOrNull()?.toString() ?: "؟",
+                size = 44.dp,
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(Res.string.print_customer), color = Fv.TextMid, fontSize = 10.sp)
+                Text(customer.nameAr, color = Fv.TextHigh, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(2.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("#${customer.code}", color = Fv.TextMid, fontSize = 11.sp)
+                    customer.area.takeIf { it.isNotBlank() }?.let {
+                        Text(it, color = Fv.TextMid, fontSize = 11.sp)
+                    }
+                }
+                customer.phone?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, color = Fv.TextMid, fontSize = 11.sp)
+                }
+            }
+            if (customer.balance > 0) {
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(stringResource(Res.string.customer_balance), color = Fv.TextMid, fontSize = 9.sp)
+                    Text(customer.balance.formatJod(AppLanguage.AR), color = Fv.Amber, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

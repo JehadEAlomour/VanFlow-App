@@ -78,3 +78,6 @@ expect object FlowVanDatabaseConstructor : RoomDatabaseConstructor<FlowVanDataba
 }
 
 const val FLOW_VAN_DB_NAME: String = "flowvan.db"
+
+/** Folder (inside the Documents dir) where dated database backups are written. */
+const val BACKUP_DIR: String = "van-flow-backups"

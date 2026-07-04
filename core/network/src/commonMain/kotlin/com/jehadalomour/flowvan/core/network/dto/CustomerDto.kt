@@ -29,13 +29,16 @@ data class CustomerDto(
 
 @Serializable
 data class CreateCustomerRequest(
-    val customerNumber: String,
+    val customerNumber: String? = null,   // omit → backend auto-generates (CUST-000001)
     val customerName: String,
     val nameAr: String? = null,
     val nameEn: String? = null,
     val phone: String? = null,
     val addressAr: String? = null,
     val city: String? = null,
+    val latitude: String? = null,
+    val longitude: String? = null,
+    val repId: String? = null,            // assign to the salesman who created it
     val creditLimit: String? = null,
     val customerType: String? = null,
     val regionId: String? = null,

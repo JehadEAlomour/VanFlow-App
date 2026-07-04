@@ -151,7 +151,11 @@ fun VoucherReportScreen(
                     }
                 } else {
                     items(state.invoices, key = { it.id }) { invoice ->
-                        VoucherRow(invoice = invoice, onClick = { onOpenVoucher(invoice.id) })
+                        VoucherRow(
+                            invoice = invoice,
+                            customerName = state.customerName,
+                            onClick = { onOpenVoucher(invoice.id) },
+                        )
                     }
                 }
             }
@@ -185,7 +189,7 @@ private fun SummaryCard(count: Int, total: Double) {
 }
 
 @Composable
-private fun VoucherRow(invoice: InvoiceEntity, onClick: () -> Unit) {
+private fun VoucherRow(invoice: InvoiceEntity, customerName: String, onClick: () -> Unit) {
     val (typeLabel, typeColor) = when (invoice.type) {
         "SALE" -> stringResource(Res.string.voucher_type_sale) to Fv.Green
         "RETURN" -> stringResource(Res.string.voucher_type_return) to Fv.Red
@@ -226,7 +230,12 @@ private fun VoucherRow(invoice: InvoiceEntity, onClick: () -> Unit) {
             ) { Text(kindLabel, color = kindColor, fontSize = 10.sp) }
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(invoice.number, color = Fv.TextHigh, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                if (customerName.isNotBlank()) {
+                    Text(customerName, color = Fv.TextHigh, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(invoice.number, color = Fv.TextMid, fontSize = 11.sp)
+                } else {
+                    Text(invoice.number, color = Fv.TextHigh, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                }
                 Text(invoice.createdAt.toDateTimeString(), color = Fv.TextMid, fontSize = 10.sp)
             }
             Text(invoice.total.formatJod(AppLanguage.AR), color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.Bold)
