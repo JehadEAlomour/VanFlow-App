@@ -2,10 +2,12 @@ package com.jehadalomour.flowvan.core.domain.usecase
 
 import co.touchlab.kermit.Logger
 import com.jehadalomour.flowvan.core.database.dao.InvoiceDao
+import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.OfferRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.domain.offers.LocalOfferEvaluator
+import com.jehadalomour.flowvan.core.model.TaxType
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.OfferEvaluation
 import com.jehadalomour.flowvan.core.model.OfferReward
@@ -27,6 +29,7 @@ class EvaluateOffersOfflineUseCase(
     private val products: ProductRepository,
     private val customers: CustomerRepository,
     private val invoiceDao: InvoiceDao,
+    private val appSettings: AppSettingsRepository,
 ) {
     private val log = Logger.withTag("Offers")
 
@@ -87,8 +90,9 @@ class EvaluateOffersOfflineUseCase(
             nowMs = now.toEpochMilliseconds(),
         )
 
+        val taxInclusive = appSettings.get().taxType == TaxType.INCLUDED_TAX
         val result = LocalOfferEvaluator
-            .evaluate(cart.map { it.sku to it.qty }, activeOffers, items, ctx)
+            .evaluate(cart.map { it.sku to it.qty }, activeOffers, items, ctx, taxInclusive)
             .toOfferEvaluation()
             .copy(source = OfferSource.LOCAL)
         log.d { "offline eval result: appliedOffers=${result.appliedOffers.map { it.name }} freeChoices=${result.pendingChoices.size} lineDiscount=${result.totals.totalDiscountJod}" }

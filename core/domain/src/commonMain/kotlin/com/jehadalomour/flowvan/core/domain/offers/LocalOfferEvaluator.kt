@@ -66,12 +66,15 @@ object LocalOfferEvaluator {
      * @param lines itemNumber → qty (aggregated like the server's toCartMap).
      * @param offers active offers in ranking order (priority DESC, createdAt ASC).
      * @param items unit price + tax% for every cart SKU AND every gift-pool SKU.
+     * @param taxInclusive company tax mode: true → unit prices already include tax
+     *   (extract it, don't add on top), matching the backend offers engine + voucher calc.
      */
     fun evaluate(
         lines: List<Pair<String, Double>>,
         offers: List<OfferDefinition>,
         items: Map<String, ItemInfo>,
         ctx: Context,
+        taxInclusive: Boolean = false,
     ): EvaluationResultDto {
         val cart = LinkedHashMap<String, Double>()
         for ((itemNumber, qty) in lines) cart[itemNumber] = (cart[itemNumber] ?: 0.0) + qty
@@ -208,7 +211,11 @@ object LocalOfferEvaluator {
             val discount = min(l.discountFils, gross)
             val net = gross - discount
             lineDiscountTotal += discount
-            taxFils += roundFils(net * (l.taxPct / 100.0))
+            taxFils += if (taxInclusive) {
+                net - (if (l.taxPct > 0.0) roundFils(net * 100.0 / (100.0 + l.taxPct)) else net)
+            } else {
+                roundFils(net * (l.taxPct / 100.0))
+            }
             resultLines.add(
                 EvalLineDto(
                     itemNumber = itemNumber,
@@ -221,7 +228,9 @@ object LocalOfferEvaluator {
             )
         }
         val invoiceDiscountFils = 0L // no invoice-level offers in the current model
-        val grandTotalFils = (subtotalFils - lineDiscountTotal) + taxFils - invoiceDiscountFils
+        // INCLUSIVE: tax is already inside the net → don't add it on top.
+        val grandTotalFils =
+            (subtotalFils - lineDiscountTotal) + (if (taxInclusive) 0L else taxFils) - invoiceDiscountFils
 
         return EvaluationResultDto(
             lines = resultLines,

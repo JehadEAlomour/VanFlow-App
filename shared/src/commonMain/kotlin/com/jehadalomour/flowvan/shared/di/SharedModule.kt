@@ -141,7 +141,7 @@ fun sharedModule(): Module = module {
     factory { GetDailyKpiUseCase(get(), get(), get()) }
     factory { VoucherNumberGenerator(get(), get()) }
     factory { CreateSaleVoucherUseCase(get(), get(), get(), get(), get(), get(), get()) }
-    factory { EvaluateOffersOfflineUseCase(get(), get(), get(), get()) }
+    factory { EvaluateOffersOfflineUseCase(get(), get(), get(), get(), get()) }
     factory { EvaluateOffersUseCase(get(), get(), get()) }
     factory { CreateReturnVoucherUseCase(get(), get(), get(), get(), get(), get(), get()) }
     factory { RequestReturnApprovalUseCase(get(), get(), get()) }
