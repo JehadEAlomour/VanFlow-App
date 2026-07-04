@@ -2,6 +2,7 @@ package com.jehadalomour.flowvan.feature.reports
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jehadalomour.flowvan.core.database.dao.CustomerDao
 import com.jehadalomour.flowvan.core.database.dao.InvoiceDao
 import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -34,6 +35,7 @@ private data class Filters(
 class VoucherReportViewModel(
     private val customerId: String,
     private val invoiceDao: InvoiceDao,
+    private val customerDao: CustomerDao,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -47,6 +49,15 @@ class VoucherReportViewModel(
 
     init {
         observeInvoices()
+        observeCustomer()
+    }
+
+    private fun observeCustomer() {
+        customerDao.observeById(customerId)
+            .onEach { customer ->
+                _state.update { it.copy(customerName = customer?.nameAr.orEmpty()) }
+            }
+            .launchIn(viewModelScope)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)

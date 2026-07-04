@@ -2,6 +2,7 @@ package com.jehadalomour.flowvan.feature.reports
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jehadalomour.flowvan.core.database.dao.CustomerDao
 import com.jehadalomour.flowvan.core.database.dao.PaymentDao
 import com.jehadalomour.flowvan.core.database.entity.PaymentEntity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,9 +33,14 @@ data class AllPaymentsReportState(
     val chequeTotal: Double = 0.0,
     val transferTotal: Double = 0.0,
     val count: Int = 0,
+    /** customerId → display name (Arabic), for showing whose collection each row is. */
+    val customerNames: Map<String, String> = emptyMap(),
 )
 
-class AllPaymentsReportViewModel(private val paymentDao: PaymentDao) : ViewModel() {
+class AllPaymentsReportViewModel(
+    private val paymentDao: PaymentDao,
+    private val customerDao: CustomerDao,
+) : ViewModel() {
 
     private val _from = MutableStateFlow(0L)
     private val _to = MutableStateFlow(0L)
@@ -46,6 +52,15 @@ class AllPaymentsReportViewModel(private val paymentDao: PaymentDao) : ViewModel
     init {
         initDefaults()
         observe()
+        observeCustomers()
+    }
+
+    private fun observeCustomers() {
+        customerDao.observeAll()
+            .onEach { customers ->
+                _state.update { s -> s.copy(customerNames = customers.associate { it.id to it.nameAr }) }
+            }
+            .launchIn(viewModelScope)
     }
 
     @OptIn(ExperimentalTime::class)

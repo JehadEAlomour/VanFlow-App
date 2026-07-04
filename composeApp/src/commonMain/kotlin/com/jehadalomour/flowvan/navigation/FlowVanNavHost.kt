@@ -30,6 +30,7 @@ import com.jehadalomour.flowvan.feature.reports.TransactionReportScreen
 import com.jehadalomour.flowvan.feature.print.VoucherDetailScreen
 import com.jehadalomour.flowvan.feature.reports.VoucherReportScreen
 import com.jehadalomour.flowvan.feature.voucher.CollectionScreen
+import com.jehadalomour.flowvan.feature.customer.CreateCustomerScreen
 import com.jehadalomour.flowvan.feature.customer.CustomerDashboardScreen
 import com.jehadalomour.flowvan.feature.customer.CustomerListScreen
 import com.jehadalomour.flowvan.feature.home.EndOfDayScreen
@@ -51,6 +52,7 @@ object Routes {
     const val HOME = "home"
     const val ROUTE = "route"
     const val CUSTOMERS = "customers"
+    const val CREATE_CUSTOMER = "create_customer"
     const val VAN_STOCK = "van_stock"
     const val AI = "ai?customerId={customerId}"
     const val END_OF_DAY = "end_of_day"
@@ -154,6 +156,18 @@ fun FlowVanNavHost(
                 onBack = { navController.popBackStack() },
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
                 onNavigateTo = { id -> navController.navigate(Routes.map(id)) },
+                onAddCustomer = { navController.navigate(Routes.CREATE_CUSTOMER) },
+            )
+        }
+        composable(Routes.CREATE_CUSTOMER) {
+            CreateCustomerScreen(
+                onBack = { navController.popBackStack() },
+                onSaved = { id ->
+                    // Replace the form with the new customer's page (back returns to the list).
+                    navController.navigate(Routes.customer(id)) {
+                        popUpTo(Routes.CREATE_CUSTOMER) { inclusive = true }
+                    }
+                },
             )
         }
         composable(
@@ -227,7 +241,16 @@ fun FlowVanNavHost(
             arguments = listOf(navArgument("customerId") { type = NavType.StringType }),
         ) { entry ->
             val id = entry.arguments?.getString("customerId").orEmpty()
-            CollectionScreen(customerId = id, onBack = { navController.popBackStack() })
+            CollectionScreen(
+                customerId = id,
+                onBack = { navController.popBackStack() },
+                onSaved = { paymentId ->
+                    // Replace the form with its printable receipt (back returns to the customer).
+                    navController.navigate(Routes.receipt(paymentId)) {
+                        popUpTo(Routes.COLLECTION) { inclusive = true }
+                    }
+                },
+            )
         }
         composable(Routes.VAN_STOCK) {
             VanStockScreen(onBack = { navController.popBackStack() })

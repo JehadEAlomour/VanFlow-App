@@ -12,10 +12,10 @@ fun reportsModule(): Module = module {
         PaymentReportViewModel(customerId, get())
     }
     viewModel { (customerId: String) ->
-        VoucherReportViewModel(customerId, get())
+        VoucherReportViewModel(customerId, get(), get())
     }
-    viewModel { AllSalesReportViewModel(get()) }
-    viewModel { AllPaymentsReportViewModel(get()) }
+    viewModel { AllSalesReportViewModel(get(), get()) }
+    viewModel { AllPaymentsReportViewModel(get(), get()) }
     viewModel { VisitReportViewModel(get(), get()) }
     viewModel { CashFlowReportViewModel(get(), get()) }
     viewModel { ItemsSalesReportViewModel(get()) }

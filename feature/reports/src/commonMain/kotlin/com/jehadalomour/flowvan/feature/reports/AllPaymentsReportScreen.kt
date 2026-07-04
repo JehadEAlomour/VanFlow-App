@@ -107,7 +107,11 @@ fun AllPaymentsReportScreen(
                 item { Text(stringResource(Res.string.all_payments_empty), color = Fv.TextMid, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp)) }
             } else {
                 items(state.payments, key = { it.id }) { pay ->
-                    PaymentRow(pay, onClick = { onOpenReceipt(pay.id) })
+                    PaymentRow(
+                        pay,
+                        customerName = state.customerNames[pay.customerId].orEmpty(),
+                        onClick = { onOpenReceipt(pay.id) },
+                    )
                 }
             }
         }
@@ -115,7 +119,7 @@ fun AllPaymentsReportScreen(
 }
 
 @Composable
-private fun PaymentRow(pay: PaymentEntity, onClick: () -> Unit) {
+private fun PaymentRow(pay: PaymentEntity, customerName: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(10.dp),
@@ -134,7 +138,13 @@ private fun PaymentRow(pay: PaymentEntity, onClick: () -> Unit) {
                 else -> Fv.Purple
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(pay.number, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                if (customerName.isNotBlank()) {
+                    Text(customerName, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(2.dp))
+                    Text(pay.number, color = Fv.TextMid, fontSize = 11.sp)
+                } else {
+                    Text(pay.number, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
                 Spacer(Modifier.height(2.dp))
                 Text(pay.createdAt.toDateString(), color = Fv.TextMid, fontSize = 11.sp)
             }

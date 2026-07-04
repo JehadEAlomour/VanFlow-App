@@ -111,7 +111,11 @@ fun AllSalesReportScreen(
                 item { Text(stringResource(Res.string.report_empty_period), color = Fv.TextMid, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp)) }
             } else {
                 items(state.invoices, key = { it.id }) { inv ->
-                    SalesInvoiceRow(inv, onClick = { onOpenVoucher(inv.id) })
+                    SalesInvoiceRow(
+                        inv,
+                        customerName = state.customerNames[inv.customerId].orEmpty(),
+                        onClick = { onOpenVoucher(inv.id) },
+                    )
                 }
             }
         }
@@ -119,7 +123,7 @@ fun AllSalesReportScreen(
 }
 
 @Composable
-private fun SalesInvoiceRow(inv: InvoiceEntity, onClick: () -> Unit) {
+private fun SalesInvoiceRow(inv: InvoiceEntity, customerName: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(10.dp),
@@ -137,7 +141,13 @@ private fun SalesInvoiceRow(inv: InvoiceEntity, onClick: () -> Unit) {
                 else -> stringResource(Res.string.chip_request)
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(inv.number, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                if (customerName.isNotBlank()) {
+                    Text(customerName, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(2.dp))
+                    Text(inv.number, color = Fv.TextMid, fontSize = 11.sp)
+                } else {
+                    Text(inv.number, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
                 Spacer(Modifier.height(2.dp))
                 Text(inv.createdAt.toDateString(), color = Fv.TextMid, fontSize = 11.sp)
             }

@@ -86,11 +86,15 @@ import org.koin.core.parameter.parametersOf
 fun CollectionScreen(
     customerId: String,
     onBack: () -> Unit,
+    onSaved: (paymentId: String) -> Unit = { onBack() },
     viewModel: CollectionViewModel = koinViewModel { parametersOf(customerId) },
 ) {
     val state by viewModel.state.collectAsState()
-    var taxInclusive by remember { mutableStateOf(true) }
-    LaunchedEffect(state.savedNumber) { if (state.savedNumber != null) onBack() }
+    // After a successful save, open the printable receipt for the collection.
+    LaunchedEffect(state.savedPaymentId) {
+        val pid = state.savedPaymentId
+        if (pid != null) onSaved(pid)
+    }
 
     Surface(modifier = Modifier.fillMaxSize(), color = Fv.BgDeepest) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -139,18 +143,6 @@ fun CollectionScreen(
                 // Advance warning
                 if (state.advanceWarning) {
                     item { AdvanceWarningBanner() }
-                }
-
-                // Tax calculator — CASH / TRANSFER with valid amount
-                val parsedAmount = state.amountText.toDoubleOrNull()
-                if (state.method != PaymentMethod.CHEQUE && parsedAmount != null && parsedAmount > 0) {
-                    item {
-                        TaxCalculatorCard(
-                            amount = parsedAmount,
-                            inclusive = taxInclusive,
-                            onToggle = { taxInclusive = it },
-                        )
-                    }
                 }
 
                 // Method picker
@@ -745,81 +737,6 @@ private fun BankGridItem(bank: JordanBank, onClick: () -> Unit) {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
-        )
-    }
-}
-
-// ── Tax calculator ──────────────────────────────────────────────────────────
-
-@Composable
-private fun TaxCalculatorCard(amount: Double, inclusive: Boolean, onToggle: (Boolean) -> Unit) {
-    val tax = if (inclusive) amount - amount / 1.16 else amount * 0.16
-    val base = if (inclusive) amount / 1.16 else amount
-    val total = if (inclusive) amount else amount + tax
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-    ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(stringResource(Res.string.collection_tax_calculator), color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Fv.BgDeepest)
-                        .padding(2.dp),
-                ) {
-                    TaxToggleChip(label = stringResource(Res.string.collection_tax_inclusive), selected = inclusive, onClick = { onToggle(true) })
-                    TaxToggleChip(label = stringResource(Res.string.collection_tax_exclusive), selected = !inclusive, onClick = { onToggle(false) })
-                }
-            }
-            TaxRow(label = stringResource(Res.string.collection_amount_before_tax), value = base.formatJod(AppLanguage.AR), valueColor = Fv.TextHigh)
-            TaxRow(label = stringResource(Res.string.collection_sales_tax), value = tax.formatJod(AppLanguage.AR), valueColor = Fv.Amber)
-            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Fv.Border))
-            TaxRow(label = stringResource(Res.string.collection_total_with_tax), value = total.formatJod(AppLanguage.AR), valueColor = Fv.Green, bold = true)
-        }
-    }
-}
-
-@Composable
-private fun TaxToggleChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(if (selected) Fv.Blue else Color.Transparent)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            label,
-            color = if (selected) Color.White else Fv.TextMid,
-            fontSize = 11.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-        )
-    }
-}
-
-@Composable
-private fun TaxRow(label: String, value: String, valueColor: Color, bold: Boolean = false) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(label, color = Fv.TextMid, fontSize = 12.sp)
-        Text(
-            value,
-            color = valueColor,
-            fontSize = if (bold) 15.sp else 13.sp,
-            fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium,
         )
     }
 }

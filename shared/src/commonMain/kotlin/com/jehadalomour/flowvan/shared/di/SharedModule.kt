@@ -52,6 +52,7 @@ import com.jehadalomour.flowvan.core.domain.usecase.RecordCollectionUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.VoucherNumberGenerator
 import com.jehadalomour.flowvan.core.domain.usecase.BackendLoginUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.PurgeDemoDataUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.BackupDatabaseUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.RefreshCatalogUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.SubmitCollectionUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.SubmitInvoiceUseCase
@@ -149,6 +150,7 @@ fun sharedModule(): Module = module {
     factory { StartShiftUseCase(get(), get()) }
     factory { BackendLoginUseCase(get(), get(), get()) }
     factory { PurgeDemoDataUseCase(get(), get()) }
+    factory { BackupDatabaseUseCase(get()) }
     factory { RefreshCatalogUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { SubmitInvoiceUseCase(get()) }
     factory { SubmitCollectionUseCase(get()) }

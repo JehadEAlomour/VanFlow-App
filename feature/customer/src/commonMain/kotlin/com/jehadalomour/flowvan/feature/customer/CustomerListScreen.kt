@@ -59,6 +59,7 @@ fun CustomerListScreen(
     onBack: () -> Unit,
     onOpenCustomer: (String) -> Unit,
     onNavigateTo: (String) -> Unit = {},
+    onAddCustomer: () -> Unit = {},
     viewModel: CustomerListViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -100,13 +101,29 @@ fun CustomerListScreen(
                 )
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(11.dp))
                         .background(Fv.Blue)
+                        .clickable(onClick = onAddCustomer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        "+",
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Fv.SurfaceTop)
                         .padding(horizontal = 13.dp, vertical = 5.dp),
                 ) {
                     Text(
                         "${state.visible.size}",
-                        color = Color.White,
+                        color = Fv.TextHigh,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.ExtraBold,
                     )

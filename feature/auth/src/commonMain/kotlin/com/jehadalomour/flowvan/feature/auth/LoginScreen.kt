@@ -1,10 +1,9 @@
 package com.jehadalomour.flowvan.feature.auth
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -23,7 +21,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -36,7 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -52,6 +49,13 @@ import com.jehadalomour.flowvan.core.designsystem.resources.*
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+
+// ── Light palette ───────────────────────────────────────────────────────────
+private val Ink = Color(0xFF14212E)
+private val Muted = Color(0xFF64748B)
+private val Accent = Color(0xFF1466B8)
+private val FieldBg = Color(0xFFFFFFFF)
+private val FieldBorder = Color(0xFFD9E2EC)
 
 @Composable
 fun LoginScreen(
@@ -70,18 +74,14 @@ fun LoginScreen(
 
     val gradient = Brush.verticalGradient(
         colors = listOf(
-            Color(0xFF02192B),
-            Color(0xFF000000),
-            Color(0xFF02192B),
+            Color(0xFFF5F8FC),
+            Color(0xFFFFFFFF),
+            Color(0xFFEDF3F9),
         ),
     )
 
     Surface(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(gradient),
-        ) {
+        Box(modifier = Modifier.fillMaxSize().background(gradient)) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -89,7 +89,7 @@ fun LoginScreen(
                     .padding(horizontal = 24.dp, vertical = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(28.dp))
                 LogoBlock()
                 Spacer(Modifier.height(32.dp))
 
@@ -97,12 +97,11 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = state.phone,
                         onValueChange = { viewModel.onEvent(LoginEvent.PhoneChanged(it)) },
-                        placeholder = { Text(stringResource(Res.string.login_user_number_hint), color = Color(0xFF7B8BAA)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        colors = darkFieldColors(),
+                        colors = lightFieldColors(),
                     )
                 }
 
@@ -112,7 +111,6 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = state.password,
                         onValueChange = { viewModel.onEvent(LoginEvent.PasswordChanged(it)) },
-                        placeholder = { Text("••••••", color = Color(0xFF7B8BAA)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         visualTransformation = if (state.passwordVisible) VisualTransformation.None
@@ -124,14 +122,14 @@ fun LoginScreen(
                                         if (state.passwordVisible) Res.drawable.ic_visibility else Res.drawable.ic_key
                                     ),
                                     contentDescription = null,
-                                    tint = Color(0xFFEDF0FA),
-                                    modifier = androidx.compose.ui.Modifier.size(18.dp),
+                                    tint = Muted,
+                                    modifier = Modifier.size(18.dp),
                                 )
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        colors = darkFieldColors(),
+                        colors = lightFieldColors(),
                     )
                 }
 
@@ -148,10 +146,10 @@ fun LoginScreen(
                     modifier = Modifier.fillMaxWidth().height(54.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF4B8FF6),
+                        containerColor = Accent,
                         contentColor = Color.White,
-                        disabledContainerColor = Color(0xFF243044),
-                        disabledContentColor = Color(0xFF7B8BAA),
+                        disabledContainerColor = Color(0xFFDCE5EE),
+                        disabledContentColor = Color(0xFF9AA8B8),
                     ),
                 ) {
                     if (state.isSubmitting) {
@@ -169,51 +167,38 @@ fun LoginScreen(
                     }
                 }
 
-                Spacer(Modifier.height(28.dp))
+                Spacer(Modifier.height(36.dp))
                 Text(
-                    text = "Al-Madina Trading Co. © 2026",
-                    color = Color(0xFF7B8BAA),
-                    fontSize = 12.sp,
+                    text = "by 7software",
+                    color = Muted,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
                 )
             }
         }
     }
-
 }
 
 @Composable
 private fun LogoBlock() {
-    Box(
-        modifier = Modifier
-            .size(88.dp)
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFF4B8FF6), Color(0xFF22D3C2)),
-                ),
-                shape = CircleShape,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "CF",
-            color = Color.White,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = FontFamily.Monospace,
-        )
-    }
+    Image(
+        painter = painterResource(Res.drawable.logo_7software),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier.size(124.dp),
+    )
     Spacer(Modifier.height(16.dp))
     Text(
         text = stringResource(Res.string.login_brand),
-        color = Color(0xFFEDF0FA),
+        color = Ink,
         fontSize = 26.sp,
         fontWeight = FontWeight.Bold,
     )
     Spacer(Modifier.height(4.dp))
     Text(
         text = stringResource(Res.string.login_brand_subtitle),
-        color = Color(0xFF7B8BAA),
+        color = Muted,
         fontSize = 13.sp,
         textAlign = TextAlign.Center,
     )
@@ -224,7 +209,7 @@ private fun LabeledField(label: String, content: @Composable () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = label,
-            color = Color(0xFFEDF0FA),
+            color = Ink,
             fontSize = 13.sp,
             modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
         )
@@ -237,29 +222,24 @@ private fun ErrorChip(messageAr: String, messageEn: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0x29F04F4F)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFDEBEC)),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-        ) {
-            Text(text = messageAr, color = Color(0xFFFFBABA), fontSize = 13.sp)
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(text = messageAr, color = Color(0xFFB42318), fontSize = 13.sp)
             Spacer(Modifier.height(2.dp))
-            Text(text = messageEn, color = Color(0xFFFFBABA), fontSize = 12.sp)
+            Text(text = messageEn, color = Color(0xFFB42318), fontSize = 12.sp)
         }
     }
 }
 
 @Composable
-private fun darkFieldColors() = TextFieldDefaults.colors(
-    focusedTextColor = Color(0xFFEDF0FA),
-    unfocusedTextColor = Color(0xFFEDF0FA),
-    focusedContainerColor = Color(0xFF1A2232),
-    unfocusedContainerColor = Color(0xFF1A2232),
-    disabledContainerColor = Color(0xFF1A2232),
-    focusedIndicatorColor = Color(0xFF4B8FF6),
-    unfocusedIndicatorColor = Color(0xFF1E2A3A),
-    cursorColor = Color(0xFF4B8FF6),
-    focusedPlaceholderColor = Color(0xFF7B8BAA),
-    unfocusedPlaceholderColor = Color(0xFF7B8BAA),
+private fun lightFieldColors() = TextFieldDefaults.colors(
+    focusedTextColor = Ink,
+    unfocusedTextColor = Ink,
+    focusedContainerColor = FieldBg,
+    unfocusedContainerColor = FieldBg,
+    disabledContainerColor = FieldBg,
+    focusedIndicatorColor = Accent,
+    unfocusedIndicatorColor = FieldBorder,
+    cursorColor = Accent,
 )
-
