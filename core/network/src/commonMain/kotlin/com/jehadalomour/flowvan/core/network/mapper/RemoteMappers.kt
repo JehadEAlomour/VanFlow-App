@@ -80,8 +80,10 @@ fun ProductDto.toEntity(): ProductEntity = ProductEntity(
     sku = sku.ifBlank { itemNumber },
     nameAr = nameAr.ifBlank { name },
     nameEn = nameEn ?: name,
-    // Show the human category name, not the raw UUID. Blank when uncategorised.
-    category = categoryName ?: "",
+    // Prefer the human category name; fall back to the id so the category filter
+    // still works before the backend (categoryName) is deployed. Blank only when
+    // the product is genuinely uncategorised.
+    category = categoryName ?: categoryId ?: "",
     unit = unit,
     salePrice = price.filsToJod(),
     costPrice = (cost ?: 0L).filsToJod(),
