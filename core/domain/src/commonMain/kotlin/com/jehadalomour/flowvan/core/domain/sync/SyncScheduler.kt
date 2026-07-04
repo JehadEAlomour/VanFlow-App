@@ -2,6 +2,8 @@ package com.jehadalomour.flowvan.core.domain.sync
 
 import co.touchlab.kermit.Logger
 import com.jehadalomour.flowvan.core.data.connectivity.ConnectivityObserver
+import com.jehadalomour.flowvan.core.data.heartbeat.HeartbeatReporter
+import com.jehadalomour.flowvan.core.data.repository.OfferRepository
 import com.jehadalomour.flowvan.core.data.repository.SyncRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,10 +21,14 @@ import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 private const val SYNC_INTERVAL_MS = 60_000L
+/** Don't re-pull the offers cache more than once per this interval during background sync. */
+private const val OFFERS_REFRESH_MIN_INTERVAL_MS = 15 * 60_000L
 
 class SyncScheduler(
     private val syncRepository: SyncRepository,
     private val connectivity: ConnectivityObserver,
+    private val offers: OfferRepository,
+    private val heartbeat: HeartbeatReporter,
 ) {
     private val log = Logger.withTag("SyncScheduler")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -38,6 +44,7 @@ class SyncScheduler(
         if (job?.isActive != true) {
             job = scope.launch {
                 while (isActive) {
+                    heartbeat.send()
                     runSync()
                     delay(SYNC_INTERVAL_MS)
                 }
@@ -47,6 +54,7 @@ class SyncScheduler(
             reconnectJob = connectivity.onlineEvents
                 .onEach {
                     log.d("network back online — syncing pending")
+                    heartbeat.send()
                     runSync()
                 }
                 .launchIn(scope)
@@ -65,10 +73,20 @@ class SyncScheduler(
             if (!result.skipped) {
                 _lastSyncAt.value = Clock.System.now().toEpochMilliseconds()
                 log.d("Sync done — invoices:${result.invoicesSynced} payments:${result.paymentsSynced} points:${result.pointsSynced}")
+                refreshOffersThrottled()
             }
         } catch (e: Exception) {
             log.e("Sync error: ${e.message}")
         }
+    }
+
+    /** Refresh the offers cache at most once per [OFFERS_REFRESH_MIN_INTERVAL_MS]. Best-effort. */
+    @OptIn(ExperimentalTime::class)
+    private suspend fun refreshOffersThrottled() {
+        val now = Clock.System.now().toEpochMilliseconds()
+        val last = offers.lastRefreshedAt()
+        if (last != null && now - last < OFFERS_REFRESH_MIN_INTERVAL_MS) return
+        offers.refresh().onFailure { log.w("offers refresh failed: ${it.message}") }
     }
 
     fun stop() {

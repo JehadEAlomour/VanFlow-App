@@ -24,12 +24,13 @@ back to on-device totals so the rep can still sell.
 
 ## Server-fed cart (NEW)
 
-- **Online** (`offersFromServer = true`): the cart lines, per-line discounts, and the totals
+- **Online** (`offersSource = SERVER`): the cart lines, per-line discounts, and the totals
   card (subtotal / offers discount / tax / final total) are **exactly what the server returned**
   — not on-device math. Each line shows its server unit price × qty, net, and a green
   "- discount" chip when the offer discounted it.
-- **Offline** (`offersFromServer = false`, evaluate failed): an amber **"غير متصل"** banner
-  appears; the cart + totals fall back to the on-device `InvoiceTaxCalculator` (no offers).
+- **Offline** (`offersSource = LOCAL`): the same server-fed cart UI, now fed by the on-device
+  `LocalOfferEvaluator` over the cached offers, plus an amber **"غير متصل"** banner. If nothing
+  can be evaluated (`offersSource = null`) it falls back to `InvoiceTaxCalculator` with no offers.
   The sale is never blocked. The server re-applies offers authoritatively on sync.
 
 ## Preconditions
@@ -130,21 +131,35 @@ This offer has two reward variants:
 - Expand the totals card. **Online:** verify `subtotal − offersDiscount + tax = final total`,
   where every number is the server's (`totals.subtotalFils` … `totals.grandTotalFils`,
   converted to JOD). Free lines do not move the total (full price + 100% discount = net 0).
-- **Offline:** the same arithmetic holds but is computed on-device by `InvoiceTaxCalculator`
-  with **no offers** applied.
+- **Offline (offers cached):** the same arithmetic holds, computed **on-device** by the
+  `LocalOfferEvaluator` — a faithful port of the backend engine — over the cached
+  `GET /offers/active` offers, so discounts/gifts match what the server will re-apply.
+- **Offline (empty offers cache):** on-device totals with **no offers** (still a valid sale).
 
 ## Offline behaviour
 
-- Turn off connectivity. Editing the cart still works; the evaluate call fails silently. The
-  state flips to `offersFromServer = false`:
-  - the offer banner / free lines / offers row **clear**,
-  - an amber **"غير متصل"** banner appears,
-  - the cart lines + totals card switch to **on-device** values (no offers, no crash, sale
-    never blocked).
-- Re-enabling connectivity and editing the cart re-evaluates and restores the server-fed cart.
-- **TODO (not yet implemented):** full offline preview from the cached `GET /offers/active`
-  list. Currently offline shows the local no-offers total until back online; the server remains
-  the final arbiter at promotion on sync.
+The offers cache (Room table `offers`, DB v9) is refreshed from `GET /offers/active` on login /
+home refresh, on opening a SALE, and during background sync (throttled to ~15 min). Van stock is
+already cached (`products.vanStock`). So offline the rep sees both stock and offers.
+
+- Turn off connectivity, then edit the cart. `EvaluateOffersUseCase` sees `isOnline() == false`
+  and runs the **on-device** evaluator against the cached offers. State flips to
+  `offersSource = OfferSource.LOCAL`:
+  - the offer banner, FREE lines, per-line discounts and totals still render (server-fed cart
+    path, now fed by the local result),
+  - an amber banner reads **"غير متصل — العروض من الذاكرة المحلية، يتحقق الخادم عند المزامنة"**,
+  - gift picks work: the choose-free-item sheet is driven by the local `freeItemChoice`.
+- **No offers cached** (fresh install that never went online): `offersSource = LOCAL` with an
+  empty result → on-device totals, no offers, amber banner. If even the local evaluator throws,
+  it degrades to `offersSource = null` (drop-everything, on-device totals) — never a crash.
+- Re-enabling connectivity and editing the cart re-evaluates against the live server
+  (`offersSource = SERVER`) and restores the authoritative cart.
+
+**Offline compromises** (documented — the server re-validates on sync and is the final arbiter):
+`perCustomerLimit` is not enforced offline (no local redemption ledger); `totalRedemptionLimit`
+is checked against the possibly-stale cached `redemptionCount`; `NEW_ONLY` eligibility is judged
+from local invoice history only. An offline preview can therefore occasionally show a discount
+the server later drops on sync.
 
 ## Save / sync
 

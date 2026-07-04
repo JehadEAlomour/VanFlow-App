@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.jehadalomour.flowvan.core.database.dao.InvoiceDao
 import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
+import com.jehadalomour.flowvan.core.data.repository.OfferRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
@@ -71,6 +72,7 @@ class VoucherViewModel(
     private val commitApprovedReturn: CommitApprovedReturnUseCase,
     private val requestDiscountApproval: RequestDiscountApprovalUseCase,
     private val commitApprovedSale: CommitApprovedSaleUseCase,
+    private val offerRepository: OfferRepository,
 ) : ViewModel() {
 
     /** Which pending approval is in flight, so the poll commits the right voucher. */
@@ -98,7 +100,12 @@ class VoucherViewModel(
 
         // SALE only: re-evaluate offers (debounced) whenever the cart, payment method,
         // or the rep's gift picks change. RETURN/ORDER never evaluate offers.
-        if (type == VoucherType.SALE) observeCartForOffers()
+        if (type == VoucherType.SALE) {
+            observeCartForOffers()
+            // Freshen the offline offers cache on open so the first offline evaluation is
+            // as current as possible. Best-effort — a failure leaves the existing cache.
+            viewModelScope.launch { offerRepository.refresh() }
+        }
 
         customers.observeById(customerId)
             .onEach { c -> _state.update { it.copy(customer = c) } }
@@ -165,6 +172,7 @@ class VoucherViewModel(
         }
         val result = evaluateOffers(
             cart = s.cart,
+            customerId = customerId,                // offline eligibility / new-customer lookup
             customerNumber = s.customer?.code,
             repId = session.currentUserId,
             // The customer number identifies the buyer; the backend resolves the store.
@@ -186,21 +194,28 @@ class VoucherViewModel(
      */
     private fun applyEvaluation(eval: OfferEvaluation) {
         _state.update { s ->
+            // Keep only picks still offered (multiset — duplicates preserved), and cap the total
+            // to the current quota so a cart edit that shrinks the entitlement drops extra picks.
             val validGiftPool = eval.pendingChoices.flatMap { it.choices }.toSet()
+            val totalQuota = eval.pendingChoices.sumOf { it.qty }
+            val prunedGifts = s.chosenFreeItems.filter { it in validGiftPool }.take(totalQuota)
             s.copy(
                 appliedOffers = eval.appliedOffers,
                 freeLines = eval.freeLines,
                 pendingChoices = eval.pendingChoices,
-                chosenFreeItems = s.chosenFreeItems.filter { it in validGiftPool },
+                chosenFreeItems = prunedGifts,
                 serverLines = eval.serverLines,
                 serverTotals = eval.totals,
-                offersFromServer = true,
+                offersSource = eval.source,
                 isEvaluatingOffers = false,
             )
         }
     }
 
-    /** Evaluate failed (offline) — fall back to on-device totals; server re-applies on sync. */
+    /**
+     * Both the server and the offline evaluator failed (e.g. empty offers cache) — drop all
+     * offers and fall back to on-device totals. [offersSource] = null flags "no evaluation".
+     */
     private fun applyOffline() {
         _state.update { s ->
             s.copy(
@@ -209,33 +224,36 @@ class VoucherViewModel(
                 pendingChoices = emptyList(),
                 serverLines = emptyList(),
                 serverTotals = OfferTotals.ZERO,
-                offersFromServer = false,
+                offersSource = null,
                 isEvaluatingOffers = false,
             )
         }
     }
 
     /**
-     * Toggle a GIFT pick for an ITEM_QTY_REWARD offer (SALE). We DO NOT add a cart line —
-     * the server adds the free line from [VoucherState.chosenFreeItems] on the next
-     * (debounced) re-evaluate and on upload. Picking is capped at the offer's `qty`; a
-     * fresh pick past the cap evicts the oldest pick for that offer. Tapping a selected
-     * item again removes it.
+     * Add one GIFT pick for an ITEM_QTY_REWARD offer (SALE). [chosenFreeItems] is a multiset —
+     * the same pool item may be picked several times (e.g. "buy 10 water → 3 free water" =
+     * water ×3). We DO NOT add a cart line; the server (and the offline evaluator) turns the
+     * picks into FREE lines on the next debounced re-evaluate and on upload. Ignored once the
+     * offer's `qty` quota is filled.
      */
-    private fun chooseFreeItem(offerId: String, itemNumber: String) {
+    private fun addFreeItem(offerId: String, itemNumber: String) {
         _state.update { s ->
             val choice = s.pendingChoices.firstOrNull { it.offerId == offerId } ?: return@update s
             val poolForOffer = choice.choices.toSet()
-            if (itemNumber in s.chosenFreeItems) {
-                return@update s.copy(chosenFreeItems = s.chosenFreeItems - itemNumber)
-            }
-            val picksForOffer = s.chosenFreeItems.filter { it in poolForOffer }
-            val capped = if (choice.qty in 1..picksForOffer.size) {
-                s.chosenFreeItems - picksForOffer.first()
-            } else {
-                s.chosenFreeItems
-            }
-            s.copy(chosenFreeItems = capped + itemNumber)
+            if (itemNumber !in poolForOffer) return@update s
+            val picksForOffer = s.chosenFreeItems.count { it in poolForOffer }
+            if (picksForOffer >= choice.qty) return@update s   // quota filled
+            s.copy(chosenFreeItems = s.chosenFreeItems + itemNumber)
+        }
+    }
+
+    /** Remove one instance of a GIFT pick (decrement its stepper). */
+    private fun removeFreeItem(itemNumber: String) {
+        _state.update { s ->
+            val idx = s.chosenFreeItems.indexOfLast { it == itemNumber }
+            if (idx < 0) return@update s
+            s.copy(chosenFreeItems = s.chosenFreeItems.toMutableList().apply { removeAt(idx) })
         }
     }
 
@@ -299,7 +317,8 @@ class VoucherViewModel(
                 _state.update { it.copy(sourceLookupQuery = event.q) }
             VoucherEvent.LookupSource -> lookupSourceByNumber()
 
-            is VoucherEvent.ChooseFreeItem -> chooseFreeItem(event.offerId, event.itemNumber)
+            is VoucherEvent.ChooseFreeItem -> addFreeItem(event.offerId, event.itemNumber)
+            is VoucherEvent.RemoveFreeItem -> removeFreeItem(event.itemNumber)
             VoucherEvent.DismissFreeItemSheet -> _state.update { it.copy(pendingChoices = emptyList()) }
         }
     }
@@ -511,6 +530,7 @@ class VoucherViewModel(
                     discountAmount = s.voucherDiscountAmount,
                     paymentMethod = s.paymentMethod,
                     notes = s.notes.takeIf { it.isNotBlank() },
+                    chosenFreeItems = s.chosenFreeItems,   // GIFT picks → server adds free lines on upload
                 )
                 VoucherType.RETURN -> createReturn(
                     customerId = customerId,

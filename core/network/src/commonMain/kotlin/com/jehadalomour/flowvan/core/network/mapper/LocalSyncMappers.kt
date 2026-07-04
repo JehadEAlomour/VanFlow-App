@@ -16,6 +16,7 @@ import com.jehadalomour.flowvan.core.model.InvoiceLine
 import kotlin.math.roundToLong
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
+import kotlinx.datetime.Instant
 import kotlinx.serialization.json.Json
 
 /**
@@ -83,12 +84,20 @@ fun InvoiceEntity.toVoucherRequest(userCode: String, customerNumber: String?, js
         ((discountAmount * 1000.0).roundToLong() - totalLineDiscountFils).coerceAtLeast(0L)
 
     return CreateVoucherRequest(
-        voucherNumber = id,                 // ignored by the inbox; the server assigns the real number
-        clientRef = id,                     // idempotency key → safe replays + server-assigned number
+        // Do NOT send a client number: the server reserves the authoritative, collision-proof
+        // number (voucher_number is UNIQUE). The old code sent the local number, which the
+        // server used verbatim — so a reinstall (counter resets to 1) produced a number that
+        // already existed. The server assigns; the app adopts it from the response on sync.
+        voucherNumber = null,
+        clientRef = id,                     // globally-unique idempotency key (UUID) → safe replays
         transKind = kind,
         userCode = userCode,
         customerNumber = customerNumber,
         referenceVoucherNumber = referenceNumber,
+        // The real sale time (local save). Without it the server stamps `now()` at
+        // processing, so a voucher that syncs late (e.g. after a backend outage) would
+        // jump to the processing date and hide from the Operations day it was actually sold.
+        inDate = Instant.fromEpochMilliseconds(createdAt).toString(),
         isPosted = true,
         totalDiscountValue = if (voucherDiscountFils > 0L) (voucherDiscountFils / 1000.0).toAmountString() else null,
         transactions = lines.map { line ->

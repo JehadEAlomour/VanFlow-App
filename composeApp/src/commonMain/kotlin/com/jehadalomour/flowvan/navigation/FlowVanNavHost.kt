@@ -6,7 +6,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -99,6 +101,7 @@ fun FlowVanNavHost(
     val getCurrentUser: GetCurrentUserUseCase = koinInject()
     val logout: LogoutUseCase = koinInject()
     val sessionStore: SessionStore = koinInject()
+    val scope = rememberCoroutineScope()
 
     var startDestination by remember { mutableStateOf<String?>(null) }
 
@@ -137,8 +140,10 @@ fun FlowVanNavHost(
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onLogout = {
-                    logout()
-                    navController.navigate(Routes.LOGIN) { popUpTo(Routes.HOME) { inclusive = true } }
+                    scope.launch {
+                        logout()
+                        navController.navigate(Routes.LOGIN) { popUpTo(Routes.HOME) { inclusive = true } }
+                    }
                 },
             )
         }

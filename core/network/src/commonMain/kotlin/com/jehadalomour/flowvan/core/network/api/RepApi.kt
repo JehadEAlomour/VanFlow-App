@@ -1,5 +1,7 @@
 package com.jehadalomour.flowvan.core.network.api
 
+import com.jehadalomour.flowvan.core.network.dto.HeartbeatRequest
+import com.jehadalomour.flowvan.core.network.dto.HeartbeatResultDto
 import com.jehadalomour.flowvan.core.network.dto.LocationBulkRequest
 import com.jehadalomour.flowvan.core.network.dto.LocationBulkResultDto
 import com.jehadalomour.flowvan.core.network.dto.LocationPingDto
@@ -22,4 +24,8 @@ class RepApi(private val client: FlowVanApiClient) {
 
     suspend fun postLocationBulk(repId: String, points: List<LocationPingRequest>): LocationBulkResultDto =
         client.postData("reps/$repId/location/bulk", LocationBulkRequest(points))
+
+    /** Liveness heartbeat: reports GPS-enabled + app state so the server can detect disconnections. */
+    suspend fun postHeartbeat(repId: String, body: HeartbeatRequest): HeartbeatResultDto =
+        client.postData("reps/$repId/heartbeat", body)
 }

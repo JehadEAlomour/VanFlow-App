@@ -39,6 +39,10 @@ interface InvoiceDao {
     @Query("UPDATE invoices SET syncedAt = :now WHERE id IN (:ids)")
     suspend fun markSynced(ids: List<String>, now: Long)
 
+    /** Adopt the server-assigned voucher number after a successful sync. */
+    @Query("UPDATE invoices SET number = :number WHERE id = :id")
+    suspend fun updateNumber(id: String, number: String)
+
     @Query("SELECT * FROM invoices WHERE createdAt >= :from AND createdAt <= :to ORDER BY createdAt DESC")
     fun observeAllByRange(from: Long, to: Long): Flow<List<InvoiceEntity>>
 
@@ -47,6 +51,10 @@ interface InvoiceDao {
 
     @Query("SELECT COUNT(*) FROM invoices")
     suspend fun count(): Int
+
+    /** Prior (non-cancelled) SALE count for a customer — 0 ⇒ new customer (offline NEW_ONLY gate). */
+    @Query("SELECT COUNT(*) FROM invoices WHERE customerId = :customerId AND type = 'SALE' AND status != 'CANCELLED'")
+    suspend fun countSalesByCustomer(customerId: String): Int
 
     /** Count of vouchers of a given [type] created within [fromMillis, toMillis) — drives the per-type yearly sequence. */
     @Query("SELECT COUNT(*) FROM invoices WHERE type = :type AND createdAt >= :fromMillis AND createdAt < :toMillis")

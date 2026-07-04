@@ -443,20 +443,22 @@ private fun ReceiptBody(state: VoucherPrintState) {
             // Column headers
             ItemColHeader()
 
-            // Items (purchased, then any free gift lines)
+            // Items (purchased, then gift lines — each a normal item at 100% discount)
             state.lines.forEach { line ->
                 ReceiptItemRow(line, t.amountDecimals)
             }
             state.freeLines.forEach { line ->
-                ReceiptItemRow(line, t.amountDecimals, isFree = true)
+                ReceiptItemRow(line, t.amountDecimals)
             }
 
             SepDash()
 
-            // Totals
-            TotRow(stringResource(Res.string.voucher_detail_subtotal), money(state.subtotal, t))
+            // Totals. Gift lines carry a real price fully discounted, so their gross adds to
+            // both the subtotal and the line discount — the columns foot and the net is 0.
+            val freeGross = state.freeLines.sumOf { it.qty * it.unitPrice }
+            TotRow(stringResource(Res.string.voucher_detail_subtotal), money(state.subtotal + freeGross, t))
             // Discount breakdown: line-level discounts, then the overall total discount.
-            val lineDiscount = state.lines.sumOf { it.qty * it.unitPrice * it.discountPct }
+            val lineDiscount = state.lines.sumOf { it.qty * it.unitPrice * it.discountPct } + freeGross
             if (lineDiscount > 0.0005) {
                 TotRow(stringResource(Res.string.print_line_discount), "- ${money(lineDiscount, t)}", valueColor = c.negative)
             }
@@ -613,17 +615,16 @@ private fun ItemColHeader() {
 }
 
 @Composable
-private fun ReceiptItemRow(line: InvoiceLine, amountDecimals: Int, isFree: Boolean = false) {
+private fun ReceiptItemRow(line: InvoiceLine, amountDecimals: Int) {
     val c = LocalRc.current
-    val freeTag = stringResource(Res.string.print_free_tag)
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 5.dp),
     ) {
-        // Product name (gift lines get a "(free)" suffix)
+        // Product name
         Text(
-            text = if (isFree) "${line.nameAr} ($freeTag)" else line.nameAr,
+            text = line.nameAr,
             fontWeight = FontWeight.ExtraBold,
             fontSize = 13.sp,
             color = c.ink,
@@ -634,9 +635,9 @@ private fun ReceiptItemRow(line: InvoiceLine, amountDecimals: Int, isFree: Boole
             val qty = formatQty(line.qty)
             val unit = line.unit.ifBlank { "—" }
             val taxPct = line.taxPctLabel()
-            val price = if (isFree) freeTag else formatAmount(line.unitPrice, amountDecimals)
+            val price = formatAmount(line.unitPrice, amountDecimals)
             val disc = if (line.discountPct > 0.0) "${(line.discountPct * 100).toInt()}%" else "—"
-            val total = if (isFree) freeTag else formatAmount(line.lineTotal, amountDecimals)
+            val total = formatAmount(line.lineTotal, amountDecimals)
 
             listOf(qty, unit, taxPct, price, disc, total).forEachIndexed { idx, cell ->
                 Text(

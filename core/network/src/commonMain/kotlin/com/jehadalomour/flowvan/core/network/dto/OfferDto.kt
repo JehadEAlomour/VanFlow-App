@@ -118,9 +118,18 @@ data class OfferDto(
     val eligibility: JsonObject? = null,
     val validFrom: String? = null,
     val validTo: String? = null,
+    /** Weekday numbers the offer runs on (0=Sun..6=Sat). Null = every day. */
+    val daysOfWeek: List<Int>? = null,
+    /** 'HH:mm' inclusive intra-day window. Null = all day. */
+    val timeFrom: String? = null,
+    val timeTo: String? = null,
+    val totalRedemptionLimit: Int? = null,
+    val perCustomerLimit: Int? = null,
     val priority: Int = 0,
     val stackable: Boolean = false,
     val isActive: Boolean = true,
     val redemptionCount: Int = 0,
+    /** Server creation instant (ISO-8601) — preserves the priority-tie ordering. */
+    val createdAt: String? = null,
     val status: String? = null,
 )

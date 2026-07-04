@@ -23,4 +23,10 @@ data class CustomerEntity(
     val visitOrder: Int,
     val lat: Double?,
     val lng: Double?,
+    /** Server category — SEGMENT offer eligibility. Null on rows cached before v8. */
+    val category: String? = null,
+    /** Server region id — regionIds offer eligibility. */
+    val regionId: String? = null,
+    /** Server rep id — repIds offer eligibility fallback. */
+    val repId: String? = null,
 )

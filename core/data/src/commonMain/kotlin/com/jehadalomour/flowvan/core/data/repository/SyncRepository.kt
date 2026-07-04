@@ -66,7 +66,10 @@ class SyncRepository(
         for (inv in invoiceDao.findUnsynced(50)) {
             try {
                 val customerNumber = customerDao.findById(inv.customerId)?.code
-                voucherApi.create(inv.toVoucherRequest(userCode, customerNumber, json))
+                val result = voucherApi.create(inv.toVoucherRequest(userCode, customerNumber, json))
+                // Adopt the server's authoritative voucher number (the local one was provisional).
+                result.voucherNumber.takeIf { it.isNotBlank() && it != inv.number }
+                    ?.let { invoiceDao.updateNumber(inv.id, it) }
                 invoiceDao.markSynced(listOf(inv.id), now)
                 invoicesSynced++
             } catch (e: NetworkException) {

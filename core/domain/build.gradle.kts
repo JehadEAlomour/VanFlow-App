@@ -17,4 +17,8 @@ dependencies {
     "commonMainImplementation"(libs.kotlinx.serialization.json)
     "commonMainImplementation"(libs.kermit)
     "commonMainImplementation"(libs.multiplatform.settings)
+    "commonTestImplementation"(libs.kotlin.test)
+    // Evaluator tests assert on the network EvaluationResultDto shape it returns.
+    "commonTestImplementation"(projects.core.network)
+    "commonTestImplementation"(libs.kotlinx.datetime)
 }

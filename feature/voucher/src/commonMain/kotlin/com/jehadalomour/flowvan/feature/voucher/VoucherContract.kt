@@ -9,6 +9,7 @@ import com.jehadalomour.flowvan.core.model.InvoiceDiscountInput
 import com.jehadalomour.flowvan.core.model.InvoiceTaxCalculator
 import com.jehadalomour.flowvan.core.model.LineTaxType
 import com.jehadalomour.flowvan.core.model.OfferChoice
+import com.jehadalomour.flowvan.core.model.OfferSource
 import com.jehadalomour.flowvan.core.model.OfferTotals
 import com.jehadalomour.flowvan.core.model.PaymentMethod
 import com.jehadalomour.flowvan.core.model.Product
@@ -97,10 +98,11 @@ data class VoucherState(
      */
     val chosenFreeItems: List<String> = emptyList(),
     /**
-     * True when the displayed cart + totals come from the server's `/offers/evaluate`
-     * result (online, SALE). False → fall back to on-device [summary] (offline, no offers).
+     * Where the current offer evaluation came from (SALE): SERVER (online /offers/evaluate),
+     * LOCAL (offline on-device evaluator over the cached offers), or null (no evaluation yet /
+     * both failed → on-device totals with no offers).
      */
-    val offersFromServer: Boolean = false,
+    val offersSource: OfferSource? = null,
     /** The server's authoritative per-line result, keyed by itemNumber (= sku) (SALE). */
     val serverLines: List<ServerLine> = emptyList(),
     /** The server's authoritative invoice totals (SALE). */
@@ -119,11 +121,23 @@ data class VoucherState(
         } ?: InvoiceDiscountInput.None,
     )
 
-    /** SALE only: offers came back from the server, so totals/lines are server-fed. */
-    val useServerOffers: Boolean get() = type == VoucherType.SALE && offersFromServer
+    /**
+     * SALE only: an offer evaluation (server OR offline) produced per-line results, so
+     * totals/lines are fed from [serverLines]/[serverTotals]. Requires [serverLines] to be
+     * non-empty — otherwise (e.g. offline with an empty offers cache) totals fall back to the
+     * on-device [summary] instead of showing the evaluator's zero totals.
+     */
+    val useServerOffers: Boolean get() =
+        type == VoucherType.SALE && offersSource != null && serverLines.isNotEmpty()
 
-    /** SALE only: a non-empty cart with no fresh server result → offline banner. */
-    val isOffline: Boolean get() = type == VoucherType.SALE && cart.isNotEmpty() && !offersFromServer
+    /** SALE only: a non-empty cart whose evaluation isn't the live server result → offline banner. */
+    val isOffline: Boolean get() = type == VoucherType.SALE && cart.isNotEmpty() && offersSource != OfferSource.SERVER
+
+    /** SALE offline banner copy — distinguishes "offers from local cache" from "no offers". */
+    val offlineBannerTextAr: String get() = when (offersSource) {
+        OfferSource.LOCAL -> "غير متصل — العروض من الذاكرة المحلية، يتحقق الخادم عند المزامنة"
+        else -> "غير متصل — الإجماليات محلية، يعاد تطبيق العروض عند المزامنة"
+    }
 
     val subtotal: Double get() =
         if (useServerOffers) serverTotals.subtotalJod else summary.subtotalBeforeDiscounts
@@ -243,7 +257,9 @@ sealed interface VoucherEvent {
     data class SourceLookupChanged(val q: String) : VoucherEvent
     data object LookupSource : VoucherEvent
 
-    // SALE: offers — choosing/clearing GIFT picks for ITEM_QTY_REWARD offers
+    // SALE: offers — GIFT picks for ITEM_QTY_REWARD offers. Choose adds one (up to the
+    // offer's quota), Remove takes one back. The same pool item can be picked multiple times.
     data class ChooseFreeItem(val offerId: String, val itemNumber: String) : VoucherEvent
+    data class RemoveFreeItem(val offerId: String, val itemNumber: String) : VoucherEvent
     data object DismissFreeItemSheet : VoucherEvent
 }

@@ -10,6 +10,7 @@ import com.jehadalomour.flowvan.core.network.http.ApiConfig
 import com.jehadalomour.flowvan.core.network.http.OffsetPage
 import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
+import com.jehadalomour.flowvan.core.data.repository.OfferRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
@@ -34,6 +35,7 @@ class RefreshCatalogUseCase(
     private val session: SessionStore,
     private val authApi: AuthApi,
     private val appSettings: AppSettingsRepository,
+    private val offers: OfferRepository,
 ) {
     private val log = Logger.withTag("RefreshCatalog")
 
@@ -46,6 +48,9 @@ class RefreshCatalogUseCase(
         if (!apiConfig.isEnabled) return Result.success(CatalogRefresh(0, 0, 0, skipped = true))
         syncCompanyTaxMode()
         syncPermissions()
+        // Refresh the offline offers cache alongside the catalog. Best-effort: a failure
+        // here must not fail the catalog refresh (the previous cache stays usable).
+        offers.refresh().onFailure { log.w("offers refresh failed: ${it.message}") }
         return try {
             coroutineScope {
                 val customersJob = async {

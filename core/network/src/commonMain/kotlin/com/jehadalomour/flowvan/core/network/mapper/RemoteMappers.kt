@@ -68,6 +68,9 @@ fun CustomerDto.toEntity(): CustomerEntity = CustomerEntity(
     visitOrder = 0,
     lat = latitude?.toDoubleOrNull(),
     lng = longitude?.toDoubleOrNull(),
+    category = category,
+    regionId = regionId,
+    repId = repId,
 )
 
 // ---- Products ----

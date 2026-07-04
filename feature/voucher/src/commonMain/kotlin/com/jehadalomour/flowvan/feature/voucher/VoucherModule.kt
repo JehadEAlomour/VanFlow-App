@@ -14,7 +14,7 @@ fun voucherModule(): Module = module {
     viewModel { (customerId: String, type: VoucherType) ->
         VoucherViewModel(
             customerId, type, get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(),
-            get(), get(), get(), get(), get(), get(), get(),
+            get(), get(), get(), get(), get(), get(), get(), get(),
         )
     }
     viewModel { (customerId: String) ->

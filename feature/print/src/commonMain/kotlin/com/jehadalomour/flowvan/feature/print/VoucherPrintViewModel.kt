@@ -106,7 +106,9 @@ class VoucherPrintViewModel(
     /**
      * Gift picks are stored only as a CSV of item numbers (SKUs); the server expands them into
      * free lines on sync. For the printed copy we resolve them locally from the product cache —
-     * duplicates in the CSV become quantity — as zero-priced display lines.
+     * duplicates in the CSV become quantity. A gift is billed as a NORMAL item at its real price
+     * with a 100% line discount (net 0): the Jordan tax authority doesn't recognise a "free"
+     * line, so the invoice must show the item, its price, and a 100% discount that nets to zero.
      */
     private suspend fun resolveFreeLines(csv: String?): List<InvoiceLine> {
         val counts = csv?.split(",")
@@ -122,10 +124,10 @@ class VoucherPrintViewModel(
                 sku = sku,
                 nameAr = product?.nameAr ?: sku,
                 qty = qty.toDouble(),
-                unitPrice = 0.0,
-                discountPct = 0.0,
+                unitPrice = product?.salePrice ?: 0.0,
+                discountPct = 1.0,          // 100% off → net 0 (a normal, fully-discounted line)
                 lineTotal = 0.0,
-                taxType = "EXEMPT",
+                taxType = "EXEMPT",         // net 0 → no tax
                 taxAmount = 0.0,
                 unit = product?.unit.orEmpty(),
                 taxRate = 0.0,

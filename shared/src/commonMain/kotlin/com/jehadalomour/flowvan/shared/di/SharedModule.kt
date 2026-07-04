@@ -6,6 +6,7 @@ import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.core.data.repository.CompanyInfoRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
+import com.jehadalomour.flowvan.core.data.repository.OfferRepository
 import com.jehadalomour.flowvan.core.data.repository.PaymentRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
@@ -26,6 +27,7 @@ import com.jehadalomour.flowvan.core.network.api.VoucherApi
 import com.jehadalomour.flowvan.core.network.http.ApiConfig
 import com.jehadalomour.flowvan.core.network.http.FlowVanApiClient
 import com.jehadalomour.flowvan.core.data.repository.LocationRepository
+import com.jehadalomour.flowvan.core.data.heartbeat.HeartbeatReporter
 import com.jehadalomour.flowvan.core.data.repository.SyncRepository
 import com.jehadalomour.flowvan.core.datastore.AiSettings
 import com.jehadalomour.flowvan.core.datastore.SyncConfig
@@ -43,6 +45,7 @@ import com.jehadalomour.flowvan.core.domain.usecase.CommitApprovedSaleUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetCustomerSalesUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateSaleVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.EndShiftUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.EvaluateOffersOfflineUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.EvaluateOffersUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetCurrentUserUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetDailyKpiUseCase
@@ -85,6 +88,7 @@ fun sharedModule(): Module = module {
     single { get<FlowVanDatabase>().routeStopDao() }
     single { get<FlowVanDatabase>().aiMessageDao() }
     single { get<FlowVanDatabase>().appSettingsDao() }
+    single { get<FlowVanDatabase>().offerDao() }
 
     single { UserRepository(get()) }
     single { CustomerRepository(get()) }
@@ -94,6 +98,7 @@ fun sharedModule(): Module = module {
     single { ProductUnitRepository(get()) }
     single { InvoiceRepository(get()) }
     single { PaymentRepository(get()) }
+    single { OfferRepository(get(), get(), get()) }
     single { LocationRepository(get()) }
     single { StopDetector() }
     single { LocationTrackingCoordinator(get(), get(), get()) }
@@ -103,7 +108,8 @@ fun sharedModule(): Module = module {
     single { createHttpClient() }
     single { ClaudeApiClient(get()) }
     single { SyncRepository(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
-    single { SyncScheduler(get(), get()) }
+    single { HeartbeatReporter(get(), get(), get(), get()) }
+    single { SyncScheduler(get(), get(), get(), get()) }
 
     // Backend API layer (VanFlow) — see .claude/FLOW-API.md
     single {
@@ -130,11 +136,12 @@ fun sharedModule(): Module = module {
 
     factory { LoginUseCase(get(), get()) }
     factory { GetCurrentUserUseCase(get(), get()) }
-    factory { LogoutUseCase(get(), get()) }
+    factory { LogoutUseCase(get(), get(), get()) }
     factory { GetDailyKpiUseCase(get(), get(), get()) }
     factory { VoucherNumberGenerator(get(), get()) }
     factory { CreateSaleVoucherUseCase(get(), get(), get(), get(), get(), get()) }
-    factory { EvaluateOffersUseCase(get()) }
+    factory { EvaluateOffersOfflineUseCase(get(), get(), get(), get()) }
+    factory { EvaluateOffersUseCase(get(), get(), get()) }
     factory { CreateReturnVoucherUseCase(get(), get(), get(), get(), get(), get()) }
     factory { RequestReturnApprovalUseCase(get(), get(), get()) }
     factory { PollApprovalUseCase(get()) }
@@ -149,7 +156,7 @@ fun sharedModule(): Module = module {
     factory { StartShiftUseCase(get(), get()) }
     factory { BackendLoginUseCase(get(), get(), get()) }
     factory { PurgeDemoDataUseCase(get(), get()) }
-    factory { RefreshCatalogUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    factory { RefreshCatalogUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { SubmitInvoiceUseCase(get()) }
     factory { SubmitCollectionUseCase(get()) }
 }
