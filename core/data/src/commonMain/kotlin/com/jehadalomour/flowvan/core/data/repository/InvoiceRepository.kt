@@ -11,6 +11,18 @@ class InvoiceRepository(private val dao: InvoiceDao) {
     suspend fun salesTotalSince(sinceMillis: Long): Double =
         dao.listSince(sinceMillis).filter { it.type == "SALE" }.sumOf { it.total }
 
+    /** Cash SALE total (CASH/CHEQUE/TRANSFER) — excludes credit (آجل) sales. Day cash. */
+    suspend fun cashSalesTotalSince(sinceMillis: Long): Double =
+        dao.listSince(sinceMillis)
+            .filter { it.type == "SALE" && it.paymentMethod != "CREDIT" }
+            .sumOf { it.total }
+
+    /** Credit (on-account, آجل) SALE total — receivables, NOT day cash. */
+    suspend fun creditSalesTotalSince(sinceMillis: Long): Double =
+        dao.listSince(sinceMillis)
+            .filter { it.type == "SALE" && it.paymentMethod == "CREDIT" }
+            .sumOf { it.total }
+
     suspend fun returnsTotalSince(sinceMillis: Long): Double =
         dao.listSince(sinceMillis).filter { it.type == "RETURN" }.sumOf { it.total }
 

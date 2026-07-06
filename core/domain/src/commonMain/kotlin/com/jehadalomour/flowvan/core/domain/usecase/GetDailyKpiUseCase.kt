@@ -25,6 +25,8 @@ class GetDailyKpiUseCase(
 
         return DailyKpi(
             salesTotal = invoices.salesTotalSince(startOfTodayMs),
+            cashSalesTotal = invoices.cashSalesTotalSince(startOfTodayMs),
+            creditSalesTotal = invoices.creditSalesTotalSince(startOfTodayMs),
             returnsTotal = invoices.returnsTotalSince(startOfTodayMs),
             collectionsTotal = payments.confirmedTotalSince(startOfTodayMs),
             customersVisited = invoices.distinctCustomersSince(startOfTodayMs),

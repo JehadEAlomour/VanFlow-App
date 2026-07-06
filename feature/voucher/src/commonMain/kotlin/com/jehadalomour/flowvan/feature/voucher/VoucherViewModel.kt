@@ -28,6 +28,7 @@ import com.jehadalomour.flowvan.core.domain.usecase.CommitApprovedReturnUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateRequestVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateReturnVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateSaleVoucherUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.CreditLimitExceededException
 import com.jehadalomour.flowvan.core.domain.usecase.EmptyCartException
 import com.jehadalomour.flowvan.core.domain.usecase.EvaluateOffersUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetCustomerSalesUseCase
@@ -588,6 +589,12 @@ class VoucherViewModel(
                         is StockShortageException ->
                             getString(Res.string.err_stock_unavailable, ex.available, ex.requested)
                         is EmptyCartException -> getString(Res.string.err_cart_empty)
+                        is CreditLimitExceededException ->
+                            getString(
+                                Res.string.err_credit_limit,
+                                ex.creditLimit.toInt(),
+                                ex.available.toInt(),
+                            )
                         else -> getString(Res.string.err_unexpected)
                     }
                     _state.update { it.copy(isSaving = false, errorAr = msg) }

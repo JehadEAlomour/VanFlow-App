@@ -83,6 +83,8 @@ fun EndOfDayScreen(
                 state.kpi?.let { kpi ->
                     SectionCard(title = stringResource(Res.string.end_of_day_summary_title)) {
                         KpiRow(stringResource(Res.string.end_of_day_total_sales), kpi.salesTotal.formatJod(AppLanguage.AR), Fv.Green)
+                        KpiRow(stringResource(Res.string.end_of_day_cash_sales), kpi.cashSalesTotal.formatJod(AppLanguage.AR), Fv.Green)
+                        KpiRow(stringResource(Res.string.end_of_day_credit_sales), kpi.creditSalesTotal.formatJod(AppLanguage.AR), Fv.Amber)
                         KpiRow(stringResource(Res.string.end_of_day_total_returns), kpi.returnsTotal.formatJod(AppLanguage.AR), Fv.Red)
                         HorizontalDivider(color = Fv.SurfaceHigh, modifier = Modifier.padding(vertical = 4.dp))
                         KpiRow(stringResource(Res.string.end_of_day_net_sales), (kpi.salesTotal - kpi.returnsTotal).formatJod(AppLanguage.AR), Fv.TextHigh)

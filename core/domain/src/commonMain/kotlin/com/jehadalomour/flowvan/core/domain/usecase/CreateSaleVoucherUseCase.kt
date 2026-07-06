@@ -22,6 +22,20 @@ class StockShortageException(val productId: String, val available: Int, val requ
 
 class EmptyCartException : Exception("cart is empty")
 
+/**
+ * A credit (on-account) sale would push the customer over their credit limit. Hard block —
+ * the remedy is a manager raising the limit (mirrors down on the next sync), then the rep
+ * re-creates the voucher. See docs/SPEC-accounts-receivable.md.
+ */
+class CreditLimitExceededException(
+    val creditLimit: Double,
+    val balance: Double,
+    val attempted: Double,
+) : Exception("credit limit exceeded: limit=$creditLimit balance=$balance attempted=$attempted") {
+    /** Remaining headroom before the sale (never negative). */
+    val available: Double get() = (creditLimit - balance).coerceAtLeast(0.0)
+}
+
 class CreateSaleVoucherUseCase(
     private val invoices: InvoiceRepository,
     private val products: ProductRepository,
@@ -58,6 +72,23 @@ class CreateSaleVoucherUseCase(
             invoiceDiscount = if (discountAmount > 0.0)
                 InvoiceDiscountInput.Fixed(discountAmount) else InvoiceDiscountInput.None,
         )
+
+        // AR credit-limit guard: a credit (on-account) sale may not push the customer's
+        // balance over their limit. The local balance already reflects prior (even
+        // unsynced) credit sales, so this is offline-safe. A limit of 0 = not enforced.
+        // Runs BEFORE any stock/balance mutation. See docs/SPEC-accounts-receivable.md.
+        if (paymentMethod == PaymentMethod.CREDIT) {
+            val customer = customers.findById(customerId)
+            if (customer != null && customer.creditLimit > 0.0 &&
+                customer.balance + summary.grandTotal > customer.creditLimit + 0.0001
+            ) {
+                throw CreditLimitExceededException(
+                    creditLimit = customer.creditLimit,
+                    balance = customer.balance,
+                    attempted = summary.grandTotal,
+                )
+            }
+        }
 
         val number = voucherNumbers.next("INV", "SALE")
         val now = Clock.System.now().toEpochMilliseconds()
