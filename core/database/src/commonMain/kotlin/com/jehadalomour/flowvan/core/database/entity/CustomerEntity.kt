@@ -29,4 +29,6 @@ data class CustomerEntity(
     val regionId: String? = null,
     /** Server rep id — repIds offer eligibility fallback. */
     val repId: String? = null,
+    /** Assigned price list id (price_lists.id). Null = base catalog prices. */
+    val priceListId: String? = null,
 )

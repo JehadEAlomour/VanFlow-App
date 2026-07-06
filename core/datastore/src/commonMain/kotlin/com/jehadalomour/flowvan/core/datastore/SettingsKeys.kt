@@ -9,12 +9,6 @@ package com.jehadalomour.flowvan.core.datastore
 object SettingsKeys {
 
     // ── App / first-run ─────────────────────────────────────────────
-    /** Legacy flag from the removed demo seeder — only cleared during purge. */
-    const val DEMO_SEEDED = "demo_seeded"
-
-    /** Set once the one-time local demo-data purge has run (see PurgeDemoDataUseCase). */
-    const val DEMO_PURGED = "demo_purged"
-
     /** Selected UI language (AppLanguage.name). */
     const val APP_LANGUAGE = "app_language"
 
@@ -33,6 +27,9 @@ object SettingsKeys {
 
     /** F10 permission keys (comma-joined) — gate returns/discounts/price edits. */
     const val CURRENT_PERM_KEYS = "current_perm_keys"
+
+    /** Whether the signed-in user may create customers (permissions.canAddCustomer). */
+    const val CAN_ADD_CUSTOMER = "can_add_customer"
 
     // ── Backend (VanFlow API) ───────────────────────────────────────
     /** Base URL of the VanFlow backend, e.g. ".../api/v1" (see ApiConfig). */

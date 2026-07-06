@@ -3,6 +3,7 @@ package com.jehadalomour.flowvan.core.domain.usecase
 import com.jehadalomour.flowvan.core.data.connectivity.ConnectivityObserver
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.OfferEvaluation
+import com.jehadalomour.flowvan.core.model.OfferSource
 import com.jehadalomour.flowvan.core.network.api.OfferApi
 import com.jehadalomour.flowvan.core.network.dto.EvaluateLine
 import com.jehadalomour.flowvan.core.network.dto.EvaluateRequest
@@ -38,11 +39,23 @@ class EvaluateOffersUseCase(
         storeNumber: String?,
         paymentMethod: String?,
         chosenFreeItems: List<String> = emptyList(),
+        hasContractPrices: Boolean = false,
     ): Result<OfferEvaluation> = runCatching {
         if (cart.isEmpty()) return@runCatching OfferEvaluation.EMPTY
 
         suspend fun local() =
             offline(cart, customerId, repId, storeNumber, paymentMethod, chosenFreeItems)
+
+        // Contracted price list: the cart is priced at list prices, but the server's
+        // /offers/evaluate re-prices from the base catalog and would override them. Evaluate
+        // on-device instead — the offline evaluator prices each line from its cart unitPrice
+        // (the list price). Tag LOCAL_CONTRACT when online so the UI shows it as a live result
+        // (no "offline" banner); genuinely offline it stays LOCAL (banner shown).
+        if (hasContractPrices) {
+            val result = local()
+            return@runCatching if (connectivity.isOnline())
+                result.copy(source = OfferSource.LOCAL_CONTRACT) else result
+        }
 
         if (connectivity.isOnline()) {
             val request = EvaluateRequest(

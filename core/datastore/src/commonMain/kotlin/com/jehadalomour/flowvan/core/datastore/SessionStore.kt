@@ -58,6 +58,11 @@ class SessionStore(private val settings: Settings) {
     fun can(key: String): Boolean =
         currentPermKeys.orEmpty().split(',').any { it.trim() == key }
 
+    /** Whether the signed-in user may create customers (permissions.canAddCustomer). */
+    var canAddCustomer: Boolean
+        get() = settings.getBoolean(SettingsKeys.CAN_ADD_CUSTOMER, false)
+        set(value) = settings.putBoolean(SettingsKeys.CAN_ADD_CUSTOMER, value)
+
     /** Max direct-discount % encoded as "vouchers.discount.max:<n>", or null = uncapped. */
     fun discountMaxPct(): Double? =
         currentPermKeys.orEmpty().split(',')
@@ -70,5 +75,6 @@ class SessionStore(private val settings: Settings) {
         settings.remove(SettingsKeys.CURRENT_REP_ID)
         settings.remove(SettingsKeys.CURRENT_USER_CODE)
         settings.remove(SettingsKeys.CURRENT_PERM_KEYS)
+        settings.remove(SettingsKeys.CAN_ADD_CUSTOMER)
     }
 }

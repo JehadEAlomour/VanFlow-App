@@ -3,6 +3,7 @@ package com.jehadalomour.flowvan.feature.customer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
+import com.jehadalomour.flowvan.core.datastore.SessionStore
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,9 +15,10 @@ import kotlinx.coroutines.flow.update
 
 class CustomerListViewModel(
     private val customers: CustomerRepository,
+    private val session: SessionStore,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(CustomerListState())
+    private val _state = MutableStateFlow(CustomerListState(canAddCustomer = session.canAddCustomer))
     val state: StateFlow<CustomerListState> = _state.asStateFlow()
 
     private val queryFlow = MutableStateFlow("")

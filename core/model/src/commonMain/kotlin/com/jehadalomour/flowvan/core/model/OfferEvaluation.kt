@@ -32,8 +32,14 @@ data class OfferEvaluation(
     }
 }
 
-/** Where an [OfferEvaluation] was computed. LOCAL results are provisional — the server re-applies on sync. */
-enum class OfferSource { SERVER, LOCAL }
+/**
+ * Where an [OfferEvaluation] was computed. LOCAL results are provisional — the server re-applies
+ * on sync. LOCAL_CONTRACT means we evaluated on-device *on purpose* (even while online) because
+ * the customer has a contracted price list the server's /offers/evaluate can't honor — it re-prices
+ * from the base catalog. It carries the price-list prices, so the UI treats it like a live result
+ * (no "offline" banner), not a fallback.
+ */
+enum class OfferSource { SERVER, LOCAL, LOCAL_CONTRACT }
 
 /** A line of the server-fed cart: server-computed unit price, discount, and net (JOD). */
 data class ServerLine(

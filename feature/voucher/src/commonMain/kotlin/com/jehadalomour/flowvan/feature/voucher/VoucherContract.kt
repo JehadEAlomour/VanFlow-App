@@ -38,6 +38,9 @@ data class VoucherState(
     val products: List<Product> = emptyList(),
     val visibleProducts: List<Product> = emptyList(),
     val productUnits: Map<String, List<ProductUnit>> = emptyMap(),
+    /** The selected customer's price list as sku→base-unit price (JOD). Empty when
+     *  unassigned; an item present here prices at the list price, else the base price. */
+    val customerPrices: Map<String, Double> = emptyMap(),
     val cart: List<CartLine> = emptyList(),
     val view: VoucherView = VoucherView.PICKER,
     val searchQuery: String = "",
@@ -130,8 +133,13 @@ data class VoucherState(
     val useServerOffers: Boolean get() =
         type == VoucherType.SALE && offersSource != null && serverLines.isNotEmpty()
 
-    /** SALE only: a non-empty cart whose evaluation isn't the live server result → offline banner. */
-    val isOffline: Boolean get() = type == VoucherType.SALE && cart.isNotEmpty() && offersSource != OfferSource.SERVER
+    /**
+     * SALE only: a non-empty cart whose evaluation isn't a live result → offline banner.
+     * SERVER (online) and LOCAL_CONTRACT (on-device on purpose, to honor the customer's price
+     * list) are both "live"; only a genuine offline/failed evaluation shows the banner.
+     */
+    val isOffline: Boolean get() = type == VoucherType.SALE && cart.isNotEmpty() &&
+        offersSource != OfferSource.SERVER && offersSource != OfferSource.LOCAL_CONTRACT
 
     /** SALE offline banner copy — distinguishes "offers from local cache" from "no offers". */
     val offlineBannerTextAr: String get() = when (offersSource) {

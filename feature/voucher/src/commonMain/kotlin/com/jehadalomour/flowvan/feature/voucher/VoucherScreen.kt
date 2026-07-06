@@ -188,6 +188,7 @@ fun VoucherScreen(
                         products = displayProducts,
                         allProducts = state.products,
                         productUnits = state.productUnits,
+                        customerPrices = state.customerPrices,
                         searchQuery = state.searchQuery,
                         selectedCategory = selectedCategory,
                         showStockBadge = state.showStockBadge,
@@ -304,6 +305,7 @@ fun VoucherScreen(
             enforceStock = state.showStockBadge,
             canDiscount = state.showDiscountInputs,
             canEditPrice = state.canEditPrice,
+            customerBasePrice = state.customerPrices[product.sku],
             onConfirm = { qty, unit, unitPrice, unitConversionQty, discountPct ->
                 viewModel.onEvent(
                     VoucherEvent.ConfirmItemDialog(product, qty, unit, unitPrice, unitConversionQty, discountPct),
@@ -452,6 +454,8 @@ private fun ProductListPicker(
     products: List<Product>,
     allProducts: List<Product>,
     productUnits: Map<String, List<ProductUnit>>,
+    /** Customer's price list as sku→base-unit price (JOD); empty when unassigned. */
+    customerPrices: Map<String, Double>,
     searchQuery: String,
     selectedCategory: String?,
     showStockBadge: Boolean,
@@ -502,10 +506,20 @@ private fun ProductListPicker(
                 val baseUnit = remember(product.id, productUnits) {
                     productUnits[product.id]?.minByOrNull { it.conversionQty }
                 }
+                // Price shown on the list card: the customer's price-list price when the
+                // item is on the list (base-unit JOD × the shown unit's conversion), else
+                // the base unit's catalog price, else the item's main sale price. Mirrors
+                // stepItem/the add-item sheet so the browse price matches the cart price.
+                val listBase = customerPrices[product.sku]
+                val resolvedPrice = if (listBase != null) {
+                    listBase * (baseUnit?.conversionQty ?: 1.0)
+                } else {
+                    baseUnit?.price ?: product.salePrice
+                }
                 ProductListCard(
                     product = product,
                     unitName = baseUnit?.name ?: product.unit,
-                    unitPrice = baseUnit?.price ?: product.salePrice,
+                    unitPrice = resolvedPrice,
                     showStockBadge = showStockBadge,
                     onTap = { onTapProduct(product) },
                     onExpandImage = onExpandImage,
@@ -1279,13 +1293,15 @@ private fun AddItemBottomSheet(
     enforceStock: Boolean,
     canDiscount: Boolean,
     canEditPrice: Boolean,
+    /** The customer's price-list base-unit price for this product (JOD), or null. */
+    customerBasePrice: Double? = null,
     onConfirm: (qty: Double, unit: String, unitPrice: Double, unitConversionQty: Double, discountPct: Double) -> Unit,
     onDelete: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
     // Use the item's OWN units (synced from the dashboard/ERP). No hardcoded list —
     // if an item somehow has none, fall back to just its base unit.
-    val effectiveUnits: List<ProductUnit> = remember(product.id, dbUnits) {
+    val effectiveUnits: List<ProductUnit> = remember(product.id, dbUnits, customerBasePrice) {
         val raw = if (dbUnits.isNotEmpty()) dbUnits
         else listOf(
             ProductUnit(
@@ -1298,11 +1314,18 @@ private fun AddItemBottomSheet(
         )
         // Any unit the ERP didn't price gets one derived from the base (piece) price:
         //   unit price = conversionQty × price-per-base-piece.
+        // When the customer has a price-list price, it is the base-unit price and
+        // OVERRIDES every unit (each pack derives from it).
         val base = raw.minByOrNull { it.conversionQty }
         val baseConv = base?.conversionQty?.takeIf { it > 0.0 } ?: 1.0
-        val perBasePrice = (base?.price?.takeIf { it > 0.0 } ?: product.salePrice) / baseConv
+        val perBasePrice =
+            (customerBasePrice ?: base?.price?.takeIf { it > 0.0 } ?: product.salePrice) / baseConv
         raw.map { u ->
-            if (u.price > 0.0) u else u.copy(price = perBasePrice * u.conversionQty)
+            if (customerBasePrice != null || u.price <= 0.0) {
+                u.copy(price = perBasePrice * u.conversionQty)
+            } else {
+                u
+            }
         }
     }
     val initialUnit: ProductUnit = remember(product.id, currentLine) {

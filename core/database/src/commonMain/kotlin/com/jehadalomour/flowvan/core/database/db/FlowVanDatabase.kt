@@ -12,6 +12,7 @@ import com.jehadalomour.flowvan.core.database.dao.InvoiceDao
 import com.jehadalomour.flowvan.core.database.dao.LocationPointDao
 import com.jehadalomour.flowvan.core.database.dao.OfferDao
 import com.jehadalomour.flowvan.core.database.dao.PaymentDao
+import com.jehadalomour.flowvan.core.database.dao.PriceListItemDao
 import com.jehadalomour.flowvan.core.database.dao.ProductDao
 import com.jehadalomour.flowvan.core.database.dao.ProductUnitDao
 import com.jehadalomour.flowvan.core.database.dao.RouteStopDao
@@ -24,6 +25,7 @@ import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
 import com.jehadalomour.flowvan.core.database.entity.LocationPointEntity
 import com.jehadalomour.flowvan.core.database.entity.OfferEntity
 import com.jehadalomour.flowvan.core.database.entity.PaymentEntity
+import com.jehadalomour.flowvan.core.database.entity.PriceListItemEntity
 import com.jehadalomour.flowvan.core.database.entity.ProductEntity
 import com.jehadalomour.flowvan.core.database.entity.ProductUnitEntity
 import com.jehadalomour.flowvan.core.database.entity.RouteStopEntity
@@ -44,8 +46,9 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         RouteStopEntity::class,
         AppSettingsEntity::class,
         OfferEntity::class,
+        PriceListItemEntity::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -63,6 +66,9 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         // v10: invoices/payments repLat/repLng (nullable) — sale-time GPS for the
         // per-rep location lock (customers.requireProximity).
         AutoMigration(from = 9, to = 10),
+        // v11: price_list_items cache table + customers.priceListId (nullable) for
+        // per-customer price-list pricing (from GET /price-lists/full).
+        AutoMigration(from = 10, to = 11),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)
@@ -79,6 +85,7 @@ abstract class FlowVanDatabase : RoomDatabase() {
     abstract fun aiMessageDao(): AiMessageDao
     abstract fun appSettingsDao(): AppSettingsDao
     abstract fun offerDao(): OfferDao
+    abstract fun priceListItemDao(): PriceListItemDao
 }
 
 @Suppress("KotlinNoActualForExpect", "NO_ACTUAL_FOR_EXPECT")

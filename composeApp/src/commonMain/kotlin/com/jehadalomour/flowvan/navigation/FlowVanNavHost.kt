@@ -43,7 +43,6 @@ import com.jehadalomour.flowvan.feature.print.VoucherPrintScreen
 import com.jehadalomour.flowvan.feature.voucher.VoucherScreen
 import com.jehadalomour.flowvan.feature.voucher.VoucherType
 import com.jehadalomour.flowvan.feature.voucher.VanStockScreen
-import com.jehadalomour.flowvan.core.domain.usecase.PurgeDemoDataUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetCurrentUserUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.LogoutUseCase
 import com.jehadalomour.flowvan.core.datastore.SessionStore
@@ -99,7 +98,6 @@ object Routes {
 fun FlowVanNavHost(
     navController: NavHostController = rememberNavController(),
 ) {
-    val purgeDemoData: PurgeDemoDataUseCase = koinInject()
     val getCurrentUser: GetCurrentUserUseCase = koinInject()
     val logout: LogoutUseCase = koinInject()
     val sessionStore: SessionStore = koinInject()
@@ -108,7 +106,6 @@ fun FlowVanNavHost(
     var startDestination by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        purgeDemoData()
         startDestination = if (getCurrentUser() != null) Routes.HOME else Routes.LOGIN
     }
 
