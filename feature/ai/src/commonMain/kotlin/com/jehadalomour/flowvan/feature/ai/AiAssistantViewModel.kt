@@ -28,8 +28,7 @@ import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 private const val WELCOME = "أهلاً! أنا مساعدك الذكي لتطبيق FlowVan. يمكنني مساعدتك في: ملخص اليوم، تحليل أداء العملاء، توصيات المنتجات، استفسارات المخزون..."
-private const val FALLBACK = "🤔 سؤال رائع! في الوقت الحالي أعمل بالبيانات التجريبية. جرب: ملخص، مبيعات، مخزون، مسار، عميل"
-private const val OFFLINE_NOTE = "\n\n_(لتفعيل الذكاء الاصطناعي الحقيقي، أضف مفتاح API من الإعدادات)_"
+private const val NOT_CONFIGURED = "لتفعيل المساعد الذكي، أضف مفتاح API من الإعدادات."
 
 class AiAssistantViewModel(
     private val customerId: String?,
@@ -94,9 +93,7 @@ class AiAssistantViewModel(
             if (aiSettings.isConfigured) {
                 streamClaudeResponse(text.trim())
             } else {
-                delay(1200)
-                val response = generateDemoResponse(text.trim()) + OFFLINE_NOTE
-                val aiMsg = buildMessage("assistant", response)
+                val aiMsg = buildMessage("assistant", NOT_CONFIGURED)
                 aiMessageDao.upsert(aiMsg.toEntity())
                 _state.update { s -> s.copy(messages = s.messages + aiMsg.toDomain(), isThinking = false) }
             }
@@ -167,99 +164,6 @@ class AiAssistantViewModel(
     }
 
     @OptIn(ExperimentalTime::class)
-    private suspend fun generateDemoResponse(query: String): String {
-        val tz = TimeZone.currentSystemDefault()
-        val nowMs = Clock.System.now().toEpochMilliseconds()
-        val today = Instant.fromEpochMilliseconds(nowMs).toLocalDateTime(tz).date
-        val startOfTodayMs = today.atStartOfDayIn(tz).toEpochMilliseconds()
-
-        return when {
-            query.containsAny("ملخص", "summary") -> buildSummaryResponse()
-            query.containsAny("مبيعات", "sales") -> buildSalesResponse(startOfTodayMs)
-            query.containsAny("مخزون", "stock") -> buildStockResponse()
-            query.containsAny("عميل", "customer") -> buildCustomerResponse()
-            query.containsAny("مسار", "route") -> buildRouteResponse()
-            else -> FALLBACK
-        }
-    }
-
-    private suspend fun buildSummaryResponse(): String {
-        val kpi = getKpi()
-        return buildString {
-            appendLine("📊 **ملخص اليوم**")
-            appendLine()
-            appendLine("💰 المبيعات: ${kpi.salesTotal.formatJod(AppLanguage.AR)}")
-            appendLine("↩️ المرتجعات: ${kpi.returnsTotal.formatJod(AppLanguage.AR)}")
-            appendLine("💵 صافي المبيعات: ${(kpi.salesTotal - kpi.returnsTotal).formatJod(AppLanguage.AR)}")
-            appendLine("🏦 التحصيلات: ${kpi.collectionsTotal.formatJod(AppLanguage.AR)}")
-            append("👥 العملاء: ${kpi.customersVisited} / ${kpi.customersPlanned} تمت زيارتهم")
-        }
-    }
-
-    private suspend fun buildSalesResponse(startOfTodayMs: Long): String {
-        val todayInvoices = invoices.listSince(startOfTodayMs).filter { it.type == "SALE" }
-        if (todayInvoices.isEmpty()) return "📋 لا توجد فواتير بيع اليوم حتى الآن."
-        return buildString {
-            appendLine("🧾 **فواتير البيع اليوم (${todayInvoices.size})**")
-            appendLine()
-            todayInvoices.forEach { inv ->
-                appendLine("• ${inv.number} — ${inv.total.formatJod(AppLanguage.AR)}")
-            }
-            append("\n💰 الإجمالي: ${todayInvoices.sumOf { it.total }.formatJod(AppLanguage.AR)}")
-        }
-    }
-
-    private suspend fun buildStockResponse(): String {
-        val lowStock = products.observeLowStock().first()
-        if (lowStock.isEmpty()) return "✅ جميع المنتجات متوفرة بكميات كافية."
-        return buildString {
-            appendLine("⚠️ **المنتجات ذات المخزون المنخفض (${lowStock.size})**")
-            appendLine()
-            lowStock.take(10).forEach { p ->
-                val status = if (p.vanStock == 0) "نفد ❌" else "منخفض ⚠️"
-                appendLine("• ${p.nameAr} (${p.sku}) — الكمية: ${p.vanStock} / الحد: ${p.minStock} — $status")
-            }
-        }
-    }
-
-    private suspend fun buildCustomerResponse(): String {
-        if (customerId != null) {
-            val customer = customers.findById(customerId) ?: return FALLBACK
-            return buildString {
-                appendLine("👤 **${customer.nameAr}**")
-                appendLine()
-                appendLine("• الرصيد: ${customer.balance.formatJod(AppLanguage.AR)}")
-                appendLine("• المتأخرات: ${customer.overdueAmount.formatJod(AppLanguage.AR)}")
-                appendLine("• التصنيف: ${customer.tier}")
-                appendLine("• مستوى خطر التوقف: ${(customer.churnRisk * 100).toInt()}%")
-                append("• حد الائتمان: ${customer.creditLimit.formatJod(AppLanguage.AR)}")
-            }
-        }
-        val topCustomers = customers.observeAll().first().take(5)
-        return buildString {
-            appendLine("👥 **أعلى العملاء**")
-            appendLine()
-            topCustomers.forEach { c ->
-                appendLine("• ${c.nameAr} — رصيد: ${c.balance.formatJod(AppLanguage.AR)} — ${c.tier}")
-            }
-        }
-    }
-
-    private suspend fun buildRouteResponse(): String {
-        val routeCustomers = customers.observeRoute().first()
-        val remaining = routeCustomers.filter { it.visitOrder > 0 }
-        if (remaining.isEmpty()) return "✅ تم زيارة جميع عملاء المسار اليوم!"
-        return buildString {
-            appendLine("🗺️ **عملاء المسار (${remaining.size})**")
-            appendLine()
-            remaining.forEach { c ->
-                val warning = if (c.overdueAmount > 0) " ⚠️ ذمم متأخرة" else ""
-                appendLine("• ${c.nameAr} — ${c.area}$warning")
-            }
-        }
-    }
-
-    @OptIn(ExperimentalTime::class)
     private fun buildMessage(role: String, content: String): MsgBundle {
         val nowMs = Clock.System.now().toEpochMilliseconds()
         val id = "ai-$nowMs-${(1000..9999).random()}"
@@ -278,7 +182,4 @@ class AiAssistantViewModel(
     }
 
     private fun AiMessageEntity.toDomain() = AiMessage(id, conversationId, role, content, createdAt)
-
-    private fun String.containsAny(vararg keywords: String) =
-        keywords.any { this.contains(it, ignoreCase = true) }
 }

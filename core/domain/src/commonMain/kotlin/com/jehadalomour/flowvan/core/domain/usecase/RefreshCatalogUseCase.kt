@@ -11,6 +11,7 @@ import com.jehadalomour.flowvan.core.network.http.OffsetPage
 import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.OfferRepository
+import com.jehadalomour.flowvan.core.data.repository.PriceListRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
@@ -36,6 +37,7 @@ class RefreshCatalogUseCase(
     private val authApi: AuthApi,
     private val appSettings: AppSettingsRepository,
     private val offers: OfferRepository,
+    private val priceLists: PriceListRepository,
 ) {
     private val log = Logger.withTag("RefreshCatalog")
 
@@ -51,6 +53,8 @@ class RefreshCatalogUseCase(
         // Refresh the offline offers cache alongside the catalog. Best-effort: a failure
         // here must not fail the catalog refresh (the previous cache stays usable).
         offers.refresh().onFailure { log.w("offers refresh failed: ${it.message}") }
+        // Cache each price list's item prices for offline per-customer pricing.
+        priceLists.refresh().onFailure { log.w("price-lists refresh failed: ${it.message}") }
         return try {
             coroutineScope {
                 val customersJob = async {
@@ -135,6 +139,7 @@ class RefreshCatalogUseCase(
         try {
             val me = authApi.me()
             session.currentPermKeys = me.permKeys.joinToString(",")
+            session.canAddCustomer = me.permissions["canAddCustomer"] == true
         } catch (e: Exception) {
             log.w("permissions sync failed: ${e.message}")
         }

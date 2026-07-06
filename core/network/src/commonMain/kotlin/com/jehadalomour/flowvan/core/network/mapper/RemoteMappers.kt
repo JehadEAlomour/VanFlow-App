@@ -71,6 +71,7 @@ fun CustomerDto.toEntity(): CustomerEntity = CustomerEntity(
     category = category,
     regionId = regionId,
     repId = repId,
+    priceListId = priceListId,
 )
 
 // ---- Products ----

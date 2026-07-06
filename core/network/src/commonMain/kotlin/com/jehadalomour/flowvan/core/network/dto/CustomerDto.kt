@@ -25,6 +25,8 @@ data class CustomerDto(
     val totalCredit: String = "0",
     val tin: String? = null,
     val isActive: Boolean = true,
+    /** Assigned price list id (price_lists.id). Null = base catalog prices. */
+    val priceListId: String? = null,
 )
 
 @Serializable

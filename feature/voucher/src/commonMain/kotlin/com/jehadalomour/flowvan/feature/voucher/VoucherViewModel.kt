@@ -9,6 +9,7 @@ import com.jehadalomour.flowvan.core.data.location.isWithinProximity
 import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.OfferRepository
+import com.jehadalomour.flowvan.core.data.repository.PriceListRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
@@ -76,6 +77,7 @@ class VoucherViewModel(
     private val requestDiscountApproval: RequestDiscountApprovalUseCase,
     private val commitApprovedSale: CommitApprovedSaleUseCase,
     private val offerRepository: OfferRepository,
+    private val priceLists: PriceListRepository,
     private val location: LocationProvider,
 ) : ViewModel() {
 
@@ -112,7 +114,13 @@ class VoucherViewModel(
         }
 
         customers.observeById(customerId)
-            .onEach { c -> _state.update { it.copy(customer = c) } }
+            .onEach { c ->
+                _state.update { it.copy(customer = c) }
+                // Load the customer's price list (sku→price) so items price at the
+                // contracted list price, falling back to the base catalog price.
+                val prices = priceLists.pricesForList(c?.priceListId)
+                _state.update { it.copy(customerPrices = prices) }
+            }
             .launchIn(viewModelScope)
 
         // RETURN: the customer's locally-saved sales are the return sources. Their
@@ -183,6 +191,9 @@ class VoucherViewModel(
             storeNumber = null,
             paymentMethod = s.paymentMethod.name,   // CASH/CREDIT condition for payment-method offers
             chosenFreeItems = s.chosenFreeItems,    // rep's GIFT picks → server returns FREE lines
+            // The customer has a contracted price list → evaluate on-device so offers apply on
+            // the list prices instead of the server re-pricing the cart at base catalog prices.
+            hasContractPrices = s.customerPrices.isNotEmpty(),
         )
         result.fold(
             onSuccess = { applyEvaluation(it) },
@@ -444,11 +455,18 @@ class VoucherViewModel(
             val newCart = when {
                 existing == null && delta > 0 -> {
                     val defaultUnit = s.productUnits[product.id]?.minByOrNull { it.conversionQty }
+                    // Price-list price (base-unit) for this customer, else the base catalog price.
+                    val listBase = s.customerPrices[product.sku]
+                    val resolvedPrice = if (listBase != null) {
+                        listBase * (defaultUnit?.conversionQty ?: 1.0)
+                    } else {
+                        defaultUnit?.price ?: product.salePrice
+                    }
                     s.cart + CartLine(
                         productId = product.id,
                         sku = product.sku,
                         nameAr = product.nameAr,
-                        unitPrice = defaultUnit?.price ?: product.salePrice,
+                        unitPrice = resolvedPrice,
                         qty = 1.0,
                         unit = defaultUnit?.name ?: product.unit,
                         unitConversionQty = defaultUnit?.conversionQty ?: 1.0,

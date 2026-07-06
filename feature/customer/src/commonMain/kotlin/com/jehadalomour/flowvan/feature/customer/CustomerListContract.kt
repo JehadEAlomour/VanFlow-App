@@ -11,6 +11,8 @@ data class CustomerListState(
     val tierFilter: CustomerTier? = null,
     val segmentFilter: CustomerSegment? = null,
     val isLoading: Boolean = true,
+    /** Whether the signed-in rep may create customers (permissions.canAddCustomer). */
+    val canAddCustomer: Boolean = false,
 )
 
 sealed interface CustomerListEvent {

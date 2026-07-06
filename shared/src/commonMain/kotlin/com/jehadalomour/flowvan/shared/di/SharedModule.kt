@@ -7,6 +7,7 @@ import com.jehadalomour.flowvan.core.data.repository.CompanyInfoRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.data.repository.OfferRepository
+import com.jehadalomour.flowvan.core.data.repository.PriceListRepository
 import com.jehadalomour.flowvan.core.data.repository.PaymentRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
@@ -21,6 +22,7 @@ import com.jehadalomour.flowvan.core.network.api.CustomerApi
 import com.jehadalomour.flowvan.core.network.api.InvoiceApi
 import com.jehadalomour.flowvan.core.network.api.MyRouteApi
 import com.jehadalomour.flowvan.core.network.api.OfferApi
+import com.jehadalomour.flowvan.core.network.api.PriceListApi
 import com.jehadalomour.flowvan.core.network.api.ProductApi
 import com.jehadalomour.flowvan.core.network.api.RepApi
 import com.jehadalomour.flowvan.core.network.api.VoucherApi
@@ -49,12 +51,10 @@ import com.jehadalomour.flowvan.core.domain.usecase.EvaluateOffersOfflineUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.EvaluateOffersUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetCurrentUserUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetDailyKpiUseCase
-import com.jehadalomour.flowvan.core.domain.usecase.LoginUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.LogoutUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.RecordCollectionUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.VoucherNumberGenerator
 import com.jehadalomour.flowvan.core.domain.usecase.BackendLoginUseCase
-import com.jehadalomour.flowvan.core.domain.usecase.PurgeDemoDataUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.BackupDatabaseUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.RefreshCatalogUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.SubmitCollectionUseCase
@@ -90,6 +90,7 @@ fun sharedModule(): Module = module {
     single { get<FlowVanDatabase>().aiMessageDao() }
     single { get<FlowVanDatabase>().appSettingsDao() }
     single { get<FlowVanDatabase>().offerDao() }
+    single { get<FlowVanDatabase>().priceListItemDao() }
 
     single { UserRepository(get()) }
     single { CustomerRepository(get()) }
@@ -100,6 +101,7 @@ fun sharedModule(): Module = module {
     single { InvoiceRepository(get()) }
     single { PaymentRepository(get()) }
     single { OfferRepository(get(), get(), get()) }
+    single { PriceListRepository(get(), get()) }
     single { LocationRepository(get()) }
     single { StopDetector() }
     single { LocationTrackingCoordinator(get(), get(), get()) }
@@ -134,8 +136,8 @@ fun sharedModule(): Module = module {
     single { VoucherApi(get()) }
     single { MyRouteApi(get()) }
     single { OfferApi(get()) }
+    single { PriceListApi(get()) }
 
-    factory { LoginUseCase(get(), get()) }
     factory { GetCurrentUserUseCase(get(), get()) }
     factory { LogoutUseCase(get(), get(), get()) }
     factory { GetDailyKpiUseCase(get(), get(), get()) }
@@ -156,9 +158,8 @@ fun sharedModule(): Module = module {
     factory { EndShiftUseCase(get()) }
     factory { StartShiftUseCase(get(), get()) }
     factory { BackendLoginUseCase(get(), get(), get()) }
-    factory { PurgeDemoDataUseCase(get(), get()) }
     factory { BackupDatabaseUseCase(get()) }
-    factory { RefreshCatalogUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    factory { RefreshCatalogUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { SubmitInvoiceUseCase(get()) }
     factory { SubmitCollectionUseCase(get()) }
 }

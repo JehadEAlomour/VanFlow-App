@@ -51,6 +51,7 @@ class BackendLoginUseCase(
             session.currentRepId = resp.user.repId
             session.currentUserCode = resp.user.userNumber
             session.currentPermKeys = resp.user.permKeys.joinToString(",")
+            session.canAddCustomer = resp.user.permissions["canAddCustomer"] == true
             Result.success(user)
         } catch (e: NetworkException) {
             Result.failure(AuthException(e.error))

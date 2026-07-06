@@ -99,22 +99,25 @@ fun CustomerListScreen(
                     fontWeight = FontWeight.ExtraBold,
                     modifier = Modifier.weight(1f),
                 )
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(11.dp))
-                        .background(Fv.Blue)
-                        .clickable(onClick = onAddCustomer),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        "+",
-                        color = Color.White,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                    )
+                // Only reps with the canAddCustomer permission see the create button.
+                if (state.canAddCustomer) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(Fv.Blue)
+                            .clickable(onClick = onAddCustomer),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            "+",
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
                 }
-                Spacer(Modifier.width(10.dp))
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
