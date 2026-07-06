@@ -46,6 +46,7 @@ fun ReportsHubScreen(
     onOpenCashFlow: () -> Unit,
     onOpenItemsSales: () -> Unit,
     onOpenReceivables: () -> Unit,
+    onOpenTargets: () -> Unit,
 ) {
     Surface(modifier = Modifier.fillMaxSize(), color = Fv.BgDeepest) {
         LazyColumn(
@@ -120,6 +121,15 @@ fun ReportsHubScreen(
                     subtitle = stringResource(Res.string.reports_receivables_subtitle),
                     accent = Fv.Red,
                     onClick = onOpenReceivables,
+                )
+            }
+            item {
+                ReportCard(
+                    icon = painterResource(Res.drawable.ic_bar_chart),
+                    title = stringResource(Res.string.targets_title),
+                    subtitle = stringResource(Res.string.targets_hub_subtitle),
+                    accent = Fv.Green,
+                    onClick = onOpenTargets,
                 )
             }
         }

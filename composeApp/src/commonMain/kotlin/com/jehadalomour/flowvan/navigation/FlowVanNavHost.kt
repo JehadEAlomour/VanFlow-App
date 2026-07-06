@@ -28,6 +28,7 @@ import com.jehadalomour.flowvan.feature.reports.VisitReportScreen
 import com.jehadalomour.flowvan.feature.reports.PaymentReportScreen
 import com.jehadalomour.flowvan.feature.print.ReceiptDetailScreen
 import com.jehadalomour.flowvan.feature.reports.ReceivablesReportScreen
+import com.jehadalomour.flowvan.feature.reports.TargetsScreen
 import com.jehadalomour.flowvan.feature.reports.TransactionReportScreen
 import com.jehadalomour.flowvan.feature.print.VoucherDetailScreen
 import com.jehadalomour.flowvan.feature.reports.VoucherReportScreen
@@ -76,6 +77,7 @@ object Routes {
     const val CASH_FLOW_REPORT = "cashflow"
     const val ITEMS_SALES_REPORT = "itemssales"
     const val RECEIVABLES_REPORT = "receivables"
+    const val TARGETS_REPORT = "targets"
     const val VOUCHER_PRINT = "voucherprint/{invoiceId}"
     const val SETTINGS = "settings"
     fun customer(id: String) = "customer/$id"
@@ -354,10 +356,14 @@ fun FlowVanNavHost(
                 onOpenCashFlow = { navController.navigate(Routes.CASH_FLOW_REPORT) },
                 onOpenItemsSales = { navController.navigate(Routes.ITEMS_SALES_REPORT) },
                 onOpenReceivables = { navController.navigate(Routes.RECEIVABLES_REPORT) },
+                onOpenTargets = { navController.navigate(Routes.TARGETS_REPORT) },
             )
         }
         composable(Routes.RECEIVABLES_REPORT) {
             ReceivablesReportScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.TARGETS_REPORT) {
+            TargetsScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.ALL_SALES_REPORT) {
             AllSalesReportScreen(

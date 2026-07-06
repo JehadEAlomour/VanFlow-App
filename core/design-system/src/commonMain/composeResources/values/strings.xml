@@ -198,6 +198,16 @@
     <string name="reports_items_subtitle">إجمالي مبيعات كل صنف من تاريخ إلى تاريخ</string>
     <string name="reports_receivables_title">تقرير ذمم العملاء</string>
     <string name="reports_receivables_subtitle">العملاء الذين لديهم أرصدة مستحقة مرتبة تنازلياً</string>
+    <string name="targets_title">الأهداف</string>
+    <string name="targets_hub_subtitle">هدفك الشهري وسجل الأهداف السابقة</string>
+    <string name="targets_current">هدف هذا الشهر</string>
+    <string name="targets_no_target">لا يوجد هدف محدد لهذا الشهر</string>
+    <string name="targets_loading">جارٍ التحميل…</string>
+    <string name="targets_history">السجل</string>
+    <string name="targets_target">الهدف</string>
+    <string name="targets_achieved">المُحقَّق</string>
+    <string name="targets_remaining">المتبقّي</string>
+    <string name="targets_qty_unit">وحدة</string>
 
     <!-- All Sales Report -->
     <string name="all_sales_title">تقرير المبيعات</string>
