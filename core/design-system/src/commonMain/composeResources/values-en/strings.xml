@@ -698,6 +698,7 @@
     <string name="err_source_invoice_not_found">No sale invoice found with this number for this customer</string>
     <string name="err_stock_unavailable">Quantity not available in the van (%1$d available of %2$d)</string>
     <string name="err_credit_limit">Credit limit exceeded (limit %1$d, available %2$d) — ask the manager to raise the limit</string>
+    <string name="err_no_credit_limit">This customer has no credit limit — credit sales are not allowed. Sell for cash or ask the manager to set a limit.</string>
     <string name="err_approval_send_failed">Failed to send the approval request</string>
     <string name="err_approved_local_save_failed">Approved, but failed to save the return locally</string>
     <string name="err_return_rejected_note">The return request was rejected by the manager: %1$s</string>

@@ -36,6 +36,14 @@ class CreditLimitExceededException(
     val available: Double get() = (creditLimit - balance).coerceAtLeast(0.0)
 }
 
+/**
+ * The customer has no credit limit set (limit ≤ 0), so credit (on-account) sales are not
+ * allowed at all. The rep must sell for cash, or a manager must set a limit first.
+ * See docs/SPEC-accounts-receivable.md.
+ */
+class NoCreditLimitException(val customerName: String?) :
+    Exception("customer has no credit limit set")
+
 class CreateSaleVoucherUseCase(
     private val invoices: InvoiceRepository,
     private val products: ProductRepository,
@@ -73,20 +81,24 @@ class CreateSaleVoucherUseCase(
                 InvoiceDiscountInput.Fixed(discountAmount) else InvoiceDiscountInput.None,
         )
 
-        // AR credit-limit guard: a credit (on-account) sale may not push the customer's
-        // balance over their limit. The local balance already reflects prior (even
-        // unsynced) credit sales, so this is offline-safe. A limit of 0 = not enforced.
-        // Runs BEFORE any stock/balance mutation. See docs/SPEC-accounts-receivable.md.
+        // AR credit-limit guard (runs BEFORE any stock/balance mutation):
+        //  • No limit set (≤ 0)                → block: this customer can't buy on credit.
+        //  • balance + sale > limit            → block: over the limit.
+        // The local balance already reflects prior (even unsynced) credit sales, so this
+        // is offline-safe. See docs/SPEC-accounts-receivable.md.
         if (paymentMethod == PaymentMethod.CREDIT) {
             val customer = customers.findById(customerId)
-            if (customer != null && customer.creditLimit > 0.0 &&
-                customer.balance + summary.grandTotal > customer.creditLimit + 0.0001
-            ) {
-                throw CreditLimitExceededException(
-                    creditLimit = customer.creditLimit,
-                    balance = customer.balance,
-                    attempted = summary.grandTotal,
-                )
+            if (customer != null) {
+                if (customer.creditLimit <= 0.0) {
+                    throw NoCreditLimitException(customer.nameAr)
+                }
+                if (customer.balance + summary.grandTotal > customer.creditLimit + 0.0001) {
+                    throw CreditLimitExceededException(
+                        creditLimit = customer.creditLimit,
+                        balance = customer.balance,
+                        attempted = summary.grandTotal,
+                    )
+                }
             }
         }
 

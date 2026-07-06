@@ -698,6 +698,7 @@
     <string name="err_source_invoice_not_found">لم يتم العثور على فاتورة بيع بهذا الرقم لهذا العميل</string>
     <string name="err_stock_unavailable">الكمية غير متوفرة في الفان (%1$d متاح من %2$d)</string>
     <string name="err_credit_limit">تجاوز الحد الائتماني (الحد %1$d، المتاح %2$d) — يرجى مراجعة المدير لرفع الحد</string>
+    <string name="err_no_credit_limit">هذا العميل ليس لديه حد ائتماني — لا يمكن البيع بالآجل. يرجى البيع نقدًا أو مراجعة المدير لتحديد حد.</string>
     <string name="err_approval_send_failed">تعذّر إرسال طلب الموافقة</string>
     <string name="err_approved_local_save_failed">تمت الموافقة لكن تعذّر حفظ المرتجع محليًا</string>
     <string name="err_return_rejected_note">تم رفض طلب المرتجع من قبل المدير: %1$s</string>
