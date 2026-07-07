@@ -19,6 +19,9 @@ dependencies {
     "commonMainImplementation"(libs.kotlinx.coroutines.core)
     "commonMainImplementation"(libs.kotlinx.datetime)
 
+    // AppBackHandler.android uses androidx.activity.compose.BackHandler
+    "androidMainImplementation"(libs.androidx.activity.compose)
+
     "commonMainImplementation"(projects.core.model)
     "commonMainImplementation"(projects.core.common)
     "commonMainImplementation"(projects.core.data)
