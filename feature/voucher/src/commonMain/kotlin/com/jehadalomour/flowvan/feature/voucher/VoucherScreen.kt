@@ -28,7 +28,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -1350,6 +1353,9 @@ private fun AddItemBottomSheet(
     }
 
     var qty by remember(product.id) { mutableStateOf(currentLine?.qty ?: 1.0) }
+    // Editable text mirror of [qty] so the rep can TYPE a quantity, not just tap +/-.
+    // The +/- handlers keep it in sync; typing digits updates qty (0 when cleared).
+    var qtyText by remember(product.id) { mutableStateOf(qty.toInt().toString()) }
     var selectedUnit by remember(product.id) { mutableStateOf(initialUnit) }
     var lineDiscountType by remember(product.id) { mutableStateOf(DiscountType.PERCENT) }
     var discountText by remember(product.id) {
@@ -1456,14 +1462,37 @@ private fun AddItemBottomSheet(
                             Text(stringResource(Res.string.voucher_qty_required), color = Color(0xFF5A7399), fontSize = 14.sp)
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Box(
-                                    modifier = Modifier.size(38.dp).background(Color.White, CircleShape).border(0.5.dp, Color(0xFFC8D8EC), CircleShape).clickable(enabled = qty > 1) { qty -= 1 },
+                                    modifier = Modifier.size(38.dp).background(Color.White, CircleShape).border(0.5.dp, Color(0xFFC8D8EC), CircleShape).clickable(enabled = qty > 1) { qty -= 1; qtyText = qty.toInt().toString() },
                                     contentAlignment = Alignment.Center,
                                 ) { Text("−", color = Color(0xFF185FA5), fontSize = 22.sp, fontWeight = FontWeight.Medium) }
-                                Text(qty.toInt().toString(), fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A2A3A))
+                                // Type-in quantity — digits only; empty → 0 (confirm stays disabled).
+                                // Drawn as a bordered input box so it clearly reads as a text field.
+                                BasicTextField(
+                                    value = qtyText,
+                                    onValueChange = { input ->
+                                        val digits = input.filter { it.isDigit() }.take(6)
+                                        qtyText = digits
+                                        qty = digits.toIntOrNull()?.toDouble() ?: 0.0
+                                    },
+                                    modifier = Modifier.width(88.dp),
+                                    textStyle = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF185FA5), textAlign = TextAlign.Center),
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    cursorBrush = SolidColor(Color(0xFF185FA5)),
+                                    decorationBox = { inner ->
+                                        Box(
+                                            modifier = Modifier
+                                                .background(Color.White, RoundedCornerShape(10.dp))
+                                                .border(1.dp, Color(0xFF9EC3EA), RoundedCornerShape(10.dp))
+                                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) { inner() }
+                                    },
+                                )
                                 Box(
                                     modifier = Modifier.size(38.dp).clip(CircleShape)
                                         .background(if (canIncrement) blueGradient else Brush.linearGradient(listOf(Color(0xFFC8D8EC), Color(0xFFC8D8EC))))
-                                        .clickable(enabled = canIncrement) { qty += 1 },
+                                        .clickable(enabled = canIncrement) { qty += 1; qtyText = qty.toInt().toString() },
                                     contentAlignment = Alignment.Center,
                                 ) { Text("+", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                             }

@@ -143,6 +143,14 @@ data class VoucherState(
     }
 
     /**
+     * The cart to PERSIST on save: offer discounts baked into each line so the saved and
+     * printed invoice matches the displayed totals (correct even offline). The raw [cart]
+     * when no offer evaluation is active. The create use case still uploads the raw cart —
+     * the server re-applies offers, so this only drives the stored/display invoice.
+     */
+    val displayCart: List<CartLine> get() = if (useServerOffers) offerAdjustedCart else cart
+
+    /**
      * The summary that drives the displayed totals. When an offer evaluation is active we
      * STILL compute tax + grand total on-device through the tax-mode-aware calculator
      * (overlaying the engine's offer discounts), because the offers engine computes tax

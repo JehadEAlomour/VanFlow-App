@@ -43,6 +43,24 @@ interface InvoiceDao {
     @Query("UPDATE invoices SET number = :number WHERE id = :id")
     suspend fun updateNumber(id: String, number: String)
 
+    /**
+     * Overwrite a synced invoice's lines + totals with the server's authoritative computed
+     * values (adopted from the create response), so the saved/printed invoice matches the
+     * backend exactly. Display fields only — the upload snapshot has already been consumed.
+     */
+    @Query(
+        "UPDATE invoices SET linesJson = :linesJson, subtotal = :subtotal, " +
+            "discountAmount = :discountAmount, taxAmount = :taxAmount, total = :total WHERE id = :id",
+    )
+    suspend fun updateComputed(
+        id: String,
+        linesJson: String,
+        subtotal: Double,
+        discountAmount: Double,
+        taxAmount: Double,
+        total: Double,
+    )
+
     @Query("SELECT * FROM invoices WHERE createdAt >= :from AND createdAt <= :to ORDER BY createdAt DESC")
     fun observeAllByRange(from: Long, to: Long): Flow<List<InvoiceEntity>>
 
