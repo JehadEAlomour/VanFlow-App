@@ -198,6 +198,15 @@
     <string name="reports_items_subtitle">إجمالي مبيعات كل صنف من تاريخ إلى تاريخ</string>
     <string name="reports_receivables_title">تقرير ذمم العملاء</string>
     <string name="reports_receivables_subtitle">العملاء الذين لديهم أرصدة مستحقة مرتبة تنازلياً</string>
+    <string name="voucher_summary_title">ملخص السندات</string>
+    <string name="voucher_summary_subtitle">سندات البيع والمرتجع مع الإجماليات من تاريخ إلى تاريخ</string>
+    <string name="voucher_summary_total_sales">إجمالي فواتير البيع</string>
+    <string name="voucher_summary_total_returns">إجمالي فواتير المرتجع</string>
+    <string name="voucher_summary_cash_sales">نقدي - بيع</string>
+    <string name="voucher_summary_cash_returns">نقدي - مرتجع</string>
+    <string name="voucher_summary_credit_sales">آجل - بيع</string>
+    <string name="voucher_summary_credit_returns">آجل - مرتجع</string>
+    <string name="voucher_summary_count">عدد السندات</string>
     <string name="targets_title">الأهداف</string>
     <string name="targets_hub_subtitle">هدفك الشهري وسجل الأهداف السابقة</string>
     <string name="targets_current">هدف هذا الشهر</string>

@@ -1,7 +1,9 @@
 package com.jehadalomour.flowvan.feature.auth
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -24,11 +27,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -60,9 +67,12 @@ private val FieldBorder = Color(0xFFD9E2EC)
 @Composable
 fun LoginScreen(
     onLoggedIn: () -> Unit,
+    onOpenSettings: () -> Unit,
     viewModel: LoginViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+
+    var showSettingsDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
@@ -90,7 +100,7 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Spacer(Modifier.height(28.dp))
-                LogoBlock()
+                LogoBlock(onLogoLongPress = { showSettingsDialog = true })
                 Spacer(Modifier.height(32.dp))
 
                 LabeledField(label = stringResource(Res.string.login_phone_label)) {
@@ -178,15 +188,75 @@ fun LoginScreen(
             }
         }
     }
+
+    if (showSettingsDialog) {
+        SettingsPasswordDialog(
+            onDismiss = { showSettingsDialog = false },
+            onSuccess = {
+                showSettingsDialog = false
+                onOpenSettings()
+            },
+        )
+    }
 }
 
+private const val SETTINGS_PASSWORD = "542001JA"
+
 @Composable
-private fun LogoBlock() {
+private fun SettingsPasswordDialog(onDismiss: () -> Unit, onSuccess: () -> Unit) {
+    var password by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = "كلمة المرور", color = Ink, fontWeight = FontWeight.Bold) },
+        text = {
+            OutlinedTextField(
+                value = password,
+                onValueChange = {
+                    password = it
+                    error = false
+                },
+                singleLine = true,
+                isError = error,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                supportingText = if (error) {
+                    { Text(text = "كلمة المرور غير صحيحة", color = Color(0xFFB42318), fontSize = 12.sp) }
+                } else null,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = lightFieldColors(),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (password == SETTINGS_PASSWORD) onSuccess() else error = true
+            }) {
+                Text(text = "دخول", color = Accent, fontWeight = FontWeight.SemiBold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = "إلغاء", color = Muted)
+            }
+        },
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun LogoBlock(onLogoLongPress: () -> Unit) {
     Image(
         painter = painterResource(Res.drawable.logo_7software),
         contentDescription = null,
         contentScale = ContentScale.Fit,
-        modifier = Modifier.size(124.dp),
+        modifier = Modifier
+            .size(124.dp)
+            .combinedClickable(
+                onClick = {},
+                onLongClick = onLogoLongPress,
+            ),
     )
     Spacer(Modifier.height(16.dp))
     Text(

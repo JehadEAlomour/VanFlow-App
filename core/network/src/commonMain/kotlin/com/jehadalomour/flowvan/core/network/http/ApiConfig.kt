@@ -12,12 +12,14 @@ import com.russhwolf.settings.Settings
 class ApiConfig(private val settings: Settings) {
 
     /**
-     * Raw value as entered/saved (what the Settings field shows).
-     * Always resolves to [DEFAULT_BASE_URL] so a stale saved host (e.g. an old
-     * Cloudflare tunnel) can never override the compiled-in backend.
+     * Raw value as entered/saved (what the Settings field shows). Reads back the
+     * value saved from the Settings page so a change to the backend URL takes effect
+     * directly (resolved per request — no app restart). Falls back to
+     * [DEFAULT_BASE_URL] when nothing has been saved yet.
      */
     var baseUrl: String
-        get() = DEFAULT_BASE_URL
+        get() = settings.getStringOrNull(SettingsKeys.API_BASE_URL)?.takeIf { it.isNotBlank() }
+            ?: DEFAULT_BASE_URL
         set(value) = settings.putString(SettingsKeys.API_BASE_URL, value.trim())
 
     val isEnabled: Boolean get() = baseUrl.isNotBlank()

@@ -42,6 +42,7 @@ import com.jehadalomour.flowvan.feature.home.OffersScreen
 import com.jehadalomour.flowvan.feature.auth.LoginScreen
 import com.jehadalomour.flowvan.feature.home.TodayRouteScreen
 import com.jehadalomour.flowvan.feature.print.VoucherPrintScreen
+import com.jehadalomour.flowvan.feature.print.VoucherSummaryScreen
 import com.jehadalomour.flowvan.feature.voucher.VoucherScreen
 import com.jehadalomour.flowvan.feature.voucher.VoucherType
 import com.jehadalomour.flowvan.feature.voucher.VanStockScreen
@@ -81,6 +82,7 @@ object Routes {
     const val RECEIVABLES_REPORT = "receivables"
     const val TARGETS_REPORT = "targets"
     const val VOUCHER_PRINT = "voucherprint/{invoiceId}"
+    const val VOUCHER_SUMMARY = "vouchersummary"
     const val SETTINGS = "settings"
     fun customer(id: String) = "customer/$id"
     fun sale(id: String) = "sale/$id"
@@ -128,9 +130,12 @@ fun FlowVanNavHost(
 
     NavHost(navController = navController, startDestination = dest) {
         composable(Routes.LOGIN) {
-            LoginScreen(onLoggedIn = {
-                navController.navigate(Routes.HOME) { popUpTo(Routes.LOGIN) { inclusive = true } }
-            })
+            LoginScreen(
+                onLoggedIn = {
+                    navController.navigate(Routes.HOME) { popUpTo(Routes.LOGIN) { inclusive = true } }
+                },
+                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+            )
         }
         composable(Routes.HOME) {
             HomeScreen(
@@ -142,7 +147,6 @@ fun FlowVanNavHost(
                 onOpenReports = { navController.navigate(Routes.REPORTS_HUB) },
                 onOpenOffers = { navController.navigate(Routes.OFFERS) },
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
-                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onLogout = {
                     scope.launch {
                         logout()
@@ -363,7 +367,11 @@ fun FlowVanNavHost(
                 onOpenItemsSales = { navController.navigate(Routes.ITEMS_SALES_REPORT) },
                 onOpenReceivables = { navController.navigate(Routes.RECEIVABLES_REPORT) },
                 onOpenTargets = { navController.navigate(Routes.TARGETS_REPORT) },
+                onOpenVoucherSummary = { navController.navigate(Routes.VOUCHER_SUMMARY) },
             )
+        }
+        composable(Routes.VOUCHER_SUMMARY) {
+            VoucherSummaryScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.RECEIVABLES_REPORT) {
             ReceivablesReportScreen(onBack = { navController.popBackStack() })
