@@ -14,4 +14,7 @@ fun printModule(): Module = module {
     viewModel { (paymentId: String) ->
         ReceiptDetailViewModel(paymentId, get(), get(), get(), get(), get())
     }
+    viewModel {
+        VoucherSummaryViewModel(get(), get(), get(), get(), get(), get())
+    }
 }

@@ -198,6 +198,15 @@
     <string name="reports_items_subtitle">Total sales per item over a date range</string>
     <string name="reports_receivables_title">Customer Receivables</string>
     <string name="reports_receivables_subtitle">Customers with outstanding balances sorted by amount</string>
+    <string name="voucher_summary_title">Voucher Summary</string>
+    <string name="voucher_summary_subtitle">Sale and return vouchers with totals for a date range</string>
+    <string name="voucher_summary_total_sales">Total sale vouchers</string>
+    <string name="voucher_summary_total_returns">Total return vouchers</string>
+    <string name="voucher_summary_cash_sales">Cash - sale</string>
+    <string name="voucher_summary_cash_returns">Cash - return</string>
+    <string name="voucher_summary_credit_sales">Credit - sale</string>
+    <string name="voucher_summary_credit_returns">Credit - return</string>
+    <string name="voucher_summary_count">Voucher count</string>
     <string name="targets_title">Targets</string>
     <string name="targets_hub_subtitle">Your monthly target and past target history</string>
     <string name="targets_current">This month's target</string>

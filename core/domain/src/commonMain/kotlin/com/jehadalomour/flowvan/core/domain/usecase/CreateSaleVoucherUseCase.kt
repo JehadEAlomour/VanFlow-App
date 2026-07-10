@@ -107,11 +107,11 @@ class CreateSaleVoucherUseCase(
                 if (customer.creditLimit <= 0.0) {
                     throw NoCreditLimitException(customer.nameAr)
                 }
-                if (customer.balance + summary.grandTotal > customer.creditLimit + 0.0001) {
+                if (customer.balance + displaySummary.grandTotal > customer.creditLimit + 0.0001) {
                     throw CreditLimitExceededException(
                         creditLimit = customer.creditLimit,
                         balance = customer.balance,
-                        attempted = summary.grandTotal,
+                        attempted = displaySummary.grandTotal,
                     )
                 }
             }
