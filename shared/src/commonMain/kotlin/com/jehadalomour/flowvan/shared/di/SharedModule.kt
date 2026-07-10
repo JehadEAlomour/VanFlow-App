@@ -9,6 +9,8 @@ import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.data.repository.OfferRepository
 import com.jehadalomour.flowvan.core.data.repository.PriceListRepository
 import com.jehadalomour.flowvan.core.data.repository.PaymentRepository
+import com.jehadalomour.flowvan.core.data.repository.TargetRepository
+import com.jehadalomour.flowvan.core.network.api.TargetApi
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.data.repository.UserRepository
@@ -100,6 +102,7 @@ fun sharedModule(): Module = module {
     single { ProductUnitRepository(get()) }
     single { InvoiceRepository(get()) }
     single { PaymentRepository(get()) }
+    single { TargetRepository(get()) }
     single { OfferRepository(get(), get(), get()) }
     single { PriceListRepository(get(), get()) }
     single { LocationRepository(get()) }
@@ -133,6 +136,7 @@ fun sharedModule(): Module = module {
     single { InvoiceApi(get()) }
     single { CollectionApi(get()) }
     single { RepApi(get()) }
+    single { TargetApi(get()) }
     single { VoucherApi(get()) }
     single { MyRouteApi(get()) }
     single { OfferApi(get()) }

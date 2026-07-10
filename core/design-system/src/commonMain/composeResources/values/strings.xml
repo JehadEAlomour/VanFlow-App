@@ -168,6 +168,8 @@
     <string name="end_of_day_title">إغلاق اليوم</string>
     <string name="end_of_day_sales_summary">ملخص المبيعات</string>
     <string name="end_of_day_total_sales">إجمالي المبيعات</string>
+    <string name="end_of_day_cash_sales">مبيعات نقدية</string>
+    <string name="end_of_day_credit_sales">مبيعات آجلة (ذمم)</string>
     <string name="end_of_day_total_returns">إجمالي المرتجعات</string>
     <string name="end_of_day_net_sales">صافي المبيعات</string>
     <string name="end_of_day_total_collections">إجمالي التحصيلات</string>
@@ -196,6 +198,16 @@
     <string name="reports_items_subtitle">إجمالي مبيعات كل صنف من تاريخ إلى تاريخ</string>
     <string name="reports_receivables_title">تقرير ذمم العملاء</string>
     <string name="reports_receivables_subtitle">العملاء الذين لديهم أرصدة مستحقة مرتبة تنازلياً</string>
+    <string name="targets_title">الأهداف</string>
+    <string name="targets_hub_subtitle">هدفك الشهري وسجل الأهداف السابقة</string>
+    <string name="targets_current">هدف هذا الشهر</string>
+    <string name="targets_no_target">لا يوجد هدف محدد لهذا الشهر</string>
+    <string name="targets_loading">جارٍ التحميل…</string>
+    <string name="targets_history">السجل</string>
+    <string name="targets_target">الهدف</string>
+    <string name="targets_achieved">المُحقَّق</string>
+    <string name="targets_remaining">المتبقّي</string>
+    <string name="targets_qty_unit">وحدة</string>
 
     <!-- All Sales Report -->
     <string name="all_sales_title">تقرير المبيعات</string>
@@ -412,6 +424,8 @@
     <string name="end_of_day_transfers">الحوالات</string>
     <string name="end_of_day_unsynced_invoices">فواتير غير مزامنة</string>
     <string name="end_of_day_unsynced_payments">تحصيلات غير مزامنة</string>
+    <string name="end_of_day_print_summary">طباعة الملخص</string>
+    <string name="end_of_day_receipt_title">تقرير نهاية اليوم</string>
     <string name="error_title">خطأ</string>
     <string name="home_action_ai_sub">اسأل عن يومك</string>
     <string name="home_action_customers">العملاء</string>
@@ -695,6 +709,8 @@
     <string name="err_select_return_reason">اختر سبب الإرجاع</string>
     <string name="err_source_invoice_not_found">لم يتم العثور على فاتورة بيع بهذا الرقم لهذا العميل</string>
     <string name="err_stock_unavailable">الكمية غير متوفرة في الفان (%1$d متاح من %2$d)</string>
+    <string name="err_credit_limit">تجاوز الحد الائتماني (الحد %1$d، المتاح %2$d) — يرجى مراجعة المدير لرفع الحد</string>
+    <string name="err_no_credit_limit">هذا العميل ليس لديه حد ائتماني — لا يمكن البيع بالآجل. يرجى البيع نقدًا أو مراجعة المدير لتحديد حد.</string>
     <string name="err_approval_send_failed">تعذّر إرسال طلب الموافقة</string>
     <string name="err_approved_local_save_failed">تمت الموافقة لكن تعذّر حفظ المرتجع محليًا</string>
     <string name="err_return_rejected_note">تم رفض طلب المرتجع من قبل المدير: %1$s</string>
@@ -718,4 +734,14 @@
     <string name="cash_flow_additional_info">معلومات إضافية</string>
     <string name="cash_flow_total_cheque_collection">إجمالي شيكات التحصيل</string>
     <string name="cash_flow_total_credit_sales">إجمالي مبيعات الذمم</string>
+    <!-- Offers -->
+    <string name="offers_title">العروض</string>
+    <string name="home_action_offers_sub">العروض النشطة</string>
+    <string name="offers_empty">لا توجد عروض نشطة حالياً</string>
+    <string name="offer_type_payment">خصم عند الدفع</string>
+    <string name="offer_type_item">مكافأة على الأصناف</string>
+    <string name="offers_reward_gift">هدية</string>
+    <string name="offers_reward_discount">خصم</string>
+    <string name="offers_all_days">كل الأيام</string>
+    <string name="offers_priority">الأولوية</string>
 </resources>

@@ -27,4 +27,6 @@ dependencies {
     "commonMainImplementation"(projects.core.network)
     "commonMainImplementation"(projects.core.domain)
     "commonMainImplementation"(projects.core.designSystem)
+    // Reuses the thermal-print capture path (ImageBitmap.toPngBytes) + PrinterConnectDialog.
+    "commonMainImplementation"(projects.feature.print)
 }

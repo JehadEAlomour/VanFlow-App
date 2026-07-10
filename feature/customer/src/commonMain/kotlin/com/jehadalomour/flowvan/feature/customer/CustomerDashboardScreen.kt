@@ -83,6 +83,16 @@ fun CustomerDashboardScreen(
     // sale/return/collection or the invoice print screen) so balances/totals are current.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     val requestLeave = { viewModel.onEvent(CustomerDashboardEvent.LeaveRequested(startedTxn)) }
+    // System back (Android) mirrors the top-bar back button: run the leave flow so the
+    // visit is recorded / the confirm-reason dialog shows — instead of a silent pop. If a
+    // leave dialog is already open, back dismisses it.
+    AppBackHandler {
+        if (state.leaveDialog != LeaveDialog.NONE) {
+            viewModel.onEvent(CustomerDashboardEvent.DismissLeave)
+        } else {
+            requestLeave()
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
 

@@ -132,6 +132,8 @@ data class VoucherDetailDto(
     val voucherNumber: String = "",
     val customerNumber: String? = null,
     val transactions: List<VoucherDetailTxn> = emptyList(),
+    /** The sale's payment lines — a RETURN inherits the original sale's payment type. */
+    val payments: List<VoucherPayment> = emptyList(),
 )
 
 @Serializable

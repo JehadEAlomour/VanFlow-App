@@ -39,8 +39,10 @@ object VoucherNumber {
  * Each [type] keeps its own sequence that restarts at 1 each calendar year; the `userCode`
  * segment keeps numbers unique across devices/reps (the backend dedupes on the full number).
  *
- * The sequence is derived from the count of same-type vouchers already saved this year, so a
- * voucher's number is generated once at creation, stored, and reused verbatim on every sync retry.
+ * The sequence is the highest trailing sequence used this year + 1 (i.e. last voucher
+ * number + 1), so a voucher's number is generated once at creation, stored, and reused
+ * verbatim on every sync retry — and offline numbers never collide even after a
+ * cancelled/removed voucher.
  */
 class VoucherNumberGenerator(
     private val invoices: InvoiceRepository,
@@ -53,7 +55,9 @@ class VoucherNumberGenerator(
         val year = Instant.fromEpochMilliseconds(nowMs).toLocalDateTime(tz).year
         val yearStart = LocalDateTime(year, 1, 1, 0, 0, 0).toInstant(tz).toEpochMilliseconds()
         val yearEnd = LocalDateTime(year + 1, 1, 1, 0, 0, 0).toInstant(tz).toEpochMilliseconds()
-        val seq = invoices.countByTypeInRange(type, yearStart, yearEnd) + 1
+        // Last voucher number + 1 (max trailing sequence + 1), not a COUNT — so an offline
+        // number is never reused after a voucher is cancelled/removed.
+        val seq = invoices.nextSeqForType(type, yearStart, yearEnd)
         val userCode = session.currentUserCode?.takeIf { it.isNotBlank() } ?: "U-0000"
         return "$prefix-$year-$userCode-$seq"
     }

@@ -159,6 +159,10 @@ private fun mapCollectionStatus(status: String): PaymentStatus = when (status.lo
 
 fun RepKpiDto.toDailyKpi(customersPlanned: Int, customersVisited: Int): DailyKpi = DailyKpi(
     salesTotal = todayRevenueFils.filsToJod(),
+    // The remote KPI doesn't split cash vs credit; treat the aggregate as cash and
+    // leave credit at 0 (the local GetDailyKpiUseCase computes the real split).
+    cashSalesTotal = todayRevenueFils.filsToJod(),
+    creditSalesTotal = 0.0,
     returnsTotal = 0.0,
     collectionsTotal = 0.0,
     customersVisited = customersVisited,

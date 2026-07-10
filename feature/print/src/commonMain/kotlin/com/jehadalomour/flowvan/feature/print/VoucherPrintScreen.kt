@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.Locale
@@ -51,6 +52,7 @@ import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.feature.print.PrinterConnectDialog
@@ -347,7 +349,12 @@ private fun ReceiptTear(flipped: Boolean = false) {
 private fun ReceiptBody(state: VoucherPrintState) {
     val t = state.template
     val palette = if (t.monochrome) MonoPalette else ColorPalette
-    CompositionLocalProvider(LocalRc provides palette) {
+    // The printed voucher is Arabic-first and must always lay out right-to-left, no matter the
+    // device/app locale — labels sit on the right, values on the left. Numbers stay LTR via LtrNum.
+    CompositionLocalProvider(
+        LocalRc provides palette,
+        LocalLayoutDirection provides LayoutDirection.Rtl,
+    ) {
         val c = LocalRc.current
         val isArabic = Locale.current.language.startsWith("ar")
         val paymentType = PaymentType.fromPaymentMethod(state.paymentMethod)
@@ -622,12 +629,14 @@ private fun ReceiptItemRow(line: InvoiceLine, amountDecimals: Int) {
             .fillMaxWidth()
             .padding(vertical = 5.dp),
     ) {
-        // Product name
+        // Product name — Arabic, always reads right-to-left (right-aligned) on the printout.
         Text(
             text = line.nameAr,
             fontWeight = FontWeight.ExtraBold,
             fontSize = 13.sp,
             color = c.ink,
+            textAlign = TextAlign.Right,
+            style = TextStyle(textDirection = TextDirection.Rtl),
             modifier = Modifier.fillMaxWidth().padding(bottom = 3.dp),
         )
         // 6-column data grid

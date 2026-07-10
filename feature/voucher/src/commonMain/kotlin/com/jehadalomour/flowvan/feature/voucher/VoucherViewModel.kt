@@ -28,9 +28,12 @@ import com.jehadalomour.flowvan.core.domain.usecase.CommitApprovedReturnUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateRequestVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateReturnVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreateSaleVoucherUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.CreditLimitExceededException
+import com.jehadalomour.flowvan.core.domain.usecase.NoCreditLimitException
 import com.jehadalomour.flowvan.core.domain.usecase.EmptyCartException
 import com.jehadalomour.flowvan.core.domain.usecase.EvaluateOffersUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetCustomerSalesUseCase
+import com.jehadalomour.flowvan.core.model.PaymentMethod
 import com.jehadalomour.flowvan.core.domain.usecase.PollApprovalUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.RequestReturnApprovalUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.RequestDiscountApprovalUseCase
@@ -370,12 +373,18 @@ class VoucherViewModel(
                 cart = cart,
                 referenceInvoiceId = invoice.id,
                 referenceNumber = invoice.number,
+                paymentMethod = returnPaymentMethodOf(invoice.paymentMethod),
                 soldQtyByProduct = sold,
                 showSourcePicker = false,
                 view = VoucherView.CART,
             )
         }
     }
+
+    /** Map an original sale's stored payment type → the RETURN's payment method (default CASH). */
+    private fun returnPaymentMethodOf(raw: String?): PaymentMethod =
+        runCatching { PaymentMethod.valueOf((raw ?: "").uppercase()) }
+            .getOrDefault(PaymentMethod.CASH)
 
     /**
      * Manual fallback when the sale isn't on this device: look the SALE up on the
@@ -393,7 +402,8 @@ class VoucherViewModel(
                 _state.update { it.copy(isLookingUp = false, errorAr = getString(Res.string.err_source_invoice_not_found)) }
                 return@launch
             }
-            val lines = runCatching { getCustomerSales.lines(sale.id) }.getOrDefault(emptyList())
+            val source = runCatching { getCustomerSales.detail(sale.id) }.getOrNull()
+            val lines = source?.lines ?: emptyList()
             _state.update { s ->
                 val cart = lines.map { sl ->
                     val product = s.products.firstOrNull { it.sku == sl.sku }
@@ -420,6 +430,8 @@ class VoucherViewModel(
                     cart = cart,
                     referenceInvoiceId = sale.id,
                     referenceNumber = sale.number,
+                    // Inherit the original sale's payment type (credit → credit, cash → cash).
+                    paymentMethod = returnPaymentMethodOf(source?.paymentType),
                     soldQtyByProduct = sold,
                     isLookingUp = false,
                     showSourcePicker = false,
@@ -554,8 +566,10 @@ class VoucherViewModel(
             val result = when (type) {
                 VoucherType.SALE -> createSale(
                     customerId = customerId,
+                    // Offer-adjusted: fold the applied offer discount into the saved lines so the
+                    // voucher, balance and printed receipt reflect it (backend stores as-is).
+                    cart = s.cartForSave,
                     salesmanId = salesmanId,
-                    cart = s.cart,
                     discountAmount = s.voucherDiscountAmount,
                     paymentMethod = s.paymentMethod,
                     notes = s.notes.takeIf { it.isNotBlank() },
@@ -591,6 +605,13 @@ class VoucherViewModel(
                         is StockShortageException ->
                             getString(Res.string.err_stock_unavailable, ex.available, ex.requested)
                         is EmptyCartException -> getString(Res.string.err_cart_empty)
+                        is NoCreditLimitException -> getString(Res.string.err_no_credit_limit)
+                        is CreditLimitExceededException ->
+                            getString(
+                                Res.string.err_credit_limit,
+                                ex.creditLimit.toInt(),
+                                ex.available.toInt(),
+                            )
                         else -> getString(Res.string.err_unexpected)
                     }
                     _state.update { it.copy(isSaving = false, errorAr = msg) }

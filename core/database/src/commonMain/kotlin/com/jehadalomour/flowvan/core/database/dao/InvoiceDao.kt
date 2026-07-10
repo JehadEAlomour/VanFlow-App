@@ -78,6 +78,11 @@ interface InvoiceDao {
     @Query("SELECT COUNT(*) FROM invoices WHERE type = :type AND createdAt >= :fromMillis AND createdAt < :toMillis")
     suspend fun countByTypeInRange(type: String, fromMillis: Long, toMillis: Long): Int
 
+    /** Numbers of vouchers of a given [type] within [fromMillis, toMillis) — the generator
+     *  derives the next sequence as max(trailing seq) + 1 so offline numbers never collide. */
+    @Query("SELECT number FROM invoices WHERE type = :type AND createdAt >= :fromMillis AND createdAt < :toMillis")
+    suspend fun numbersByTypeInRange(type: String, fromMillis: Long, toMillis: Long): List<String>
+
     @Query("DELETE FROM invoices")
     suspend fun deleteAll()
 }

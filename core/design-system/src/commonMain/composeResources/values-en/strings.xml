@@ -168,6 +168,8 @@
     <string name="end_of_day_title">Close Day</string>
     <string name="end_of_day_sales_summary">Sales Summary</string>
     <string name="end_of_day_total_sales">Total Sales</string>
+    <string name="end_of_day_cash_sales">Cash Sales</string>
+    <string name="end_of_day_credit_sales">Credit Sales (A/R)</string>
     <string name="end_of_day_total_returns">Total Returns</string>
     <string name="end_of_day_net_sales">Net Sales</string>
     <string name="end_of_day_total_collections">Total Collections</string>
@@ -196,6 +198,16 @@
     <string name="reports_items_subtitle">Total sales per item over a date range</string>
     <string name="reports_receivables_title">Customer Receivables</string>
     <string name="reports_receivables_subtitle">Customers with outstanding balances sorted by amount</string>
+    <string name="targets_title">Targets</string>
+    <string name="targets_hub_subtitle">Your monthly target and past target history</string>
+    <string name="targets_current">This month's target</string>
+    <string name="targets_no_target">No target set for this month</string>
+    <string name="targets_loading">Loading…</string>
+    <string name="targets_history">History</string>
+    <string name="targets_target">Target</string>
+    <string name="targets_achieved">Achieved</string>
+    <string name="targets_remaining">Remaining</string>
+    <string name="targets_qty_unit">units</string>
 
     <!-- All Sales Report -->
     <string name="all_sales_title">Sales Report</string>
@@ -412,6 +424,8 @@
     <string name="end_of_day_transfers">Transfers</string>
     <string name="end_of_day_unsynced_invoices">Unsynced Invoices</string>
     <string name="end_of_day_unsynced_payments">Unsynced Payments</string>
+    <string name="end_of_day_print_summary">Print Summary</string>
+    <string name="end_of_day_receipt_title">End of Day Report</string>
     <string name="error_title">Error</string>
     <string name="home_action_ai_sub">Ask about your day</string>
     <string name="home_action_customers">Customers</string>
@@ -695,6 +709,8 @@
     <string name="err_select_return_reason">Select a return reason</string>
     <string name="err_source_invoice_not_found">No sale invoice found with this number for this customer</string>
     <string name="err_stock_unavailable">Quantity not available in the van (%1$d available of %2$d)</string>
+    <string name="err_credit_limit">Credit limit exceeded (limit %1$d, available %2$d) — ask the manager to raise the limit</string>
+    <string name="err_no_credit_limit">This customer has no credit limit — credit sales are not allowed. Sell for cash or ask the manager to set a limit.</string>
     <string name="err_approval_send_failed">Failed to send the approval request</string>
     <string name="err_approved_local_save_failed">Approved, but failed to save the return locally</string>
     <string name="err_return_rejected_note">The return request was rejected by the manager: %1$s</string>
@@ -718,4 +734,14 @@
     <string name="cash_flow_additional_info">Additional information</string>
     <string name="cash_flow_total_cheque_collection">Total cheque collection</string>
     <string name="cash_flow_total_credit_sales">Total credit sales</string>
+    <!-- Offers -->
+    <string name="offers_title">Offers</string>
+    <string name="home_action_offers_sub">Active offers</string>
+    <string name="offers_empty">No active offers right now</string>
+    <string name="offer_type_payment">Payment discount</string>
+    <string name="offer_type_item">Item reward</string>
+    <string name="offers_reward_gift">Gift</string>
+    <string name="offers_reward_discount">Discount</string>
+    <string name="offers_all_days">Every day</string>
+    <string name="offers_priority">Priority</string>
 </resources>

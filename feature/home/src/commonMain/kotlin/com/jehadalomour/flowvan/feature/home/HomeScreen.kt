@@ -78,6 +78,7 @@ fun HomeScreen(
     onOpenAi: () -> Unit,
     onOpenEndOfDay: () -> Unit,
     onOpenReports: () -> Unit,
+    onOpenOffers: () -> Unit,
     onOpenCustomer: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onLogout: () -> Unit,
@@ -156,6 +157,7 @@ fun HomeScreen(
                     onOpenAi = onOpenAi,
                     onOpenEndOfDay = onOpenEndOfDay,
                     onOpenReports = onOpenReports,
+                    onOpenOffers = onOpenOffers,
                     modifier = Modifier.padding(horizontal = 14.dp),
                 )
             }
@@ -507,9 +509,13 @@ private fun ActionGrid(
     onOpenAi: () -> Unit,
     onOpenEndOfDay: () -> Unit,
     onOpenReports: () -> Unit,
+    onOpenOffers: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ActionTile(painterResource(Res.drawable.ic_cart), stringResource(Res.string.offers_title), stringResource(Res.string.home_action_offers_sub), Fv.Purple, Modifier.weight(1f), onOpenOffers)
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ActionTile(painterResource(Res.drawable.ic_truck), stringResource(Res.string.route_title), stringResource(Res.string.home_action_route_sub), Fv.Blue, Modifier.weight(1f), onOpenRoute)
             ActionTile(painterResource(Res.drawable.ic_customers), stringResource(Res.string.home_action_customers), stringResource(Res.string.home_action_customers_sub), Fv.Teal, Modifier.weight(1f), onOpenCustomers)
