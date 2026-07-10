@@ -113,16 +113,47 @@ data class VoucherState(
     /** True while a debounced offer evaluation is in flight (SALE). */
     val isEvaluatingOffers: Boolean = false,
 ) {
-    /** Full invoice calculation via the tax calculator (pure, no side effects). */
-    val summary: VoucherSummary get() = InvoiceTaxCalculator.calculateInvoice(
-        cart = cart,
-        invoiceDiscount = voucherDiscountInput.toDoubleOrNull()?.let { v ->
+    /** The voucher-footer discount the rep entered, parsed into the calculator input. */
+    private val invoiceDiscountInputParsed: InvoiceDiscountInput get() =
+        voucherDiscountInput.toDoubleOrNull()?.let { v ->
             when (voucherDiscountType) {
                 DiscountType.PERCENT -> InvoiceDiscountInput.Percent(v)
                 DiscountType.VALUE   -> InvoiceDiscountInput.Fixed(v)
             }
-        } ?: InvoiceDiscountInput.None,
+        } ?: InvoiceDiscountInput.None
+
+    /** Full invoice calculation via the tax calculator (pure, no side effects). */
+    val summary: VoucherSummary get() = InvoiceTaxCalculator.calculateInvoice(
+        cart = cart,
+        invoiceDiscount = invoiceDiscountInputParsed,
     )
+
+    /**
+     * Cart lines with the offer engine's per-line discount overlaid on top of any manual
+     * line discount (keyed by sku). Display-only — the raw cart is uploaded and the server
+     * re-applies offers. Gift free-lines are net-0 so they don't affect the totals below.
+     */
+    private val offerAdjustedCart: List<CartLine> get() {
+        val bySku = serverLines.associateBy { it.itemNumber }
+        return cart.map { line ->
+            val frac = bySku[line.sku]?.discountFraction ?: 0.0
+            if (frac <= 0.0) line
+            else line.copy(discountPct = (line.discountPct + frac).coerceIn(0.0, 1.0))
+        }
+    }
+
+    /**
+     * The summary that drives the displayed totals. When an offer evaluation is active we
+     * STILL compute tax + grand total on-device through the tax-mode-aware calculator
+     * (overlaying the engine's offer discounts), because the offers engine computes tax
+     * EXCLUDED-only — trusting its totals would add tax on top even for INCLUSIVE-priced
+     * companies. This mirrors the authoritative backend posting (same fils calc + tax mode).
+     */
+    val displaySummary: VoucherSummary get() =
+        if (useServerOffers) InvoiceTaxCalculator.calculateInvoice(
+            cart = offerAdjustedCart,
+            invoiceDiscount = invoiceDiscountInputParsed,
+        ) else summary
 
     /**
      * SALE only: an offer evaluation (server OR offline) produced per-line results, so
@@ -147,17 +178,14 @@ data class VoucherState(
         else -> "غير متصل — الإجماليات محلية، يعاد تطبيق العروض عند المزامنة"
     }
 
-    val subtotal: Double get() =
-        if (useServerOffers) serverTotals.subtotalJod else summary.subtotalBeforeDiscounts
-    val lineDiscountTotal: Double get() = summary.totalLineDiscounts
-    val taxAmount: Double get() =
-        if (useServerOffers) serverTotals.taxJod else summary.totalTax
+    val subtotal: Double get() = displaySummary.subtotalBeforeDiscounts
+    val lineDiscountTotal: Double get() = displaySummary.totalLineDiscounts
+    val taxAmount: Double get() = displaySummary.totalTax
+    /** Manual voucher-level discount the rep entered (drives the SAVE); offers are separate. */
     val voucherDiscountAmount: Double get() = summary.invoiceDiscountAmount
     val totalDiscount: Double get() =
-        if (useServerOffers) serverTotals.totalDiscountJod
-        else summary.totalLineDiscounts + summary.invoiceDiscountAmount
-    val total: Double get() =
-        if (useServerOffers) serverTotals.grandTotalJod else summary.grandTotal
+        displaySummary.totalLineDiscounts + displaySummary.invoiceDiscountAmount
+    val total: Double get() = displaySummary.grandTotal
 
     /** Label shown next to the tax row — clarifies inclusive vs additive. */
     val taxLabelRes: StringResource get() = when (taxType) {

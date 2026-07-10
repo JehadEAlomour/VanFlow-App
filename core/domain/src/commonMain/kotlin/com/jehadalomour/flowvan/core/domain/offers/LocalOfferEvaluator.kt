@@ -60,16 +60,17 @@ object LocalOfferEvaluator {
     )
 
     /**
-     * [amountPerUnitFils] set → ITEM_AMOUNT_DISCOUNT (fils off per unit);
-     * [amountPerLineFils] set → LINE_AMOUNT_DISCOUNT (flat fils off the line);
-     * both null → percent via [pct].
+     * [amountPerUnitFils] set → an amount reward (fils off per unit, × line qty) —
+     * LINE_AMOUNT_DISCOUNT (all lines) or ITEM_AMOUNT_DISCOUNT (selected lines);
+     * [maxPercentOfPrice] optionally caps the per-unit amount to a % of the line's unit
+     * price. null → percent via [pct].
      */
     private class Disc(
         val offer: OfferDefinition,
         val pct: Double,
         val items: Set<String>?,
         val amountPerUnitFils: Double? = null,
-        val amountPerLineFils: Double? = null,
+        val maxPercentOfPrice: Double? = null,
     )
     private class GiftEntry(val offer: OfferDefinition, val reward: OfferReward.Gift, val freeQty: Int)
 
@@ -132,8 +133,11 @@ object LocalOfferEvaluator {
                                 if (pct > 0) payOffers.add(Disc(offer, pct, null))
                             }
                             is OfferReward.LineAmount -> {
+                                // Per-unit amount on every line (× line qty), like the server.
                                 val amt = effectiveAmount(reward, itemCount, anchor)
-                                if (amt > 0) payOffers.add(Disc(offer, 0.0, null, amountPerLineFils = amt))
+                                if (amt > 0) payOffers.add(
+                                    Disc(offer, 0.0, null, amountPerUnitFils = amt, maxPercentOfPrice = reward.maxPercentOfPrice),
+                                )
                             }
                             else -> {}
                         }
@@ -141,6 +145,9 @@ object LocalOfferEvaluator {
                 }
                 OfferType.ITEM_QTY_REWARD -> {
                     val t = offer.trigger as? OfferTrigger.ItemSet ?: continue
+                    // Optional payment gate (CASH = any non-CREDIT). Null = any payment.
+                    val cond = t.paymentCondition
+                    if (cond != null && (if (cond == "CREDIT") !isCredit else isCredit)) continue
                     val qty = t.itemNumbers.sumOf { cart[it] ?: 0.0 }
                     when (val reward = offer.reward) {
                         is OfferReward.Gift -> {
@@ -156,7 +163,9 @@ object LocalOfferEvaluator {
                         is OfferReward.ItemAmount -> {
                             if (qty >= reward.minQty) {
                                 val amt = effectiveAmount(reward, qty, reward.minQty.toDouble())
-                                if (amt > 0) itemOffers.add(Disc(offer, 0.0, t.itemNumbers.toSet(), amt))
+                                if (amt > 0) itemOffers.add(
+                                    Disc(offer, 0.0, t.itemNumbers.toSet(), amt, reward.maxPercentOfPrice),
+                                )
                             }
                         }
                         else -> {}
@@ -169,13 +178,22 @@ object LocalOfferEvaluator {
         for ((itemNumber, l) in work) {
             val gross = roundFils(l.qty * l.unitPriceFils)
             if (gross <= 0) continue
-            // Candidate's discount for this line: percent → % of gross; per-unit amount →
-            // fils × line qty; per-line amount → flat fils. Highest fils wins per line, so a
-            // percent and a flat-amount payment offer compare correctly (same as items).
-            fun discFor(c: Disc): Long = when {
-                c.amountPerUnitFils != null -> roundFils(l.qty * c.amountPerUnitFils)
-                c.amountPerLineFils != null -> roundFils(c.amountPerLineFils)
-                else -> roundFils(gross * c.pct / 100.0)
+            // Candidate's discount for this line: per-unit amount → fils × line qty (the
+            // per-unit amount first clamped to maxPercentOfPrice of THIS line's unit price,
+            // when set); percent → % of gross. Highest fils wins per line, so a percent and an
+            // amount offer compare correctly.
+            fun discFor(c: Disc): Long {
+                val perUnitAmt = c.amountPerUnitFils
+                if (perUnitAmt != null) {
+                    var perUnit = perUnitAmt
+                    val capPct = c.maxPercentOfPrice
+                    if (capPct != null) {
+                        val cap = roundFils(l.unitPriceFils * capPct / 100.0).toDouble()
+                        if (cap < perUnit) perUnit = cap
+                    }
+                    return roundFils(l.qty * perUnit)
+                }
+                return roundFils(gross * c.pct / 100.0)
             }
             var bestPay: Disc? = null
             var bestPayFils = 0L
@@ -439,9 +457,9 @@ object LocalOfferEvaluator {
             if (amount.dynamic) {
                 val cap = amount.maxAmountFils?.let { " up to ${jodString(it.roundToLong())} JOD" } ?: ""
                 val step = amount.itemsPerStep?.toString() ?: "?"
-                return "$cond · ${jodString(amount.baseAmountFils.roundToLong())} JOD per line, ×${numStr(amount.multiplier ?: 0.0)} per $step items$cap$suffix"
+                return "$cond · ${jodString(amount.baseAmountFils.roundToLong())} JOD per unit, ×${numStr(amount.multiplier ?: 0.0)} per $step items$cap$suffix"
             }
-            return "$cond · ${jodString(amount.baseAmountFils.roundToLong())} JOD off each line$suffix"
+            return "$cond · ${jodString(amount.baseAmountFils.roundToLong())} JOD off each unit$suffix"
         }
         val r = offer.reward as? OfferReward.LinePercent
         if (r?.dynamic == true) {

@@ -46,7 +46,11 @@ sealed interface OfferTrigger {
     ) : OfferTrigger
 
     /** ITEM_QTY_REWARD: the offer's selected items; the trigger qty is their combined cart qty. */
-    data class ItemSet(val itemNumbers: List<String>) : OfferTrigger
+    data class ItemSet(
+        val itemNumbers: List<String>,
+        /** Optional payment gate: "CASH" (any non-CREDIT) / "CREDIT". Null = any payment. */
+        val paymentCondition: String? = null,
+    ) : OfferTrigger
 }
 
 sealed interface OfferReward {
@@ -60,9 +64,10 @@ sealed interface OfferReward {
     ) : OfferReward
 
     /**
-     * A fixed amount (fils) off EVERY line of the order — the amount-off twin of [LinePercent],
-     * for a PAYMENT_METHOD_DISCOUNT. Each line gets [baseAmountFils] off (flat per line,
-     * independent of qty), clamped to the line gross by the evaluator.
+     * A fixed amount (fils) off EACH UNIT, on every line of the order — the amount-off twin of
+     * [LinePercent], for a PAYMENT_METHOD_DISCOUNT. Each line gets [baseAmountFils] × line qty
+     * off, clamped to the line gross by the evaluator. [maxPercentOfPrice] optionally caps the
+     * per-unit amount to that % of the line's unit price (per line).
      */
     data class LineAmount(
         val baseAmountFils: Double,
@@ -70,6 +75,7 @@ sealed interface OfferReward {
         val multiplier: Double?,
         val itemsPerStep: Int?,
         val maxAmountFils: Double?,
+        val maxPercentOfPrice: Double?,
     ) : OfferReward
 
     /** A gift the rep picks from [giftItems]; count derived from the trigger qty. */
@@ -102,6 +108,8 @@ sealed interface OfferReward {
         val multiplier: Double?,
         val itemsPerStep: Int?,
         val maxAmountFils: Double?,
+        /** Optional cap on the per-unit amount as a % of the item's unit price (per line). */
+        val maxPercentOfPrice: Double?,
     ) : OfferReward
 }
 

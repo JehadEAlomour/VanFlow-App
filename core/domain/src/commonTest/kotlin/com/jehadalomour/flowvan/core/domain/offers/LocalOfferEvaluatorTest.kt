@@ -61,11 +61,12 @@ class LocalOfferEvaluatorTest {
         multiplier: Double? = null,
         itemsPerStep: Int? = null,
         maxAmountFils: Double? = null,
+        maxPercentOfPrice: Double? = null,
         minItemCount: Int? = null,
     ) = OfferDefinition(
         id = id, name = id, type = OfferType.PAYMENT_METHOD_DISCOUNT,
         trigger = OfferTrigger.PaymentMethod(condition, null, minItemCount),
-        reward = OfferReward.LineAmount(baseAmountFils, dynamic, multiplier, itemsPerStep, maxAmountFils),
+        reward = OfferReward.LineAmount(baseAmountFils, dynamic, multiplier, itemsPerStep, maxAmountFils, maxPercentOfPrice),
         eligibility = allEligibility,
         validFromMs = null, validToMs = null, daysOfWeek = null, timeFrom = null, timeTo = null,
         totalRedemptionLimit = null, perCustomerLimit = null, priority = 0, redemptionCount = 0, createdAtMs = 0,
@@ -110,10 +111,12 @@ class LocalOfferEvaluatorTest {
         multiplier: Double? = null,
         itemsPerStep: Int? = null,
         maxAmountFils: Double? = null,
+        maxPercentOfPrice: Double? = null,
+        paymentCondition: String? = null,
     ) = OfferDefinition(
         id = id, name = id, type = OfferType.ITEM_QTY_REWARD,
-        trigger = OfferTrigger.ItemSet(itemNumbers),
-        reward = OfferReward.ItemAmount(minQty, baseAmountFils, dynamic, multiplier, itemsPerStep, maxAmountFils),
+        trigger = OfferTrigger.ItemSet(itemNumbers, paymentCondition),
+        reward = OfferReward.ItemAmount(minQty, baseAmountFils, dynamic, multiplier, itemsPerStep, maxAmountFils, maxPercentOfPrice),
         eligibility = allEligibility,
         validFromMs = null, validToMs = null, daysOfWeek = null, timeFrom = null, timeTo = null,
         totalRedemptionLimit = null, perCustomerLimit = null, priority = 0, redemptionCount = 0, createdAtMs = 0,
@@ -176,13 +179,13 @@ class LocalOfferEvaluatorTest {
     // ── PAYMENT_METHOD_DISCOUNT (amount) ─────────────────────────────────────
 
     @Test
-    fun lineAmountTakesFlatOffEachLineForCash() {
+    fun lineAmountTakesFixedOffEachUnitForCash() {
         val r = LocalOfferEvaluator.evaluate(
             listOf("A" to 4.0, "B" to 2.0), listOf(payAmtOffer(baseAmountFils = 300.0)), items, ctx("CASH"),
         )
-        assertEquals(300, r.disc("A"))
-        assertEquals(300, r.disc("B"))
-        assertEquals(600, r.totals.lineDiscountFils)
+        assertEquals(1200, r.disc("A")) // 300 × 4
+        assertEquals(600, r.disc("B"))  // 300 × 2
+        assertEquals(1800, r.totals.lineDiscountFils)
     }
 
     @Test
@@ -198,21 +201,30 @@ class LocalOfferEvaluatorTest {
     fun lineAmountDynamicStepsAndCaps() {
         val offers = listOf(payAmtOffer(baseAmountFils = 100.0, dynamic = true, multiplier = 0.5, itemsPerStep = 6, maxAmountFils = 250.0, minItemCount = 6))
         fun d(q: Double) = LocalOfferEvaluator.evaluate(listOf("A" to q), offers, items, ctx("CASH")).disc("A")
-        assertEquals(100, d(6.0))
-        assertEquals(150, d(12.0))
-        assertEquals(250, d(60.0))
+        assertEquals(600, d(6.0))     // per-unit 100 × 6
+        assertEquals(1800, d(12.0))   // 1 step → per-unit 150 × 12
+        assertEquals(15000, d(60.0))  // per-unit capped 250 × 60
     }
 
     @Test
-    fun perLineHigherFilsWinsBetweenPercentAndFlatAmountPayment() {
+    fun lineAmountCapsAtMaxPercentOfPrice() {
+        // Base 500/unit capped per line at 20% of unit price: A(1000)→200, B(500)→100.
+        val offers = listOf(payAmtOffer(baseAmountFils = 500.0, maxPercentOfPrice = 20.0))
+        val r = LocalOfferEvaluator.evaluate(listOf("A" to 3.0, "B" to 2.0), offers, items, ctx("CASH"))
+        assertEquals(600, r.disc("A")) // 200 × 3
+        assertEquals(200, r.disc("B")) // 100 × 2
+    }
+
+    @Test
+    fun perLineHigherFilsWinsBetweenPercentAndAmountPayment() {
         val offers = listOf(
             payOffer(id = "pct10", base = 10.0),
-            payAmtOffer(id = "flat300", baseAmountFils = 300.0),
+            payAmtOffer(id = "amt80", baseAmountFils = 80.0),
         )
         val r = LocalOfferEvaluator.evaluate(listOf("A" to 4.0, "B" to 1.0), offers, items, ctx("CASH"))
-        assertEquals(400, r.disc("A")) // 10% of 4000 beats flat 300
-        assertEquals(300, r.disc("B")) // flat 300 beats 10% of 500
-        assertEquals(listOf("flat300", "pct10"), r.appliedOffers.map { it.offerId }.sorted())
+        assertEquals(400, r.disc("A")) // 10% of 4000 beats amount 80 × 4 = 320
+        assertEquals(80, r.disc("B"))  // amount 80 × 1 beats 10% of 500 = 50
+        assertEquals(listOf("amt80", "pct10"), r.appliedOffers.map { it.offerId }.sorted())
     }
 
     // ── ITEM_QTY_REWARD (gift) ───────────────────────────────────────────────
@@ -285,6 +297,20 @@ class LocalOfferEvaluatorTest {
         assertEquals(2400, r.disc("A")) // 200 × 12
         assertEquals(0, r.disc("B"))
         assertTrue(LocalOfferEvaluator.evaluate(listOf("A" to 11.0), listOf(offer), items, ctx()).appliedOffers.isEmpty())
+    }
+
+    @Test
+    fun itemOfferPaymentGateOnlyAppliesOnMatchingPayment() {
+        val offer = itemAmtOffer(
+            itemNumbers = listOf("A"), minQty = 1, baseAmountFils = 100.0, paymentCondition = "CREDIT",
+        )
+        assertEquals(
+            1,
+            LocalOfferEvaluator.evaluate(listOf("A" to 2.0), listOf(offer), items, ctx("CREDIT")).appliedOffers.size,
+        )
+        assertTrue(
+            LocalOfferEvaluator.evaluate(listOf("A" to 2.0), listOf(offer), items, ctx("CASH")).appliedOffers.isEmpty(),
+        )
     }
 
     @Test
