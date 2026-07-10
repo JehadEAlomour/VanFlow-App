@@ -40,6 +40,15 @@ class CreateSaleVoucherUseCase(
         paymentMethod: PaymentMethod,
         notes: String?,
         chosenFreeItems: List<String> = emptyList(),
+        /**
+         * The cart with the offers engine's per-line discounts overlaid (the same lines
+         * the cart screen shows). When offers applied this differs from [cart]; we store
+         * the OFFER-APPLIED result as the invoice's primary/display totals so the saved
+         * and printed invoice matches the cart even offline. Null / equal to [cart] → no
+         * offers, behaviour unchanged. The RAW [cart] is still what uploads — the server
+         * re-applies offers, so uploading the offer-applied cart would double-discount.
+         */
+        offerAdjustedCart: List<CartLine>? = null,
     ): Result<InvoiceEntity> = runCatching {
         if (cart.isEmpty()) throw EmptyCartException()
 
@@ -51,20 +60,27 @@ class CreateSaleVoucherUseCase(
             }
         }
 
+        val invoiceDiscount = if (discountAmount > 0.0)
+            InvoiceDiscountInput.Fixed(discountAmount) else InvoiceDiscountInput.None
         // Use the full tax calculator — lineTaxType is already stamped on each CartLine
         // by the ViewModel based on the active AppSettings.
-        val summary = InvoiceTaxCalculator.calculateInvoice(
-            cart = cart,
-            invoiceDiscount = if (discountAmount > 0.0)
-                InvoiceDiscountInput.Fixed(discountAmount) else InvoiceDiscountInput.None,
-        )
+        val rawSummary = InvoiceTaxCalculator.calculateInvoice(cart, invoiceDiscount)
+
+        // Offers were applied when a distinct offer-adjusted cart was supplied. The
+        // DISPLAY cart drives the primary/stored totals; the RAW cart drives the upload.
+        val offersApplied = offerAdjustedCart != null && offerAdjustedCart != cart
+        val displayCart = if (offersApplied) offerAdjustedCart!! else cart
+        val displaySummary =
+            if (offersApplied) InvoiceTaxCalculator.calculateInvoice(displayCart, invoiceDiscount)
+            else rawSummary
 
         val number = voucherNumbers.next("INV", "SALE")
         val now = Clock.System.now().toEpochMilliseconds()
         // Capture the rep's position at sale time for the location lock. Persisted on
         // the entity so it survives an offline delay and reaches the backend on sync.
         val loc = location.lastLocation()
-        val invoiceLines = cart.map {
+
+        fun List<CartLine>.toInvoiceLines(): List<InvoiceLine> = map {
             InvoiceLine(
                 productId   = it.productId,
                 sku         = it.sku,
@@ -89,11 +105,12 @@ class CreateSaleVoucherUseCase(
             customerId    = customerId,
             salesmanId    = salesmanId,
             createdAt     = now,
-            linesJson     = json.encodeToString(invoiceLines),
-            subtotal      = summary.subtotalBeforeDiscounts,
-            discountAmount = summary.totalLineDiscounts + summary.invoiceDiscountAmount,
-            taxAmount     = summary.totalTax,
-            total         = summary.grandTotal,
+            // Primary/display fields carry the OFFER-APPLIED result (matches the cart).
+            linesJson     = json.encodeToString(displayCart.toInvoiceLines()),
+            subtotal      = displaySummary.subtotalBeforeDiscounts,
+            discountAmount = displaySummary.totalLineDiscounts + displaySummary.invoiceDiscountAmount,
+            taxAmount     = displaySummary.totalTax,
+            total         = displaySummary.grandTotal,
             paymentMethod = paymentMethod.name,
             notes         = notes,
             syncedAt      = null,
@@ -103,6 +120,12 @@ class CreateSaleVoucherUseCase(
                 ?.joinToString(","),
             repLat = loc?.lat,
             repLng = loc?.lng,
+            // Upload snapshot: the RAW cart (manual discounts only) so the backend applies
+            // offers exactly once. Null when no offers → upload uses the primary fields.
+            uploadLinesJson =
+                if (offersApplied) json.encodeToString(cart.toInvoiceLines()) else null,
+            uploadDiscountAmount =
+                if (offersApplied) rawSummary.totalLineDiscounts + rawSummary.invoiceDiscountAmount else null,
         )
 
         invoices.save(entity)
@@ -111,7 +134,8 @@ class CreateSaleVoucherUseCase(
             products.adjustStock(line.productId, -line.stockQty.toInt())
         }
         if (paymentMethod == PaymentMethod.CREDIT) {
-            customers.adjustBalance(customerId, summary.grandTotal)
+            // The customer owes the offer-applied total, not the pre-offer amount.
+            customers.adjustBalance(customerId, displaySummary.grandTotal)
         }
         syncScheduler.syncNow()   // push invoice to backend now; stays flagged (synced=null) if offline
         entity

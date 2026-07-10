@@ -7,9 +7,11 @@ import com.jehadalomour.flowvan.core.network.dto.CreateCollectionRequest
 import com.jehadalomour.flowvan.core.network.dto.CreateInvoiceLine
 import com.jehadalomour.flowvan.core.network.dto.CreateInvoiceRequest
 import com.jehadalomour.flowvan.core.network.dto.CreateVoucherRequest
+import com.jehadalomour.flowvan.core.network.dto.SyncVoucherResult
 import com.jehadalomour.flowvan.core.network.dto.VoucherPayment
 import com.jehadalomour.flowvan.core.network.dto.VoucherTxn
 import com.jehadalomour.flowvan.core.network.http.jodToFils
+import com.jehadalomour.flowvan.core.network.http.numericStringToDouble
 import com.jehadalomour.flowvan.core.network.http.toAmountString
 import com.jehadalomour.flowvan.core.network.http.toPercentString
 import com.jehadalomour.flowvan.core.model.InvoiceLine
@@ -52,7 +54,12 @@ fun InvoiceEntity.toCreateRequest(repId: String, json: Json): CreateInvoiceReque
  * Voucher transactions reference the legacy `itemNumber` (our `sku`) and the `customerNumber`.
  */
 fun InvoiceEntity.toVoucherRequest(userCode: String, customerNumber: String?, json: Json): CreateVoucherRequest {
-    val lines = json.decodeFromString<List<InvoiceLine>>(linesJson)
+    // Upload the RAW cart (manual discounts only): the entity's primary fields hold the
+    // OFFER-APPLIED result for display, but the server re-applies offers on POST, so posting
+    // the offer-applied lines/discount would double-count. uploadLinesJson/uploadDiscountAmount
+    // are set only when an offer applied; null → no offer, use the primary fields as before.
+    val lines = json.decodeFromString<List<InvoiceLine>>(uploadLinesJson ?: linesJson)
+    val uploadDiscount = uploadDiscountAmount ?: discountAmount
     val kind = when (type) {
         "SALE" -> "SALE"
         "RETURN" -> "RETURN"
@@ -81,7 +88,7 @@ fun InvoiceEntity.toVoucherRequest(userCode: String, customerNumber: String?, js
     // the server applies the line discounts twice (the INV-…-4 "0.75 not 1.00" bug).
     val totalLineDiscountFils = lines.sumOf { lineDiscountFils(it) }
     val voucherDiscountFils =
-        ((discountAmount * 1000.0).roundToLong() - totalLineDiscountFils).coerceAtLeast(0L)
+        ((uploadDiscount * 1000.0).roundToLong() - totalLineDiscountFils).coerceAtLeast(0L)
 
     return CreateVoucherRequest(
         // Do NOT send a client number: the server reserves the authoritative, collision-proof
@@ -148,5 +155,58 @@ fun PaymentEntity.toCreateCollectionRequest(repId: String): CreateCollectionRequ
         } else {
             null
         },
+    )
+}
+
+/**
+ * The server's authoritative invoice, adopted from a create response — the app overwrites its
+ * on-device totals with these so the saved/printed invoice is exactly what the backend recorded.
+ */
+data class AdoptedInvoice(
+    val lines: List<InvoiceLine>,
+    val subtotal: Double,
+    val discountAmount: Double,
+    val taxAmount: Double,
+    val total: Double,
+)
+
+/**
+ * Map a create response's SERVER-COMPUTED voucher into the local invoice shape (money engine +
+ * offers already applied on the backend). Only PAID lines (net > 0) become [AdoptedInvoice.lines]
+ * — gift/free lines (net 0) keep rendering from the saved gift picks, so they aren't doubled.
+ * Header totals are taken from the authoritative header fields. Returns null when the response
+ * carries no computed lines (older backend / non-SALE) so the on-device calc stays in place.
+ */
+fun SyncVoucherResult.toAdoptedInvoice(): AdoptedInvoice? {
+    val paid = transactions.filter { it.total.numericStringToDouble() > 0.0 }
+    if (paid.isEmpty()) return null
+    val lines = paid.map { t ->
+        val qty = t.itemQty.numericStringToDouble()
+        val unit = t.unitPrice.numericStringToDouble()
+        val gross = unit * qty
+        val disc = t.discountValue.numericStringToDouble()
+        val net = t.total.numericStringToDouble()
+        val grand = t.netTotal.numericStringToDouble()
+        InvoiceLine(
+            productId = "",                 // server-side; not needed for display
+            sku = t.itemNumber,
+            nameAr = t.itemName,
+            qty = qty,
+            unitPrice = unit,
+            discountPct = if (gross > 0.0) (disc / gross).coerceIn(0.0, 1.0) else 0.0,
+            lineTotal = grand,              // line grand total (with tax)
+            taxType = "TAXABLE",
+            taxAmount = (grand - net).coerceAtLeast(0.0),
+            unit = t.unitName ?: "",
+            unitConversionQty = (t.unitBaseQty ?: 1).toDouble(),
+            taxRate = t.taxPercentage.numericStringToDouble() / 100.0,
+        )
+    }
+    return AdoptedInvoice(
+        lines = lines,
+        subtotal = paid.sumOf { it.unitPrice.numericStringToDouble() * it.itemQty.numericStringToDouble() },
+        discountAmount = paid.sumOf { it.discountValue.numericStringToDouble() },
+        taxAmount = totalTax.numericStringToDouble(),
+        total = netTotal.numericStringToDouble(),
     )
 }

@@ -37,13 +37,44 @@ data class CreateVoucherRequest(
     val chosenFreeItems: List<String> = emptyList(),
 )
 
-/** `POST /sync/vouchers` response: server-assigned number + staging status. */
+/**
+ * `POST /sync/vouchers` response: the created voucher header. Beyond the server-assigned
+ * number it carries the SERVER-COMPUTED invoice (money engine + offers already applied),
+ * so the app can adopt the authoritative totals/lines on sync instead of trusting its own
+ * on-device calc. All money fields are major-unit numeric strings ("8.120"). Numeric/nested
+ * fields default so an older backend (number only) still deserializes.
+ */
 @Serializable
 data class SyncVoucherResult(
     val id: String = "",
     val voucherNumber: String = "",
     val status: String = "",               // pending | posted | failed
     val error: String? = null,
+    /** Grand total WITH tax (what the customer pays). */
+    val netTotal: String = "0",
+    val totalTax: String = "0",
+    /** Header-level discount only (line discounts live on each transaction). */
+    val totalDiscountValue: String = "0",
+    val transactions: List<CreatedVoucherTxn> = emptyList(),
+)
+
+/** One server-computed line on a created voucher. Money = major-unit numeric strings. */
+@Serializable
+data class CreatedVoucherTxn(
+    val itemNumber: String = "",
+    val itemName: String = "",
+    val itemQty: String = "0",
+    val unitPrice: String = "0",
+    val taxPercentage: String = "0",
+    /** Resolved line discount (own line discount + its share of the header discount), JOD. */
+    val discountValue: String = "0",
+    val discountPercentage: String = "0",
+    /** Line net (post-discount, tax base). Gift/free lines net to 0. */
+    val total: String = "0",
+    /** Line grand total WITH tax. */
+    val netTotal: String = "0",
+    val unitName: String? = null,
+    val unitBaseQty: Int? = null,
 )
 
 @Serializable

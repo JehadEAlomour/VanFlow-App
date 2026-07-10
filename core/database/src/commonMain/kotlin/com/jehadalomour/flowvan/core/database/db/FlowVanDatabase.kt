@@ -48,7 +48,7 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         OfferEntity::class,
         PriceListItemEntity::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -69,6 +69,10 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         // v11: price_list_items cache table + customers.priceListId (nullable) for
         // per-customer price-list pricing (from GET /price-lists/full).
         AutoMigration(from = 10, to = 11),
+        // v12: invoices.uploadLinesJson/uploadDiscountAmount (nullable) — raw upload
+        // snapshot so offer-applied invoices display correctly offline yet upload the
+        // raw cart (the server re-applies offers, avoiding a double discount).
+        AutoMigration(from = 11, to = 12),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)

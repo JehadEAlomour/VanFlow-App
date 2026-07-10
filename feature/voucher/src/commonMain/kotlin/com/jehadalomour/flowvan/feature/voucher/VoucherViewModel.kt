@@ -560,6 +560,9 @@ class VoucherViewModel(
                     paymentMethod = s.paymentMethod,
                     notes = s.notes.takeIf { it.isNotBlank() },
                     chosenFreeItems = s.chosenFreeItems,   // GIFT picks → server adds free lines on upload
+                    // Offer-applied lines → stored as the display invoice so it matches the
+                    // cart offline; the raw cart above is still what uploads.
+                    offerAdjustedCart = s.displayCart,
                 )
                 VoucherType.RETURN -> createReturn(
                     customerId = customerId,

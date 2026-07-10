@@ -37,4 +37,16 @@ data class InvoiceEntity(
      */
     val repLat: Double? = null,
     val repLng: Double? = null,
+    /**
+     * Offer-aware upload snapshot. The primary fields ([linesJson], [subtotal],
+     * [discountAmount], [taxAmount], [total]) hold the OFFER-APPLIED result so the
+     * saved/printed invoice matches the cart (correct even offline). But the server
+     * re-applies offers on POST /vouchers, so the UPLOAD must carry the RAW cart
+     * (manual discounts only) or offers would be counted twice. When an offer was
+     * applied at sale time these hold that raw representation; the sync mapper uses
+     * them instead of the primary fields. Null → no offer, upload uses the primary
+     * fields (unchanged behaviour).
+     */
+    val uploadLinesJson: String? = null,
+    val uploadDiscountAmount: Double? = null,
 )
