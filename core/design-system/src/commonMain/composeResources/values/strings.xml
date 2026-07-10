@@ -424,6 +424,8 @@
     <string name="end_of_day_transfers">الحوالات</string>
     <string name="end_of_day_unsynced_invoices">فواتير غير مزامنة</string>
     <string name="end_of_day_unsynced_payments">تحصيلات غير مزامنة</string>
+    <string name="end_of_day_print_summary">طباعة الملخص</string>
+    <string name="end_of_day_receipt_title">تقرير نهاية اليوم</string>
     <string name="error_title">خطأ</string>
     <string name="home_action_ai_sub">اسأل عن يومك</string>
     <string name="home_action_customers">العملاء</string>

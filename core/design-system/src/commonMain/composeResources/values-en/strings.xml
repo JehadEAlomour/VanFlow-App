@@ -424,6 +424,8 @@
     <string name="end_of_day_transfers">Transfers</string>
     <string name="end_of_day_unsynced_invoices">Unsynced Invoices</string>
     <string name="end_of_day_unsynced_payments">Unsynced Payments</string>
+    <string name="end_of_day_print_summary">Print Summary</string>
+    <string name="end_of_day_receipt_title">End of Day Report</string>
     <string name="error_title">Error</string>
     <string name="home_action_ai_sub">Ask about your day</string>
     <string name="home_action_customers">Customers</string>

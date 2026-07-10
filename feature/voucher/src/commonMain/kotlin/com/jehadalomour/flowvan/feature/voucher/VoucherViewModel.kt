@@ -373,8 +373,6 @@ class VoucherViewModel(
                 cart = cart,
                 referenceInvoiceId = invoice.id,
                 referenceNumber = invoice.number,
-                // A RETURN carries the original sale's payment type — a credit sale's return
-                // is credit (frees A/R), a cash sale's return is cash. See SPEC-accounts-receivable.
                 paymentMethod = returnPaymentMethodOf(invoice.paymentMethod),
                 soldQtyByProduct = sold,
                 showSourcePicker = false,
