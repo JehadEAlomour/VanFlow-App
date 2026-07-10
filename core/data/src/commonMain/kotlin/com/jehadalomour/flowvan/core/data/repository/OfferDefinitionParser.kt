@@ -34,6 +34,7 @@ internal fun OfferEntity.toDefinition(json: Json): OfferDefinition? {
         )
         OfferType.ITEM_QTY_REWARD -> OfferTrigger.ItemSet(
             itemNumbers = t.itemNumbers ?: emptyList(),
+            paymentCondition = t.paymentCondition,
         )
     }
 
@@ -51,6 +52,7 @@ internal fun OfferEntity.toDefinition(json: Json): OfferDefinition? {
             multiplier = r.multiplier,
             itemsPerStep = r.itemsPerStep,
             maxAmountFils = r.maxAmountFils,
+            maxPercentOfPrice = r.maxPercentOfPrice,
         )
         "GIFT" -> OfferReward.Gift(
             giftItems = r.giftItems ?: emptyList(),
@@ -73,6 +75,7 @@ internal fun OfferEntity.toDefinition(json: Json): OfferDefinition? {
             multiplier = r.multiplier,
             itemsPerStep = r.itemsPerStep,
             maxAmountFils = r.maxAmountFils,
+            maxPercentOfPrice = r.maxPercentOfPrice,
         )
         else -> return null
     }
@@ -133,6 +136,7 @@ private data class RewardJson(
     val minQty: Int? = null,
     val baseAmountFils: Double? = null,
     val maxAmountFils: Double? = null,
+    val maxPercentOfPrice: Double? = null,
 )
 
 @Serializable

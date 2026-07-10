@@ -289,7 +289,12 @@ fun VoucherScreen(
 
     // ── Item bottom sheet ─────────────────────────────────────────────────────
     dialogProduct?.let { product ->
+        // Match the existing cart line to EDIT. Fall back to sku: when offers are active the
+        // cart renders server lines keyed by sku (itemNumber), and a line's productId can
+        // differ from productBySku[sku].id — without the sku fallback the tap opens a blank
+        // "add" sheet (qty 1, base unit) instead of the real line.
         val currentLine = state.cart.firstOrNull { it.productId == product.id }
+            ?: state.cart.firstOrNull { it.sku == product.sku }
         // SALE + server offers: seed the line-discount field with the offer discount
         // applied to this line, so tapping a discounted line shows its % (not blank).
         val offerDiscountPct = if (state.useServerOffers) {
@@ -879,7 +884,16 @@ private fun ServerCartLineCard(
                 Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(Fv.Border))
                 Spacer(Modifier.height(8.dp))
                 if (line.offers.isNotEmpty()) {
-                    line.offers.forEach { offer -> OfferLineRow(offer) }
+                    line.offers.forEach { offer ->
+                        // Amount rewards carry pct = 0 (they're a fils amount, not a %),
+                        // so derive the EFFECTIVE % from the amount saved vs the line gross
+                        // — otherwise an amount offer shows a misleading "-0%".
+                        val effPct =
+                            if (offer.pct > 0.0) offer.pct
+                            else if (line.grossJod > 0.0) offer.discountJod / line.grossJod * 100.0
+                            else 0.0
+                        OfferLineRow(offer.copy(pct = effPct))
+                    }
                 } else {
                     // Fallback (older server without per-line attribution): combined % only.
                     OfferLineRow(
