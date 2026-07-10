@@ -734,4 +734,14 @@
     <string name="cash_flow_additional_info">معلومات إضافية</string>
     <string name="cash_flow_total_cheque_collection">إجمالي شيكات التحصيل</string>
     <string name="cash_flow_total_credit_sales">إجمالي مبيعات الذمم</string>
+    <!-- Offers -->
+    <string name="offers_title">العروض</string>
+    <string name="home_action_offers_sub">العروض النشطة</string>
+    <string name="offers_empty">لا توجد عروض نشطة حالياً</string>
+    <string name="offer_type_payment">خصم عند الدفع</string>
+    <string name="offer_type_item">مكافأة على الأصناف</string>
+    <string name="offers_reward_gift">هدية</string>
+    <string name="offers_reward_discount">خصم</string>
+    <string name="offers_all_days">كل الأيام</string>
+    <string name="offers_priority">الأولوية</string>
 </resources>

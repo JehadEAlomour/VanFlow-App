@@ -734,4 +734,14 @@
     <string name="cash_flow_additional_info">Additional information</string>
     <string name="cash_flow_total_cheque_collection">Total cheque collection</string>
     <string name="cash_flow_total_credit_sales">Total credit sales</string>
+    <!-- Offers -->
+    <string name="offers_title">Offers</string>
+    <string name="home_action_offers_sub">Active offers</string>
+    <string name="offers_empty">No active offers right now</string>
+    <string name="offer_type_payment">Payment discount</string>
+    <string name="offer_type_item">Item reward</string>
+    <string name="offers_reward_gift">Gift</string>
+    <string name="offers_reward_discount">Discount</string>
+    <string name="offers_all_days">Every day</string>
+    <string name="offers_priority">Priority</string>
 </resources>

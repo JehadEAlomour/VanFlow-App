@@ -566,8 +566,10 @@ class VoucherViewModel(
             val result = when (type) {
                 VoucherType.SALE -> createSale(
                     customerId = customerId,
+                    // Offer-adjusted: fold the applied offer discount into the saved lines so the
+                    // voucher, balance and printed receipt reflect it (backend stores as-is).
+                    cart = s.cartForSave,
                     salesmanId = salesmanId,
-                    cart = s.cart,
                     discountAmount = s.voucherDiscountAmount,
                     paymentMethod = s.paymentMethod,
                     notes = s.notes.takeIf { it.isNotBlank() },

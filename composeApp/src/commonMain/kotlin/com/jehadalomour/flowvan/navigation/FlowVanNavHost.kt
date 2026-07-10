@@ -38,6 +38,7 @@ import com.jehadalomour.flowvan.feature.customer.CustomerDashboardScreen
 import com.jehadalomour.flowvan.feature.customer.CustomerListScreen
 import com.jehadalomour.flowvan.feature.home.EndOfDayScreen
 import com.jehadalomour.flowvan.feature.home.HomeScreen
+import com.jehadalomour.flowvan.feature.home.OffersScreen
 import com.jehadalomour.flowvan.feature.auth.LoginScreen
 import com.jehadalomour.flowvan.feature.home.TodayRouteScreen
 import com.jehadalomour.flowvan.feature.print.VoucherPrintScreen
@@ -58,6 +59,7 @@ object Routes {
     const val VAN_STOCK = "van_stock"
     const val AI = "ai?customerId={customerId}"
     const val END_OF_DAY = "end_of_day"
+    const val OFFERS = "offers"
     const val CUSTOMER = "customer/{customerId}"
     const val SALE = "sale/{customerId}"
     const val RETURN = "return/{customerId}"
@@ -138,6 +140,7 @@ fun FlowVanNavHost(
                 onOpenAi = { navController.navigate(Routes.ai()) },
                 onOpenEndOfDay = { navController.navigate(Routes.END_OF_DAY) },
                 onOpenReports = { navController.navigate(Routes.REPORTS_HUB) },
+                onOpenOffers = { navController.navigate(Routes.OFFERS) },
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onLogout = {
@@ -280,6 +283,9 @@ fun FlowVanNavHost(
                     }
                 },
             )
+        }
+        composable(Routes.OFFERS) {
+            OffersScreen(onBack = { navController.popBackStack() })
         }
         composable(
             Routes.MAP,
