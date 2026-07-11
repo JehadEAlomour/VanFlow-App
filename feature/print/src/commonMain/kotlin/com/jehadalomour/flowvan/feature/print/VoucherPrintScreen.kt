@@ -28,6 +28,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.foundation.horizontalScroll
@@ -374,13 +375,23 @@ private fun ReceiptBody(state: VoucherPrintState) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // Logo at the top — bundled default for now; tinted black for the 1-bit print.
-                Image(
-                    painter = painterResource(Res.drawable.voucher_logo),
-                    contentDescription = null,
-                    colorFilter = ColorFilter.tint(c.ink),
-                    modifier = Modifier.size(54.dp).padding(bottom = 4.dp),
-                )
+                // Logo at the top — the company's own logo (cached from /company-info) when
+                // available, else the bundled default (tinted black for the 1-bit print).
+                val logoBitmap = remember(state.companyLogo) { decodeBase64Image(state.companyLogo) }
+                if (logoBitmap != null) {
+                    Image(
+                        bitmap = logoBitmap,
+                        contentDescription = null,
+                        modifier = Modifier.size(54.dp).padding(bottom = 4.dp),
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(Res.drawable.voucher_logo),
+                        contentDescription = null,
+                        colorFilter = ColorFilter.tint(c.ink),
+                        modifier = Modifier.size(54.dp).padding(bottom = 4.dp),
+                    )
+                }
                 if (companyName.isNotBlank()) {
                     Text(
                         text = companyName,

@@ -406,12 +406,22 @@ private fun VsReceiptBody(state: VoucherSummaryState) {
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Image(
-                painter = painterResource(Res.drawable.voucher_logo),
-                contentDescription = null,
-                colorFilter = ColorFilter.tint(RcInk),
-                modifier = Modifier.size(54.dp).padding(bottom = 4.dp),
-            )
+            // The company's own logo (cached from /company-info) when available, else default.
+            val logoBitmap = remember(state.companyLogo) { decodeBase64Image(state.companyLogo) }
+            if (logoBitmap != null) {
+                Image(
+                    bitmap = logoBitmap,
+                    contentDescription = null,
+                    modifier = Modifier.size(54.dp).padding(bottom = 4.dp),
+                )
+            } else {
+                Image(
+                    painter = painterResource(Res.drawable.voucher_logo),
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(RcInk),
+                    modifier = Modifier.size(54.dp).padding(bottom = 4.dp),
+                )
+            }
             if (companyName.isNotBlank()) {
                 Text(
                     text = companyName,

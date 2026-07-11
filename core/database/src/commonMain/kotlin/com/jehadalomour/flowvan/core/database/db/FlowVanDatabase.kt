@@ -48,7 +48,7 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         OfferEntity::class,
         PriceListItemEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -73,6 +73,9 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         // snapshot so offer-applied invoices display correctly offline yet upload the
         // raw cart (the server re-applies offers, avoiding a double discount).
         AutoMigration(from = 11, to = 12),
+        // v13: app_settings.companyLogo — the company logo (base64 data URI) cached from
+        // /company-info so the printed voucher header shows it, even offline.
+        AutoMigration(from = 12, to = 13),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)

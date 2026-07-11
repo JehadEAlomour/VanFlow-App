@@ -130,6 +130,7 @@ class VoucherSummaryViewModel(
                     companyNameAr = info.nameAr,
                     companyNameEn = info.nameEn,
                     companyTaxNumber = info.taxNumber,
+                    companyLogo = info.logo,
                     branch = settings.branch,
                     salesmanNameAr = user?.nameAr.orEmpty(),
                 )

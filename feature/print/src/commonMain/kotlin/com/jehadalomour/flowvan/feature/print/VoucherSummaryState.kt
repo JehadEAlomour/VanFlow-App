@@ -35,6 +35,8 @@ data class VoucherSummaryState(
     val companyNameAr: String = "",
     val companyNameEn: String = "",
     val companyTaxNumber: String = "",
+    /** Company logo (data:...;base64 URI) cached from /company-info; blank → bundled default. */
+    val companyLogo: String = "",
     val branch: String = "",
     val salesmanNameAr: String = "",
     /** Millis timestamp printed on the summary; captured when the screen loads. */

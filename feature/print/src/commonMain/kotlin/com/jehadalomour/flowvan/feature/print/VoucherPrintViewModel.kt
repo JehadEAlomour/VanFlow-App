@@ -98,6 +98,7 @@ class VoucherPrintViewModel(
                     companyNameAr = info.nameAr,
                     companyNameEn = info.nameEn,
                     companyTaxNumber = info.taxNumber,
+                    companyLogo = info.logo,
                 )
             }
         }

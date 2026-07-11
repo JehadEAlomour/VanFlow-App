@@ -22,4 +22,7 @@ data class AppSettingsEntity(
     @ColumnInfo(defaultValue = "''") val companyNameAr: String = "",
     @ColumnInfo(defaultValue = "''") val companyNameEn: String = "",
     @ColumnInfo(defaultValue = "''") val companyTaxNumber: String = "",
+    // v13: company logo cached from GET /company-info (a `data:<mime>;base64,...` URI),
+    // stored so the printed voucher header shows the company's own logo, even offline.
+    @ColumnInfo(defaultValue = "''") val companyLogo: String = "",
 )
