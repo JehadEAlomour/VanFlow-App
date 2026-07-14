@@ -5,6 +5,7 @@ import com.jehadalomour.flowvan.core.model.OfferEligibilityRule
 import com.jehadalomour.flowvan.core.model.OfferReward
 import com.jehadalomour.flowvan.core.model.OfferTrigger
 import com.jehadalomour.flowvan.core.model.OfferType
+import com.jehadalomour.flowvan.core.model.TableEntry
 import com.jehadalomour.flowvan.core.network.dto.EvaluationResultDto
 import kotlinx.datetime.LocalDateTime
 import kotlin.test.Test
@@ -381,5 +382,90 @@ class LocalOfferEvaluatorTest {
         val bOffers = r.lines.first { it.itemNumber == "B" }.offers
         assertEquals(1, bOffers.size)
         assertEquals("pay10", bOffers[0].offerId)
+    }
+
+    // ── quantity bands (min..max) + per-item "dynamic" tables ────────────────
+
+    private fun bandedAmtOffer(
+        id: String, condition: String = "CASH", baseAmountFils: Double,
+        minItemCount: Int? = null, maxItemCount: Int? = null,
+    ) = OfferDefinition(
+        id = id, name = id, type = OfferType.PAYMENT_METHOD_DISCOUNT,
+        trigger = OfferTrigger.PaymentMethod(condition, null, minItemCount, maxItemCount),
+        reward = OfferReward.LineAmount(baseAmountFils, false, null, null, null, null),
+        eligibility = allEligibility,
+        validFromMs = null, validToMs = null, daysOfWeek = null, timeFrom = null, timeTo = null,
+        totalRedemptionLimit = null, perCustomerLimit = null, priority = 0, redemptionCount = 0, createdAtMs = 0,
+    )
+
+    private fun tableAmtOffer(
+        id: String, condition: String = "CASH", entries: List<TableEntry>,
+        minItemCount: Int? = null, maxItemCount: Int? = null,
+    ) = OfferDefinition(
+        id = id, name = id, type = OfferType.PAYMENT_METHOD_DISCOUNT,
+        trigger = OfferTrigger.PaymentMethod(condition, null, minItemCount, maxItemCount),
+        reward = OfferReward.TableAmount(entries),
+        eligibility = allEligibility,
+        validFromMs = null, validToMs = null, daysOfWeek = null, timeFrom = null, timeTo = null,
+        totalRedemptionLimit = null, perCustomerLimit = null, priority = 0, redemptionCount = 0, createdAtMs = 0,
+    )
+
+    private fun tablePctOffer(
+        id: String, condition: String = "CASH", entries: List<TableEntry>,
+        minItemCount: Int? = null, maxItemCount: Int? = null,
+    ) = OfferDefinition(
+        id = id, name = id, type = OfferType.PAYMENT_METHOD_DISCOUNT,
+        trigger = OfferTrigger.PaymentMethod(condition, null, minItemCount, maxItemCount),
+        reward = OfferReward.TablePercent(entries),
+        eligibility = allEligibility,
+        validFromMs = null, validToMs = null, daysOfWeek = null, timeFrom = null, timeTo = null,
+        totalRedemptionLimit = null, perCustomerLimit = null, priority = 0, redemptionCount = 0, createdAtMs = 0,
+    )
+
+    @Test
+    fun quantityBandAppliesOnlyInsideInterval() {
+        val offers = listOf(
+            bandedAmtOffer("band1", baseAmountFils = 100.0, minItemCount = 1, maxItemCount = 49),
+            bandedAmtOffer("band2", baseAmountFils = 200.0, minItemCount = 50, maxItemCount = 99),
+        )
+        val at49 = LocalOfferEvaluator.evaluate(listOf("A" to 49.0), offers, items, ctx("CASH"))
+        assertEquals(listOf("band1"), at49.appliedOffers.map { it.offerId })
+        assertEquals(4900, at49.disc("A")) // 100 × 49
+        val at50 = LocalOfferEvaluator.evaluate(listOf("A" to 50.0), offers, items, ctx("CASH"))
+        assertEquals(listOf("band2"), at50.appliedOffers.map { it.offerId })
+        assertEquals(10000, at50.disc("A")) // 200 × 50
+        val at100 = LocalOfferEvaluator.evaluate(listOf("A" to 100.0), offers, items, ctx("CASH"))
+        assertEquals(0, at100.appliedOffers.size)
+    }
+
+    @Test
+    fun tableAmountPerItemUnlistedGetsNothing() {
+        val offers = listOf(
+            tableAmtOffer("tbl", entries = listOf(TableEntry("A", amountFils = 110.0)), minItemCount = 50, maxItemCount = 99),
+        )
+        val r = LocalOfferEvaluator.evaluate(listOf("A" to 50.0, "B" to 5.0), offers, items, ctx("CASH"))
+        assertEquals(5500, r.disc("A")) // 110 × 50
+        assertEquals(0, r.disc("B"))    // B unlisted → nothing
+        val below = LocalOfferEvaluator.evaluate(listOf("A" to 40.0, "B" to 5.0), offers, items, ctx("CASH"))
+        assertEquals(0, below.appliedOffers.size) // 45 < band floor
+    }
+
+    @Test
+    fun tablePercentPerItem() {
+        val offers = listOf(
+            tablePctOffer("tblp", entries = listOf(TableEntry("A", percent = 10.0), TableEntry("B", percent = 20.0)), minItemCount = 1, maxItemCount = 99),
+        )
+        val r = LocalOfferEvaluator.evaluate(listOf("A" to 50.0, "B" to 10.0), offers, items, ctx("CASH"))
+        assertEquals(5000, r.disc("A")) // 50000 × 10%
+        assertEquals(1000, r.disc("B")) // 5000 × 20%
+    }
+
+    @Test
+    fun tableAmountCapsAtMaxPercentOfPrice() {
+        val offers = listOf(
+            tableAmtOffer("tblcap", entries = listOf(TableEntry("A", amountFils = 500.0, maxPercentOfPrice = 20.0)), minItemCount = 1, maxItemCount = 99),
+        )
+        val r = LocalOfferEvaluator.evaluate(listOf("A" to 50.0), offers, items, ctx("CASH"))
+        assertEquals(10000, r.disc("A")) // 200 (20% of 1000) × 50
     }
 }

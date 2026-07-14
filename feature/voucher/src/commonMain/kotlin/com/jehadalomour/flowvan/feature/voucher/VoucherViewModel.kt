@@ -566,9 +566,12 @@ class VoucherViewModel(
             val result = when (type) {
                 VoucherType.SALE -> createSale(
                     customerId = customerId,
-                    // Offer-adjusted: fold the applied offer discount into the saved lines so the
-                    // voucher, balance and printed receipt reflect it (backend stores as-is).
-                    cart = s.cartForSave,
+                    // RAW cart (manual discounts only) — this is what UPLOADS. The backend is
+                    // server-authoritative and re-applies offers on ingest, so uploading the
+                    // offer-adjusted cart double-discounts and trips the manual-discount gate
+                    // (DISCOUNT_NOT_ALLOWED). The use case stores the offer-applied result as
+                    // the display invoice separately via offerAdjustedCart below.
+                    cart = s.cart,
                     salesmanId = salesmanId,
                     discountAmount = s.voucherDiscountAmount,
                     paymentMethod = s.paymentMethod,

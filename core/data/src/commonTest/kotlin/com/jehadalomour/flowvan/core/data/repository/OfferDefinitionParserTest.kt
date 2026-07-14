@@ -70,6 +70,37 @@ class OfferDefinitionParserTest {
     }
 
     @Test
+    fun parsesBandedTableAmountDiscount() {
+        val d = entity(
+            "PAYMENT_METHOD_DISCOUNT",
+            """{"paymentCondition":"CASH","minItemCount":50,"maxItemCount":99}""",
+            """{"kind":"TABLE_AMOUNT_DISCOUNT","entries":[{"itemNumber":"WATER-1.5L","amountFils":110},{"itemNumber":"COLA-330","amountFils":150,"maxPercentOfPrice":20}]}""",
+        ).toDefinition(json)
+        assertNotNull(d, "banded table-amount offer parsed to null — offline cache unreadable")
+        val t = d.trigger as OfferTrigger.PaymentMethod
+        assertEquals(50, t.minItemCount)
+        assertEquals(99, t.maxItemCount)
+        val r = d.reward as OfferReward.TableAmount
+        assertEquals(2, r.entries.size)
+        assertEquals("WATER-1.5L", r.entries[0].itemNumber)
+        assertEquals(110.0, r.entries[0].amountFils)
+        assertEquals(20.0, r.entries[1].maxPercentOfPrice)
+    }
+
+    @Test
+    fun parsesTablePercentDiscount() {
+        val d = entity(
+            "PAYMENT_METHOD_DISCOUNT",
+            """{"paymentCondition":"CASH","minItemCount":1,"maxItemCount":49}""",
+            """{"kind":"TABLE_PERCENT_DISCOUNT","entries":[{"itemNumber":"COLA-330","percent":10}]}""",
+        ).toDefinition(json)
+        assertNotNull(d, "table-percent offer parsed to null — offline cache unreadable")
+        val r = d.reward as OfferReward.TablePercent
+        assertEquals(1, r.entries.size)
+        assertEquals(10.0, r.entries[0].percent)
+    }
+
+    @Test
     fun parsesItemAmountDiscount() {
         val d = entity(
             "ITEM_QTY_REWARD",

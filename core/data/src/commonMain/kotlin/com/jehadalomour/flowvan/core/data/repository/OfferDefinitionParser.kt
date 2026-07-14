@@ -6,6 +6,7 @@ import com.jehadalomour.flowvan.core.model.OfferEligibilityRule
 import com.jehadalomour.flowvan.core.model.OfferReward
 import com.jehadalomour.flowvan.core.model.OfferTrigger
 import com.jehadalomour.flowvan.core.model.OfferType
+import com.jehadalomour.flowvan.core.model.TableEntry
 import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -31,6 +32,7 @@ internal fun OfferEntity.toDefinition(json: Json): OfferDefinition? {
             paymentCondition = t.paymentCondition ?: return null,
             minOrderTotalFils = t.minOrderTotal,
             minItemCount = t.minItemCount,
+            maxItemCount = t.maxItemCount,
         )
         OfferType.ITEM_QTY_REWARD -> OfferTrigger.ItemSet(
             itemNumbers = t.itemNumbers ?: emptyList(),
@@ -53,6 +55,20 @@ internal fun OfferEntity.toDefinition(json: Json): OfferDefinition? {
             itemsPerStep = r.itemsPerStep,
             maxAmountFils = r.maxAmountFils,
             maxPercentOfPrice = r.maxPercentOfPrice,
+        )
+        "TABLE_AMOUNT_DISCOUNT" -> OfferReward.TableAmount(
+            entries = (r.entries ?: return null).map {
+                TableEntry(
+                    itemNumber = it.itemNumber,
+                    amountFils = it.amountFils,
+                    maxPercentOfPrice = it.maxPercentOfPrice,
+                )
+            },
+        )
+        "TABLE_PERCENT_DISCOUNT" -> OfferReward.TablePercent(
+            entries = (r.entries ?: return null).map {
+                TableEntry(itemNumber = it.itemNumber, percent = it.percent)
+            },
         )
         "GIFT" -> OfferReward.Gift(
             giftItems = r.giftItems ?: emptyList(),
@@ -118,6 +134,7 @@ private data class TriggerJson(
     val paymentCondition: String? = null,
     val minOrderTotal: Long? = null,
     val minItemCount: Int? = null,
+    val maxItemCount: Int? = null,
     val itemNumbers: List<String>? = null,
 )
 
@@ -136,6 +153,15 @@ private data class RewardJson(
     val minQty: Int? = null,
     val baseAmountFils: Double? = null,
     val maxAmountFils: Double? = null,
+    val maxPercentOfPrice: Double? = null,
+    val entries: List<TableEntryJson>? = null,
+)
+
+@Serializable
+private data class TableEntryJson(
+    val itemNumber: String,
+    val amountFils: Double? = null,
+    val percent: Double? = null,
     val maxPercentOfPrice: Double? = null,
 )
 

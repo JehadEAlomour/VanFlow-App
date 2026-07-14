@@ -118,6 +118,9 @@ private fun OfferCard(offer: OfferDefinition) {
         is OfferReward.LinePercent -> "$discountLabel ${r.basePercent.trimPercent()}%"
         is OfferReward.ItemPercent -> "$discountLabel ${r.basePercent.trimPercent()}%"
         is OfferReward.LineAmount -> "$discountLabel ${(r.baseAmountFils / 1000.0).trimAmount()}"
+        // Per-item "dynamic" tables carry per-item values, so show the generic discount label.
+        is OfferReward.TableAmount -> discountLabel
+        is OfferReward.TablePercent -> discountLabel
         is OfferReward.Gift -> giftLabel
         else -> typeLabel
     }

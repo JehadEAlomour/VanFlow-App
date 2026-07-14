@@ -195,16 +195,6 @@ data class VoucherState(
         displaySummary.totalLineDiscounts + displaySummary.invoiceDiscountAmount
     val total: Double get() = displaySummary.grandTotal
 
-    /**
-     * The cart to PERSIST + upload on SALE. When an offer evaluation is active, the offer's
-     * per-line discount is folded into each line (via [offerAdjustedCart]) so the saved
-     * voucher, the customer balance, and the printed receipt all reflect the offer discount.
-     * The backend stores exactly what it receives — it does NOT re-apply offers on ingest
-     * (`/offers/evaluate` is preview-only) — so sending the discounted cart is correct and
-     * does not double-discount. Falls back to the raw [cart] when no offer is applied.
-     */
-    val cartForSave: List<CartLine> get() = if (useServerOffers) offerAdjustedCart else cart
-
     /** Label shown next to the tax row — clarifies inclusive vs additive. */
     val taxLabelRes: StringResource get() = when (taxType) {
         LineTaxType.INCLUSIVE -> Res.string.tax_label_inclusive

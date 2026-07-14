@@ -41,8 +41,14 @@ sealed interface OfferTrigger {
         val paymentCondition: String,
         /** Minimum order subtotal in fils, or null. */
         val minOrderTotalFils: Long?,
-        /** Minimum total item count (sum of qty), or null. */
+        /** Minimum total item count (sum of qty) — band floor, or null. */
         val minItemCount: Int?,
+        /**
+         * Maximum total item count (sum of qty) — band ceiling, or null (open-ended).
+         * With [minItemCount] forms an inclusive quantity band, e.g. [1,49] then [50,99];
+         * admins create one offer per band and the order's total unit count selects it.
+         */
+        val maxItemCount: Int? = null,
     ) : OfferTrigger
 
     /** ITEM_QTY_REWARD: the offer's selected items; the trigger qty is their combined cart qty. */
@@ -78,6 +84,17 @@ sealed interface OfferReward {
         val maxPercentOfPrice: Double?,
     ) : OfferReward
 
+    /**
+     * PAYMENT_METHOD_DISCOUNT "per-item table" (the "dynamic" offer): within a quantity
+     * band, each LISTED item gets its own fixed amount (fils) off per unit; items not
+     * listed get NO discount. Per-line = amount × line qty, optionally capped by
+     * [TableEntry.maxPercentOfPrice], clamped to the line gross by the evaluator.
+     */
+    data class TableAmount(val entries: List<TableEntry>) : OfferReward
+
+    /** PAYMENT_METHOD_DISCOUNT "per-item table", percentage twin of [TableAmount]. */
+    data class TablePercent(val entries: List<TableEntry>) : OfferReward
+
     /** A gift the rep picks from [giftItems]; count derived from the trigger qty. */
     data class Gift(
         val giftItems: List<String>,
@@ -112,6 +129,21 @@ sealed interface OfferReward {
         val maxPercentOfPrice: Double?,
     ) : OfferReward
 }
+
+/**
+ * One row of a per-item discount table ([OfferReward.TableAmount] /
+ * [OfferReward.TablePercent]). Exactly one of [amountFils] / [percent] is meaningful,
+ * matching the reward kind.
+ */
+data class TableEntry(
+    val itemNumber: String,
+    /** TableAmount: fils off each unit of this item. */
+    val amountFils: Double? = null,
+    /** TablePercent: % off this item's line, 0–100. */
+    val percent: Double? = null,
+    /** TableAmount only: cap the per-unit amount to this % of the unit price (0–100). */
+    val maxPercentOfPrice: Double? = null,
+)
 
 data class OfferEligibilityRule(
     /** ALL | SEGMENT | SPECIFIC | NEW_ONLY. */

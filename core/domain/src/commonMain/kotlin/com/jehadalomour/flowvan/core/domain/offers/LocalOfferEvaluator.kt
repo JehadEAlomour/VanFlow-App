@@ -71,6 +71,17 @@ object LocalOfferEvaluator {
         val items: Set<String>?,
         val amountPerUnitFils: Double? = null,
         val maxPercentOfPrice: Double? = null,
+        /**
+         * Per-item discount table (TABLE_*_DISCOUNT, the "dynamic" payment-method offer).
+         * When set, the discount is looked up PER LINE from the item's cell; a line whose
+         * itemNumber is absent contributes nothing. Overrides [pct]/[amountPerUnitFils].
+         */
+        val table: Map<String, TableCell>? = null,
+    )
+    private class TableCell(
+        val pct: Double = 0.0,
+        val amountPerUnitFils: Double? = null,
+        val maxPercentOfPrice: Double? = null,
     )
     private class GiftEntry(val offer: OfferDefinition, val reward: OfferReward.Gift, val freeQty: Int)
 
@@ -122,10 +133,14 @@ object LocalOfferEvaluator {
                     val t = offer.trigger as? OfferTrigger.PaymentMethod ?: continue
                     val minTotal = t.minOrderTotalFils
                     val minCount = t.minItemCount
+                    val maxCount = t.maxItemCount
                     val payOk = if (t.paymentCondition == "CREDIT") isCredit else !isCredit
                     val totalOk = minTotal == null || subtotalFils >= minTotal
                     val countOk = minCount == null || itemCount >= minCount
-                    if (payOk && totalOk && countOk) {
+                    // Quantity band ceiling: the order's total unit count must be within
+                    // [minItemCount, maxItemCount]. Null max = open-ended (legacy).
+                    val maxOk = maxCount == null || itemCount <= maxCount
+                    if (payOk && totalOk && countOk && maxOk) {
                         val anchor = (minCount ?: 0).toDouble()
                         when (val reward = offer.reward) {
                             is OfferReward.LinePercent -> {
@@ -138,6 +153,28 @@ object LocalOfferEvaluator {
                                 if (amt > 0) payOffers.add(
                                     Disc(offer, 0.0, null, amountPerUnitFils = amt, maxPercentOfPrice = reward.maxPercentOfPrice),
                                 )
+                            }
+                            is OfferReward.TableAmount -> {
+                                // Per-item table ("dynamic"): each listed item its own per-unit
+                                // amount off; unlisted items absent from the map → no discount.
+                                val table = LinkedHashMap<String, TableCell>()
+                                for (e in reward.entries) {
+                                    val amt = e.amountFils
+                                    if (amt != null && amt > 0) {
+                                        table[e.itemNumber] = TableCell(amountPerUnitFils = amt, maxPercentOfPrice = e.maxPercentOfPrice)
+                                    }
+                                }
+                                if (table.isNotEmpty()) payOffers.add(Disc(offer, 0.0, null, table = table))
+                            }
+                            is OfferReward.TablePercent -> {
+                                val table = LinkedHashMap<String, TableCell>()
+                                for (e in reward.entries) {
+                                    val pct = e.percent
+                                    if (pct != null && pct > 0) {
+                                        table[e.itemNumber] = TableCell(pct = min(pct, 100.0))
+                                    }
+                                }
+                                if (table.isNotEmpty()) payOffers.add(Disc(offer, 0.0, null, table = table))
                             }
                             else -> {}
                         }
@@ -183,17 +220,27 @@ object LocalOfferEvaluator {
             // when set); percent → % of gross. Highest fils wins per line, so a percent and an
             // amount offer compare correctly.
             fun discFor(c: Disc): Long {
-                val perUnitAmt = c.amountPerUnitFils
+                // Per-item table candidates resolve their value from THIS line's cell; a line
+                // not listed in the table contributes nothing from this offer.
+                var pct = c.pct
+                var perUnitAmt = c.amountPerUnitFils
+                var capPct = c.maxPercentOfPrice
+                val table = c.table
+                if (table != null) {
+                    val cell = table[itemNumber] ?: return 0L
+                    pct = cell.pct
+                    perUnitAmt = cell.amountPerUnitFils
+                    capPct = cell.maxPercentOfPrice
+                }
                 if (perUnitAmt != null) {
                     var perUnit = perUnitAmt
-                    val capPct = c.maxPercentOfPrice
                     if (capPct != null) {
                         val cap = roundFils(l.unitPriceFils * capPct / 100.0).toDouble()
                         if (cap < perUnit) perUnit = cap
                     }
                     return roundFils(l.qty * perUnit)
                 }
-                return roundFils(gross * c.pct / 100.0)
+                return roundFils(gross * pct / 100.0)
             }
             var bestPay: Disc? = null
             var bestPayFils = 0L
@@ -450,8 +497,23 @@ object LocalOfferEvaluator {
         val cond = if (t?.paymentCondition == "CREDIT") "Credit" else "Cash"
         val mins = mutableListOf<String>()
         t?.minOrderTotalFils?.takeIf { it != 0L }?.let { mins.add("≥ ${jodString(it)} JOD") }
-        t?.minItemCount?.takeIf { it != 0 }?.let { mins.add("≥ $it items") }
+        // Quantity band: show the interval when a ceiling is set, else the floor only.
+        val minC = t?.minItemCount
+        val maxC = t?.maxItemCount
+        when {
+            minC != null && maxC != null -> mins.add("$minC–$maxC items")
+            maxC != null -> mins.add("≤ $maxC items")
+            minC != null && minC != 0 -> mins.add("≥ $minC items")
+        }
         val suffix = if (mins.isNotEmpty()) " (${mins.joinToString(", ")})" else ""
+        (offer.reward as? OfferReward.TableAmount)?.let {
+            val n = it.entries.size
+            return "$cond · per-item amount off ($n item${if (n == 1) "" else "s"})$suffix"
+        }
+        (offer.reward as? OfferReward.TablePercent)?.let {
+            val n = it.entries.size
+            return "$cond · per-item % off ($n item${if (n == 1) "" else "s"})$suffix"
+        }
         val amount = offer.reward as? OfferReward.LineAmount
         if (amount != null) {
             if (amount.dynamic) {
