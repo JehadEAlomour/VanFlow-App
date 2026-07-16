@@ -1,5 +1,7 @@
 package com.jehadalomour.flowvan.core.model
 
+ import kotlin.math.roundToLong
+
 /** Per-line (per-product) tax treatment — distinct from the global AppSettings.TaxType. */
 enum class LineTaxType {
     /** Tax is added on top of the net price (prices exclude tax). */
@@ -95,12 +97,15 @@ object InvoiceTaxCalculator {
                 headerDiscountPct = headerPct,
                 headerDiscountFils = headerFils,
                 lines = cart.map { line ->
+                    // Tobacco lines don't get normal GST here — their tax is computed by
+                    // the tobacco engine below and added on top, so zero-rate them.
+                    val isTobaccoLine = line.isTobacco && line.tobaccoProfile != null
                     CalcLineInput(
                         unitPriceFils = line.unitPrice.toFils(),
                         qty = line.qty,
                         lineDiscountPct = line.discountPct.coerceIn(0.0, 1.0) * 100.0,
                         lineDiscountFils = 0L,
-                        taxRatePct = if (line.lineTaxType == LineTaxType.EXEMPT) 0.0
+                        taxRatePct = if (isTobaccoLine || line.lineTaxType == LineTaxType.EXEMPT) 0.0
                         else line.taxRate * 100.0,
                     )
                 },
@@ -113,9 +118,27 @@ object InvoiceTaxCalculator {
         var netExempt = 0L
         var taxOnTaxable = 0L
         var taxInInclusive = 0L
+        var tobaccoTaxFils = 0L
         cart.forEachIndexed { i, line ->
             val r = result.lines[i]
+            val profile = line.tobaccoProfile
             when {
+                line.isTobacco && profile != null -> {
+                    // Tobacco tax on BASE pieces: per-unit excise/withheld scale with the
+                    // base quantity; the SALE_PRICE base uses the line's discounted net
+                    // (offers reduce it), while CONSUMER_PRICE uses the fixed MSRP.
+                    val qtyBase = line.qty * line.unitConversionQty
+                    val unitBaseFils = if (qtyBase > 0.0) (r.netFils.toDouble() / qtyBase).roundToLong() else 0L
+                    val t = TobaccoTaxCalc.calc(
+                        quantity = qtyBase,
+                        unitPriceFils = unitBaseFils,
+                        consumerPriceFils = line.consumerPriceFils,
+                        profile = profile,
+                    )
+                    netTaxable += r.netFils
+                    taxOnTaxable += t.netTaxFils
+                    tobaccoTaxFils += t.netTaxFils
+                }
                 line.lineTaxType == LineTaxType.INCLUSIVE -> {
                     netInclusive += r.netFils; taxInInclusive += r.taxFils
                 }
@@ -138,8 +161,9 @@ object InvoiceTaxCalculator {
             netExempt               = netExempt.filsToJod(),
             taxOnTaxable            = taxOnTaxable.filsToJod(),
             taxInInclusive          = taxInInclusive.filsToJod(),
-            totalTax                = result.totalTaxFils.filsToJod(),
-            grandTotal              = result.grandTotalFils.filsToJod(),
+            // Tobacco tax is added on top of the (zero-rated-here) tobacco lines.
+            totalTax                = (result.totalTaxFils + tobaccoTaxFils).filsToJod(),
+            grandTotal              = (result.grandTotalFils + tobaccoTaxFils).filsToJod(),
         )
     }
 }

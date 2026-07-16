@@ -15,4 +15,11 @@ data class Product(
     val brand: String?,
     val taxRate: Double = 0.16,
     val imageUrl: String? = null,
+    // ── Tobacco tax (mirrors the ERP/cash-van item tobacco fields) ──────────────
+    /** When true this item is taxed via a tobacco profile, not normal GST. */
+    val isTobacco: Boolean = false,
+    /** The tobacco tax profile id to apply (resolve against the synced profiles). */
+    val tobaccoProfileId: String? = null,
+    /** MSRP / consumer price used as a tobacco tax base, in integer fils per base piece. */
+    val consumerPriceFils: Long = 0L,
 )

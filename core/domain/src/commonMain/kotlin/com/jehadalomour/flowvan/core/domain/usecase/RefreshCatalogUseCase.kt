@@ -60,7 +60,9 @@ class RefreshCatalogUseCase(
                 val customersJob = async {
                     // Page through ALL customers (server caps each page at 200).
                     val all = fetchAllPages { limit, offset -> customerApi.list(limit = limit, offset = offset) }
-                    customers.cacheAll(all.map { it.toEntity() })
+                    // Full replace (not upsert): the server list is scoped to this
+                    // salesman, so customers no longer assigned to them are removed.
+                    customers.replaceAll(all.map { it.toEntity() })
                     all.size
                 }
                 // Products first (upsert replaces the row, zeroing stock)…

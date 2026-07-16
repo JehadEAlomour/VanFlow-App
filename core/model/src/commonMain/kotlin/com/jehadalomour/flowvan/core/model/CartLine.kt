@@ -13,6 +13,13 @@ data class CartLine(
     val lineTaxType: LineTaxType = LineTaxType.TAXABLE,
     /** Product image (carried from the product) so cart rows show the image too. */
     val imageUrl: String? = null,
+    // ── Tobacco tax — set only when the feature flag is ON and the item is tobacco.
+    /** When true this line is taxed by [tobaccoProfile] instead of normal GST. */
+    val isTobacco: Boolean = false,
+    /** The tobacco profile applied to this line (null → normal GST). */
+    val tobaccoProfile: TobaccoTaxProfile? = null,
+    /** MSRP / consumer price for the tobacco base, integer fils per base piece. */
+    val consumerPriceFils: Long = 0L,
 ) {
     /** qty × unitPrice — gross before any discount. */
     val grossLineTotal: Double get() = unitPrice * qty

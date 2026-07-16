@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.jehadalomour.flowvan.core.database.entity.CustomerEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -35,4 +36,15 @@ interface CustomerDao {
 
     @Query("DELETE FROM customers")
     suspend fun deleteAll()
+
+    /**
+     * Replace the whole cache so customers no longer returned by the server
+     * (e.g. reassigned to another salesman) disappear locally instead of
+     * lingering. The list is already scoped to the logged-in rep server-side.
+     */
+    @Transaction
+    suspend fun replaceAll(customers: List<CustomerEntity>) {
+        deleteAll()
+        upsertAll(customers)
+    }
 }
