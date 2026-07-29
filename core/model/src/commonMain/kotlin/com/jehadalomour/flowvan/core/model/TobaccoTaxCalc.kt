@@ -33,11 +33,13 @@ object TobaccoTaxCalc {
         val saleBase = (unitPriceFils.toDouble() * quantity).roundToLong()
         val consumerBase = (consumerPriceFils.toDouble() * quantity).roundToLong()
 
-        // 1. Sales tax
+        // 1. Sales tax — if the consumer price is tax-inclusive, extract the tax
+        // from within it (÷(100+rate)); otherwise add it on top (÷100). Mirrors ERP.
         val salesTaxBase = if (profile.taxBase == TobaccoTaxBase.CONSUMER_PRICE) consumerBase else saleBase
+        val salesTaxDivisor = if (profile.taxIncludedInConsumerPrice) 100.0 + profile.salesTaxRate else 100.0
         val salesTax =
             if (profile.salesTaxEnabled && profile.salesTaxRate > 0)
-                (salesTaxBase.toDouble() * profile.salesTaxRate / 100.0).roundToLong()
+                (salesTaxBase.toDouble() * profile.salesTaxRate / salesTaxDivisor).roundToLong()
             else 0L
 
         // 2. Special (excise) tax

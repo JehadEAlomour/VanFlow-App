@@ -161,9 +161,16 @@ object InvoiceTaxCalculator {
             netExempt               = netExempt.filsToJod(),
             taxOnTaxable            = taxOnTaxable.filsToJod(),
             taxInInclusive          = taxInInclusive.filsToJod(),
-            // Tobacco tax is added on top of the (zero-rated-here) tobacco lines.
+            // totalTax always reports the full tobacco tax content, informationally,
+            // regardless of tax mode.
             totalTax                = (result.totalTaxFils + tobaccoTaxFils).filsToJod(),
-            grandTotal              = (result.grandTotalFils + tobaccoTaxFils).filsToJod(),
+            // grandTotal only adds tobacco tax on top under EXCLUSIVE mode. Under
+            // INCLUSIVE mode the entered price already contains it (r.netFils/
+            // result.grandTotalFils for a zero-rated tobacco line IS the tax-inclusive
+            // entered price) — adding tobaccoTaxFils again would double-count it. This
+            // mirrors the ERP backend's DirectInvoiceClient.tsx/SalesOrderBuilderClient.tsx,
+            // which gate the same way on the document tax mode.
+            grandTotal              = (result.grandTotalFils + if (mode == TaxMode.INCLUSIVE) 0L else tobaccoTaxFils).filsToJod(),
         )
     }
 }

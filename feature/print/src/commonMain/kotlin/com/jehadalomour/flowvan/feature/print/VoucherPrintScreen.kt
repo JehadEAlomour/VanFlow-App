@@ -361,11 +361,9 @@ private fun ReceiptBody(state: VoucherPrintState) {
         val paymentType = PaymentType.fromPaymentMethod(state.paymentMethod)
         val paymentValue = if (isArabic) paymentType.labelAr else paymentType.labelEn
 
-        // Company header (server-first, else DB cache). Fall back across locales so the name
-        // still shows if only one language was provided.
-        val companyName = (if (isArabic) state.companyNameAr else state.companyNameEn)
-            .ifBlank { state.companyNameAr }
-            .ifBlank { state.companyNameEn }
+        // Company header — always the Arabic company name (fall back to the English one only
+        // if no Arabic name was provided). The printed voucher never shows the English name.
+        val companyName = state.companyNameAr.ifBlank { state.companyNameEn }
         val taxLabel = if (isArabic) "الرقم الضريبي" else "Tax No."
 
         Column(modifier = Modifier.background(RcBg).padding(14.dp)) {
@@ -382,21 +380,21 @@ private fun ReceiptBody(state: VoucherPrintState) {
                     Image(
                         bitmap = logoBitmap,
                         contentDescription = null,
-                        modifier = Modifier.size(54.dp).padding(bottom = 4.dp),
+                        modifier = Modifier.size(250.dp).padding(bottom = 8.dp),
                     )
                 } else {
                     Image(
                         painter = painterResource(Res.drawable.voucher_logo),
                         contentDescription = null,
                         colorFilter = ColorFilter.tint(c.ink),
-                        modifier = Modifier.size(54.dp).padding(bottom = 4.dp),
+                        modifier = Modifier.size(250.dp).padding(bottom = 8.dp),
                     )
                 }
                 if (companyName.isNotBlank()) {
                     Text(
                         text = companyName,
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 21.sp,
+                        fontSize = 26.sp,
                         color = c.ink,
                         textAlign = TextAlign.Center,
                         letterSpacing = 0.5.sp,
@@ -412,7 +410,7 @@ private fun ReceiptBody(state: VoucherPrintState) {
                 if (subLine.isNotBlank()) {
                     Text(
                         text = subLine,
-                        fontSize = 12.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = c.muted,
                         textAlign = TextAlign.Center,
@@ -475,18 +473,34 @@ private fun ReceiptBody(state: VoucherPrintState) {
             // both the subtotal and the line discount — the columns foot and the net is 0.
             val freeGross = state.freeLines.sumOf { it.qty * it.unitPrice }
             TotRow(stringResource(Res.string.voucher_detail_subtotal), money(state.subtotal + freeGross, t))
-            // Discount breakdown: line-level discounts, then the overall total discount.
-            val lineDiscount = state.lines.sumOf { it.qty * it.unitPrice * it.discountPct } + freeGross
-            if (lineDiscount > 0.0005) {
-                TotRow(stringResource(Res.string.print_line_discount), "- ${money(lineDiscount, t)}", valueColor = c.negative)
-            }
-            if (state.discountAmount > 0.0005) {
-                TotRow(stringResource(Res.string.print_total_discount), "- ${money(state.discountAmount, t)}", valueColor = c.negative)
+            // Discount breakdown. When offers were applied we ITEMIZE each offer (name + value)
+            // then a total-offer-discount row, and drop the generic aggregate rows — for a SALE
+            // the offers ARE the discount, so the generic rows would just duplicate the total.
+            // No offers (or a RETURN/ORDER) → fall back to the generic line/total discount rows.
+            if (state.appliedOffers.isNotEmpty()) {
+                state.appliedOffers.forEach { offer ->
+                    TotRow(offer.name, "- ${money(offer.discountAmount, t)}", valueColor = c.negative)
+                }
+                val offersTotal = state.appliedOffers.sumOf { it.discountAmount }
+                TotRow(stringResource(Res.string.print_offers_total), "- ${money(offersTotal, t)}", valueColor = c.negative)
+            } else {
+                val lineDiscount = state.lines.sumOf { it.qty * it.unitPrice * it.discountPct } + freeGross
+                if (lineDiscount > 0.0005) {
+                    TotRow(stringResource(Res.string.print_line_discount), "- ${money(lineDiscount, t)}", valueColor = c.negative)
+                }
+                if (state.discountAmount > 0.0005) {
+                    TotRow(stringResource(Res.string.print_total_discount), "- ${money(state.discountAmount, t)}", valueColor = c.negative)
+                }
             }
             if (state.taxAmount > 0.0) {
                 TotRow(taxTotalLabel(state.lines), "+ ${money(state.taxAmount, t)}", valueColor = c.warn)
             }
-            TotRow(stringResource(Res.string.print_item_count), (state.lines.size + state.freeLines.size).toString())
+            TotRow(
+                stringResource(Res.string.print_item_count),
+                (state.lines.sumOf { it.qty } + state.freeLines.sumOf { it.qty }).let {
+                    if (it == it.toLong().toDouble()) it.toLong().toString() else it.toString()
+                }
+            )
             if (t.showPaymentType && t.paymentTypeInFooter) {
                 PaymentTypeFooterRow(
                     label = stringResource(Res.string.print_payment_method_label),
@@ -508,14 +522,14 @@ private fun ReceiptBody(state: VoucherPrintState) {
                     text = stringResource(Res.string.voucher_detail_total),
                     modifier = Modifier.padding(horizontal = 10.dp),
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 18.sp,
+                    fontSize = 22.sp,
                     color = c.ink,
                 )
                 Text(
                     text = money(state.total, t),
                     modifier = Modifier.padding(horizontal = 10.dp),
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 20.sp,
+                    fontSize = 24.sp,
                     color = c.accent,
                     style = LtrNum,
                 )
@@ -526,7 +540,7 @@ private fun ReceiptBody(state: VoucherPrintState) {
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = stringResource(Res.string.print_notes_prefix, notes),
-                    fontSize = 10.5.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = c.muted,
                     modifier = Modifier.fillMaxWidth(),
@@ -562,7 +576,7 @@ private fun ReceiptBody(state: VoucherPrintState) {
                     text = t.qrCaption,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
-                    fontSize = 10.5.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = c.muted,
                     lineHeight = 14.sp,
@@ -587,9 +601,9 @@ private fun ReceiptBody(state: VoucherPrintState) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(stringResource(Res.string.print_footer_thanks), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = c.muted)
+                Text(stringResource(Res.string.print_footer_thanks), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = c.muted)
                 Spacer(Modifier.height(2.dp))
-                Text("Powered by 7Software", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = c.muted, lineHeight = 14.sp)
+                Text("Powered by 7Software", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = c.muted, lineHeight = 14.sp)
             }
             Spacer(Modifier.height(4.dp))
         }
@@ -618,7 +632,7 @@ private fun ItemColHeader() {
                 text = label,
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = c.muted,
                 maxLines = 1,
@@ -644,7 +658,7 @@ private fun ReceiptItemRow(line: InvoiceLine, amountDecimals: Int) {
         Text(
             text = line.nameAr,
             fontWeight = FontWeight.ExtraBold,
-            fontSize = 13.sp,
+            fontSize = 15.sp,
             color = c.ink,
             textAlign = TextAlign.Right,
             style = TextStyle(textDirection = TextDirection.Rtl),
@@ -656,7 +670,9 @@ private fun ReceiptItemRow(line: InvoiceLine, amountDecimals: Int) {
             val unit = line.unit.ifBlank { "—" }
             val taxPct = line.taxPctLabel()
             val price = formatAmount(line.unitPrice, amountDecimals)
-            val disc = if (line.discountPct > 0.0) "${(line.discountPct * 100).toInt()}%" else "—"
+            // Discount shown as a VALUE (the amount taken off this line, incl. offers), not a %.
+            val discAmt = line.qty * line.unitPrice * line.discountPct
+            val disc = if (discAmt > 0.0005) formatAmount(discAmt, amountDecimals) else "—"
             val total = formatAmount(line.lineTotal, amountDecimals)
 
             listOf(qty, unit, taxPct, price, disc, total).forEachIndexed { idx, cell ->
@@ -664,7 +680,7 @@ private fun ReceiptItemRow(line: InvoiceLine, amountDecimals: Int) {
                     text = cell,
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = if (idx == 5) FontWeight.ExtraBold else FontWeight.SemiBold,
                     color = when (idx) {
                         4 -> if (line.discountPct > 0.0) c.negative else c.ink
@@ -679,7 +695,7 @@ private fun ReceiptItemRow(line: InvoiceLine, amountDecimals: Int) {
         // SKU
         Text(
             text = line.sku,
-            fontSize = 9.5.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             color = c.faint,
         )
@@ -729,10 +745,10 @@ private fun KvRow(key: String, value: String, valueColor: Color? = null) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = key, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = c.muted)
+        Text(text = key, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = c.muted)
         Text(
             text = value,
-            fontSize = 13.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
             color = valueColor ?: c.ink,
             style = LtrNum,
@@ -747,10 +763,10 @@ private fun TotRow(label: String, value: String, valueColor: Color? = null) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = c.muted)
+        Text(text = label, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = c.muted)
         Text(
             text = value,
-            fontSize = 13.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
             color = valueColor ?: c.ink,
             style = LtrNum,
@@ -765,7 +781,7 @@ private fun TypeTag(label: String, color: Color) {
             .border(2.dp, color, RoundedCornerShape(4.dp))
             .padding(horizontal = 14.dp, vertical = 4.dp),
     ) {
-        Text(label, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = color)
+        Text(label, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = color)
     }
 }
 
@@ -784,7 +800,7 @@ private fun PaymentTypeHeaderRow(label: String, value: String) {
                 .border(2.dp, c.ink, RoundedCornerShape(4.dp))
                 .padding(horizontal = 12.dp, vertical = 3.dp),
         ) {
-            Text(value, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = c.ink)
+            Text(value, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = c.ink)
         }
     }
 }
@@ -797,8 +813,8 @@ private fun PaymentTypeFooterRow(label: String, value: String) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = c.muted)
-        Text(value, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = c.ink)
+        Text(text = label, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = c.muted)
+        Text(value, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = c.ink)
     }
 }
 
@@ -809,7 +825,7 @@ private fun SignatureBox(label: String) {
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(label, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = c.muted)
+        Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.muted)
         Spacer(Modifier.height(16.dp))
         Canvas(Modifier.fillMaxWidth().height(1.5.dp)) {
             drawLine(c.faint, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1.5.dp.toPx())

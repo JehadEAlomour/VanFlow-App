@@ -13,6 +13,7 @@ import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.OfferRepository
 import com.jehadalomour.flowvan.core.data.repository.PriceListRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
+import com.jehadalomour.flowvan.core.data.repository.TobaccoTaxProfileRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
 import com.jehadalomour.flowvan.core.model.ProductUnit
@@ -38,6 +39,7 @@ class RefreshCatalogUseCase(
     private val appSettings: AppSettingsRepository,
     private val offers: OfferRepository,
     private val priceLists: PriceListRepository,
+    private val tobaccoProfiles: TobaccoTaxProfileRepository,
 ) {
     private val log = Logger.withTag("RefreshCatalog")
 
@@ -55,6 +57,8 @@ class RefreshCatalogUseCase(
         offers.refresh().onFailure { log.w("offers refresh failed: ${it.message}") }
         // Cache each price list's item prices for offline per-customer pricing.
         priceLists.refresh().onFailure { log.w("price-lists refresh failed: ${it.message}") }
+        // Cache tobacco tax profiles so tobacco items apply their excise/special tax at sale.
+        tobaccoProfiles.refresh().onFailure { log.w("tobacco profiles refresh failed: ${it.message}") }
         return try {
             coroutineScope {
                 val customersJob = async {

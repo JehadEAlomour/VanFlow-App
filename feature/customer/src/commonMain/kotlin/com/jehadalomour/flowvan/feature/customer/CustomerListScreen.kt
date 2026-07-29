@@ -163,69 +163,7 @@ fun CustomerListScreen(
                 )
             }
 
-            // Tier filter pills
-            item {
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TierPill(stringResource(Res.string.chip_all), state.tierFilter == null) {
-                        viewModel.onEvent(CustomerListEvent.TierFilter(null))
-                    }
-                    CustomerTier.entries.forEach { tier ->
-                        TierPill(stringResource(Res.string.customers_tier_prefix, tier.name), state.tierFilter == tier) {
-                            viewModel.onEvent(CustomerListEvent.TierFilter(if (state.tierFilter == tier) null else tier))
-                        }
-                    }
-                }
-            }
-
-            // Segment filter chips
-            item {
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    SegmentPill(
-                        label = stringResource(Res.string.chip_all),
-                        active = state.segmentFilter == null,
-                        activeBg = Fv.SurfaceTop,
-                        activeFg = Fv.TextHigh,
-                    ) {
-                        viewModel.onEvent(CustomerListEvent.SegmentFilter(null))
-                    }
-                    CustomerSegment.entries.forEach { seg ->
-                        val (activeBg, activeFg) = when (seg) {
-                            CustomerSegment.CHAMPIONS -> Fv.Purple.copy(alpha = 0.13f) to Fv.Purple
-                            CustomerSegment.LOYAL     -> Fv.Blue.copy(alpha = 0.13f)   to Fv.Blue
-                            CustomerSegment.AT_RISK   -> Fv.Red.copy(alpha = 0.13f)    to Fv.Red
-                            CustomerSegment.PROMISING -> Fv.Amber.copy(alpha = 0.13f)  to Fv.Amber
-                            CustomerSegment.DORMANT   -> Fv.SurfaceTop                 to Fv.TextMid
-                            CustomerSegment.REGULAR   -> Fv.SurfaceTop                 to Fv.TextMid
-                        }
-                        val label = when (seg) {
-                            CustomerSegment.CHAMPIONS -> stringResource(Res.string.customers_segment_champions)
-                            CustomerSegment.LOYAL     -> stringResource(Res.string.customers_segment_loyal)
-                            CustomerSegment.AT_RISK   -> stringResource(Res.string.customers_segment_at_risk)
-                            CustomerSegment.PROMISING -> stringResource(Res.string.customers_segment_promising)
-                            CustomerSegment.DORMANT   -> stringResource(Res.string.customers_segment_dormant)
-                            CustomerSegment.REGULAR   -> stringResource(Res.string.customers_segment_regular)
-                        }
-                        SegmentPill(
-                            label = label,
-                            active = state.segmentFilter == seg,
-                            activeBg = activeBg,
-                            activeFg = activeFg,
-                        ) {
-                            viewModel.onEvent(
-                                CustomerListEvent.SegmentFilter(
-                                    if (state.segmentFilter == seg) null else seg
-                                )
-                            )
-                        }
-                    }
-                }
-            }
+            // Tier/segment filters removed — the list shows all customers (search only).
 
             // Customer cards
             items(state.visible, key = { it.id }) { customer ->

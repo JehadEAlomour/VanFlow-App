@@ -111,6 +111,9 @@ private val saleSaveGradient    = listOf(Color(0xFF1D9E75), Color(0xFF0F6E56))
 private val returnSaveGradient  = listOf(Color(0xFFD63B3B), Color(0xFF992828))
 private val orderSaveGradient   = listOf(Color(0xFF0E9E91), Color(0xFF0A6E66))
 
+/** Picker stock scope: only in-stock (qty > 0) items, or the whole catalog. */
+private enum class StockFilter { IN_STOCK, ALL }
+
 @Composable
 fun VoucherScreen(
     customerId: String,
@@ -123,10 +126,18 @@ fun VoucherScreen(
     var dialogProduct by remember { mutableStateOf<Product?>(null) }
     var expandedImage by remember { mutableStateOf<String?>(null) }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
+    var stockFilter by remember { mutableStateOf(StockFilter.IN_STOCK) }
 
-    val displayProducts = remember(state.visibleProducts, selectedCategory) {
+    // Picker browsing scope: the stock dropdown chooses in-stock-only (qty > 0) vs the whole
+    // catalog, then the category dropdown narrows further. Applies to every voucher type.
+    val displayProducts = remember(state.visibleProducts, selectedCategory, stockFilter) {
+        val base = if (stockFilter == StockFilter.IN_STOCK) {
+            state.visibleProducts.filter { it.vanStock > 0 }
+        } else {
+            state.visibleProducts
+        }
         val cat = selectedCategory
-        if (cat == null) state.visibleProducts else state.visibleProducts.filter { it.category == cat }
+        if (cat == null) base else base.filter { it.category == cat }
     }
 
     val saveGradient = when (state.type) {
@@ -194,9 +205,11 @@ fun VoucherScreen(
                         customerPrices = state.customerPrices,
                         searchQuery = state.searchQuery,
                         selectedCategory = selectedCategory,
+                        stockFilter = stockFilter,
                         showStockBadge = state.showStockBadge,
                         onSearch = { viewModel.onEvent(VoucherEvent.SearchChanged(it)) },
                         onSelectCategory = { selectedCategory = it },
+                        onSelectStockFilter = { stockFilter = it },
                         onTapProduct = { dialogProduct = it },
                         onExpandImage = { expandedImage = it },
                         modifier = Modifier.weight(1f),
@@ -466,15 +479,21 @@ private fun ProductListPicker(
     customerPrices: Map<String, Double>,
     searchQuery: String,
     selectedCategory: String?,
+    stockFilter: StockFilter,
     showStockBadge: Boolean,
     onSearch: (String) -> Unit,
     onSelectCategory: (String?) -> Unit,
+    onSelectStockFilter: (StockFilter) -> Unit,
     onTapProduct: (Product) -> Unit,
     onExpandImage: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val categories = remember(allProducts) {
-        allProducts.map { it.category }.distinct().filter { it.isNotBlank() }
+    // Category options follow the stock scope: in-stock-only mode lists just the categories
+    // that still have qty > 0 items (so no option leads to an empty list), while the "all
+    // items" scope lists every category in the catalog.
+    val categories = remember(allProducts, stockFilter) {
+        val base = if (stockFilter == StockFilter.IN_STOCK) allProducts.filter { it.vanStock > 0 } else allProducts
+        base.map { it.category }.distinct().filter { it.isNotBlank() }.sorted()
     }
 
     Column(modifier = modifier) {
@@ -491,18 +510,24 @@ private fun ProductListPicker(
             colors = fvFieldColors(),
         )
 
-        if (categories.isNotEmpty()) {
-            Row(
-                modifier = Modifier
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                CategoryPill(stringResource(Res.string.all), selectedCategory == null) { onSelectCategory(null) }
-                categories.forEach { cat ->
-                    CategoryPill(cat, selectedCategory == cat) { onSelectCategory(cat) }
-                }
-            }
+        // ── Filters under the search bar: category (searchable) + stock scope ──
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            CategoryFilterDropdown(
+                categories = categories,
+                selected = selectedCategory,
+                onSelect = onSelectCategory,
+                modifier = Modifier.weight(1f),
+            )
+            StockFilterDropdown(
+                selected = stockFilter,
+                onSelect = onSelectStockFilter,
+                modifier = Modifier.weight(1f),
+            )
         }
 
         LazyColumn(
@@ -624,16 +649,119 @@ private fun StockBadge(product: Product) {
     }
 }
 
+// ── Filter dropdowns (category + stock scope) ─────────────────────────────────
+
+/** A boxed, pill-shaped anchor that opens a dropdown; used by both picker filters. */
 @Composable
-private fun CategoryPill(label: String, active: Boolean, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(if (active) Fv.Blue else Fv.SurfaceTop)
+private fun FilterAnchor(label: String, active: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (active) Fv.Blue.copy(alpha = 0.16f) else Fv.SurfaceTop)
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, color = if (active) Color.White else Fv.TextMid, fontSize = 12.sp, fontWeight = if (active) FontWeight.SemiBold else FontWeight.Medium)
+        Text(
+            label,
+            color = if (active) Fv.Blue else Fv.TextHigh,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Text("▾", color = if (active) Fv.Blue else Fv.TextMid, fontSize = 14.sp)
+    }
+}
+
+/** Searchable category picker: type in the in-menu field to narrow the category list. */
+@Composable
+private fun CategoryFilterDropdown(
+    categories: List<String>,
+    selected: String?,
+    onSelect: (String?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    val filtered = remember(categories, query) {
+        if (query.isBlank()) categories else categories.filter { it.contains(query.trim(), ignoreCase = true) }
+    }
+    Box(modifier = modifier) {
+        FilterAnchor(
+            label = selected ?: stringResource(Res.string.voucher_filter_all_categories),
+            active = selected != null,
+            onClick = { query = ""; expanded = true },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(Fv.Surface),
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = { Text(stringResource(Res.string.voucher_filter_category), color = Fv.TextMid) },
+                singleLine = true,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).width(200.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = fvFieldColors(),
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(Res.string.voucher_filter_all_categories), fontWeight = FontWeight.SemiBold, color = Fv.TextHigh) },
+                onClick = { onSelect(null); expanded = false },
+            )
+            filtered.forEach { cat ->
+                DropdownMenuItem(
+                    text = { Text(cat, color = Fv.TextHigh, fontWeight = if (cat == selected) FontWeight.SemiBold else FontWeight.Normal) },
+                    onClick = { onSelect(cat); expanded = false },
+                )
+            }
+            if (filtered.isEmpty()) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(Res.string.voucher_no_products), color = Fv.TextMid, fontSize = 12.sp) },
+                    onClick = {},
+                    enabled = false,
+                )
+            }
+        }
+    }
+}
+
+/** Stock-scope picker: in-stock-only (qty > 0) vs the whole catalog. */
+@Composable
+private fun StockFilterDropdown(
+    selected: StockFilter,
+    onSelect: (StockFilter) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val options = listOf(
+        StockFilter.IN_STOCK to stringResource(Res.string.voucher_filter_stock_available),
+        StockFilter.ALL to stringResource(Res.string.voucher_filter_stock_all),
+    )
+    Box(modifier = modifier) {
+        FilterAnchor(
+            label = options.first { it.first == selected }.second,
+            active = selected != StockFilter.IN_STOCK,
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(Fv.Surface),
+        ) {
+            options.forEach { (option, label) ->
+                DropdownMenuItem(
+                    text = { Text(label, color = Fv.TextHigh, fontWeight = if (option == selected) FontWeight.SemiBold else FontWeight.Normal) },
+                    onClick = { onSelect(option); expanded = false },
+                )
+            }
+        }
     }
 }
 

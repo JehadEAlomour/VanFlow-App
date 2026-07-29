@@ -1,6 +1,6 @@
 # Voucher Template — Backend (NestJS) Implementation Guide
 
-Implements the per-tenant store + API for the [`VoucherTemplate` contract](./voucher-template.contract.md). The mobile app fetches this once per session and renders the receipt from it; if the request fails, the app keeps its built-in Jordan defaults.
+Implements the per-tenant store + API for the [`VoucherTemplate` contract](voucher-template.contract.md). The mobile app fetches this once per session and renders the receipt from it; if the request fails, the app keeps its built-in Jordan defaults.
 
 ---
 

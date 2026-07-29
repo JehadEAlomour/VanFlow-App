@@ -504,6 +504,7 @@
     <string name="print_item_count">عدد الأصناف</string>
     <string name="print_line_discount">خصم الأصناف</string>
     <string name="print_notes_prefix">ملاحظات: %1$s</string>
+    <string name="print_offers_total">إجمالي خصم العروض</string>
     <string name="print_payment_cash">نقد</string>
     <string name="print_payment_method_label">طريقة الدفع</string>
     <string name="print_payment_credit">ذمم</string>
@@ -630,6 +631,10 @@
     <string name="voucher_line_discount_total">إجمالي خصم الأسطر</string>
     <string name="voucher_line_total">إجمالي السطر</string>
     <string name="voucher_no_products">لا توجد منتجات</string>
+    <string name="voucher_filter_category">الفئة</string>
+    <string name="voucher_filter_all_categories">كل الفئات</string>
+    <string name="voucher_filter_stock_available">المتوفر (كمية &gt; 0)</string>
+    <string name="voucher_filter_stock_all">كل الأصناف</string>
     <string name="voucher_notes_optional">ملاحظات (اختياري)</string>
     <string name="voucher_payment_cash">نقد</string>
     <string name="voucher_payment_transfer">حوالة</string>

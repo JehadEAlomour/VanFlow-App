@@ -53,7 +53,6 @@ class LoginViewModel(
             )
             result.fold(
                 onSuccess = { user ->
-                    // Snapshot the local db into Documents on every successful login (best-effort).
                     backupDatabase()
                     _state.update { it.copy(isSubmitting = false, error = null, password = "") }
                     _effects.tryEmit(LoginEffect.NavigateHome(user))

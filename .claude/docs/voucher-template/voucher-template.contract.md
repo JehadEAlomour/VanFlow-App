@@ -99,4 +99,4 @@ Use to validate stored/served templates on the backend and in the admin UI.
 4. Color belongs to the template (`monochrome`), never to the payment/domain model.
 5. Breaking changes require an app release first; coordinate via the `templateSchemaVersion` field if/when introduced.
 
-See [`backend-nestjs.md`](./backend-nestjs.md) and [`frontend.md`](./frontend.md) for implementation.
+See [`backend-nestjs.md`](backend-nestjs.md) and [`frontend.md`](frontend.md) for implementation.

@@ -24,6 +24,12 @@ data class ProductDto(
     val taxType: String = "TAXABLE",
     val taxCategory: String = "S",
     val taxRate: String = "0.1600",
+    // ── Tobacco tax (from the item_cart row; default off if the BE omits them) ──
+    val isTobaccoProduct: Boolean = false,
+    val tobaccoTaxProfileId: String? = null,
+    /** MSRP / consumer price for the tobacco base, integer fils per base piece.
+     *  Nullable — the BE sends null for non-tobacco items. */
+    val consumerPriceFils: Long? = null,
     /** The item's real sellable units (base + larger), from the dashboard/ERP. */
     val units: List<ProductUnitDto> = emptyList(),
 )

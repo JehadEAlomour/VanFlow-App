@@ -1,5 +1,6 @@
 package com.jehadalomour.flowvan.feature.print
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,11 +26,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -174,7 +177,22 @@ private fun PaymentReceiptDocument(entity: PaymentEntity, state: ReceiptDetailSt
         else -> entity.method
     }
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 20.dp)) {
-        // Header
+        // Header — big company logo (own logo cached from /company-info, else bundled default)
+        val logoBitmap = remember(state.companyLogo) { decodeBase64Image(state.companyLogo) }
+        if (logoBitmap != null) {
+            Image(
+                bitmap = logoBitmap,
+                contentDescription = null,
+                modifier = Modifier.align(Alignment.CenterHorizontally).size(140.dp).padding(bottom = 8.dp),
+            )
+        } else {
+            Image(
+                painter = painterResource(Res.drawable.voucher_logo),
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(Ink),
+                modifier = Modifier.align(Alignment.CenterHorizontally).size(140.dp).padding(bottom = 8.dp),
+            )
+        }
         Text(
             state.companyNameAr.ifBlank { "فان فلو" },
             modifier = Modifier.fillMaxWidth(),

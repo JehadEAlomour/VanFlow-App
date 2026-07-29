@@ -17,6 +17,7 @@ class TobaccoTaxCalcTest {
         taxBase = TobaccoTaxBase.CONSUMER_PRICE,
         salesTaxEnabled = true,
         salesTaxRate = 13,
+        taxIncludedInConsumerPrice = false,
         specialTaxEnabled = true,
         specialTaxCalculationType = SpecialTaxCalcType.FIXED_PER_UNIT,
         specialTaxBase = SpecialTaxBase.QUANTITY,
@@ -45,6 +46,20 @@ class TobaccoTaxCalcTest {
     }
 
     @Test
+    fun tax_included_in_consumer_price_extracts_tax_matching_erp() {
+        // BOHEM: consumer 25.000, sales 16%, tax-inclusive → extract ÷116. No special/withheld.
+        val p = specProfile.copy(
+            salesTaxRate = 16,
+            taxIncludedInConsumerPrice = true,
+            specialTaxEnabled = false,
+            withheldTaxEnabled = false,
+        )
+        val r = TobaccoTaxCalc.calc(quantity = 1.0, unitPriceFils = 24700, consumerPriceFils = 25000, profile = p)
+        assertEquals(3448L, r.salesTaxFils) // 25000 × 16 / 116 — matches the ERP engine
+        assertEquals(3448L, r.netTaxFils)
+    }
+
+    @Test
     fun sale_price_base_uses_discounted_price_rate_special() {
         // taxBase SALE_PRICE, sales 10%, special RATE 5% on sale, no withheld.
         val p = specProfile.copy(
@@ -61,6 +76,53 @@ class TobaccoTaxCalcTest {
         assertEquals(400L, r.salesTaxFils)
         assertEquals(200L, r.specialTaxFils)
         assertEquals(600L, r.netTaxFils)
+    }
+
+    @Test
+    fun inclusive_mode_does_not_double_count_tobacco_tax_in_grand_total() {
+        // Regression for the reported bug: net total on an inclusive tobacco line was
+        // getting the extracted tax added back on top of the total. BOHEM: consumer
+        // 25.000, sales 16%, tax-inclusive, entered/sale price 24.700, no special/withheld.
+        val p = specProfile.copy(
+            salesTaxRate = 16,
+            taxIncludedInConsumerPrice = true,
+            specialTaxEnabled = false,
+            withheldTaxEnabled = false,
+        )
+        val line = CartLine(
+            productId = "x", sku = "SK", nameAr = "دخان",
+            unitPrice = 24.700, qty = 1.0,
+            unitConversionQty = 1.0, lineTaxType = LineTaxType.INCLUSIVE,
+            isTobacco = true, tobaccoProfile = p, consumerPriceFils = 25000,
+        )
+        val summary = InvoiceTaxCalculator.calculateInvoice(listOf(line))
+        // Grand total must equal exactly what the salesman entered/collected — the tax
+        // is already inside 24.700, so it must not be added again.
+        assertEquals(24.700, summary.grandTotal, 0.0005)
+        // totalTax still reports the true tax content, informationally.
+        assertEquals(3.448, summary.totalTax, 0.0005)
+    }
+
+    @Test
+    fun exclusive_mode_still_adds_tobacco_tax_on_top() {
+        // Same profile shape but EXCLUSIVE line — tax must still be added on top,
+        // preserving the pre-existing (correct) behavior.
+        val p = specProfile.copy(
+            salesTaxRate = 16,
+            taxIncludedInConsumerPrice = false,
+            specialTaxEnabled = false,
+            withheldTaxEnabled = false,
+        )
+        val line = CartLine(
+            productId = "x", sku = "SK", nameAr = "دخان",
+            unitPrice = 21.250, qty = 1.0,
+            unitConversionQty = 1.0, lineTaxType = LineTaxType.TAXABLE,
+            isTobacco = true, tobaccoProfile = p, consumerPriceFils = 21250,
+        )
+        val summary = InvoiceTaxCalculator.calculateInvoice(listOf(line))
+        // 21.250 sale price + 16% of 21.250 consumer base (3.400) = 24.650.
+        assertEquals(24.650, summary.grandTotal, 0.0005)
+        assertEquals(3.400, summary.totalTax, 0.0005)
     }
 
     @Test

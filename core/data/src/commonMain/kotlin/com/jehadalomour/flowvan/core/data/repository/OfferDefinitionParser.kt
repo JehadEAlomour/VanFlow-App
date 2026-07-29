@@ -55,6 +55,7 @@ internal fun OfferEntity.toDefinition(json: Json): OfferDefinition? {
             itemsPerStep = r.itemsPerStep,
             maxAmountFils = r.maxAmountFils,
             maxPercentOfPrice = r.maxPercentOfPrice,
+            bundle = r.mode == "BUNDLE",
         )
         "TABLE_AMOUNT_DISCOUNT" -> OfferReward.TableAmount(
             entries = (r.entries ?: return null).map {
@@ -92,6 +93,7 @@ internal fun OfferEntity.toDefinition(json: Json): OfferDefinition? {
             itemsPerStep = r.itemsPerStep,
             maxAmountFils = r.maxAmountFils,
             maxPercentOfPrice = r.maxPercentOfPrice,
+            bundle = r.mode == "BUNDLE",
         )
         else -> return null
     }

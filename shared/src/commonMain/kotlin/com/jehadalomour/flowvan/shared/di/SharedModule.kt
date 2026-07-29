@@ -8,6 +8,7 @@ import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.data.repository.OfferRepository
 import com.jehadalomour.flowvan.core.data.repository.PriceListRepository
+import com.jehadalomour.flowvan.core.data.repository.TobaccoTaxProfileRepository
 import com.jehadalomour.flowvan.core.data.repository.PaymentRepository
 import com.jehadalomour.flowvan.core.data.repository.TargetRepository
 import com.jehadalomour.flowvan.core.network.api.TargetApi
@@ -24,6 +25,7 @@ import com.jehadalomour.flowvan.core.network.api.CustomerApi
 import com.jehadalomour.flowvan.core.network.api.InvoiceApi
 import com.jehadalomour.flowvan.core.network.api.MyRouteApi
 import com.jehadalomour.flowvan.core.network.api.OfferApi
+import com.jehadalomour.flowvan.core.network.api.TobaccoTaxProfileApi
 import com.jehadalomour.flowvan.core.network.api.PriceListApi
 import com.jehadalomour.flowvan.core.network.api.ProductApi
 import com.jehadalomour.flowvan.core.network.api.RepApi
@@ -93,6 +95,7 @@ fun sharedModule(): Module = module {
     single { get<FlowVanDatabase>().appSettingsDao() }
     single { get<FlowVanDatabase>().offerDao() }
     single { get<FlowVanDatabase>().priceListItemDao() }
+    single { get<FlowVanDatabase>().tobaccoTaxProfileDao() }
 
     single { UserRepository(get()) }
     single { CustomerRepository(get()) }
@@ -105,6 +108,7 @@ fun sharedModule(): Module = module {
     single { TargetRepository(get()) }
     single { OfferRepository(get(), get(), get()) }
     single { PriceListRepository(get(), get()) }
+    single { TobaccoTaxProfileRepository(get(), get()) }
     single { LocationRepository(get()) }
     single { StopDetector() }
     single { LocationTrackingCoordinator(get(), get(), get()) }
@@ -140,6 +144,7 @@ fun sharedModule(): Module = module {
     single { VoucherApi(get()) }
     single { MyRouteApi(get()) }
     single { OfferApi(get()) }
+    single { TobaccoTaxProfileApi(get()) }
     single { PriceListApi(get()) }
 
     factory { GetCurrentUserUseCase(get(), get()) }
@@ -148,7 +153,7 @@ fun sharedModule(): Module = module {
     factory { VoucherNumberGenerator(get(), get()) }
     factory { CreateSaleVoucherUseCase(get(), get(), get(), get(), get(), get(), get()) }
     factory { EvaluateOffersOfflineUseCase(get(), get(), get(), get(), get()) }
-    factory { EvaluateOffersUseCase(get(), get(), get()) }
+    factory { EvaluateOffersUseCase(get(), get()) }
     factory { CreateReturnVoucherUseCase(get(), get(), get(), get(), get(), get(), get()) }
     factory { RequestReturnApprovalUseCase(get(), get(), get()) }
     factory { PollApprovalUseCase(get()) }
@@ -163,7 +168,7 @@ fun sharedModule(): Module = module {
     factory { StartShiftUseCase(get(), get()) }
     factory { BackendLoginUseCase(get(), get(), get()) }
     factory { BackupDatabaseUseCase(get()) }
-    factory { RefreshCatalogUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    factory { RefreshCatalogUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { SubmitInvoiceUseCase(get()) }
     factory { SubmitCollectionUseCase(get()) }
 }

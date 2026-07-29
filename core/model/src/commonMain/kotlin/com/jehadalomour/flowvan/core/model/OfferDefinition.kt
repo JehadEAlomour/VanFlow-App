@@ -82,6 +82,8 @@ sealed interface OfferReward {
         val itemsPerStep: Int?,
         val maxAmountFils: Double?,
         val maxPercentOfPrice: Double?,
+        /** Lump sum per completed group of [itemsPerStep] units instead of a per-unit rate. */
+        val bundle: Boolean = false,
     ) : OfferReward
 
     /**
@@ -114,9 +116,13 @@ sealed interface OfferReward {
     ) : OfferReward
 
     /**
-     * A fixed amount (fils) off EACH UNIT of the SELECTED items once their combined qty ≥ [minQty]
-     * — the amount-off twin of [ItemPercent]. Per-line discount = amount × line qty, clamped to
-     * the line gross by the evaluator.
+     * A fixed amount (fils) off the SELECTED items once their combined qty ≥ [minQty] — the
+     * amount-off twin of [ItemPercent]. Per-line discount = amount × line qty, clamped to the
+     * line gross by the evaluator.
+     *
+     * [bundle] switches the amount from a PER-UNIT rate to a LUMP SUM per completed group of
+     * [itemsPerStep] units: total = baseAmountFils × floor(qty / itemsPerStep), so qty 2→1×,
+     * 3→1×, 4→2×, 5→2×. Mutually exclusive with [dynamic] (bundle wins).
      */
     data class ItemAmount(
         val minQty: Int,
@@ -127,6 +133,8 @@ sealed interface OfferReward {
         val maxAmountFils: Double?,
         /** Optional cap on the per-unit amount as a % of the item's unit price (per line). */
         val maxPercentOfPrice: Double?,
+        /** Lump sum per completed group of [itemsPerStep] units instead of a per-unit rate. */
+        val bundle: Boolean = false,
     ) : OfferReward
 }
 

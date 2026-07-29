@@ -1,6 +1,6 @@
 # Voucher Template — Frontend Guide
 
-For the **admin web frontend** that edits a tenant's [`VoucherTemplate`](./voucher-template.contract.md), and as a reference for how the **mobile app** consumes it. The base template is the starting point for every tenant.
+For the **admin web frontend** that edits a tenant's [`VoucherTemplate`](voucher-template.contract.md), and as a reference for how the **mobile app** consumes it. The base template is the starting point for every tenant.
 
 ---
 

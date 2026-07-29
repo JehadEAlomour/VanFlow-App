@@ -8,6 +8,7 @@ import com.jehadalomour.flowvan.core.data.repository.CompanyInfoRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.UserRepository
+import com.jehadalomour.flowvan.core.model.InvoiceAppliedOffer
 import com.jehadalomour.flowvan.core.model.InvoiceLine
 import com.jehadalomour.flowvan.core.domain.printer.PaperWidth
 import com.jehadalomour.flowvan.core.domain.printer.PrintResult
@@ -54,6 +55,13 @@ class VoucherPrintViewModel(
                 val lines = runCatching {
                     json.decodeFromString<List<InvoiceLine>>(entity.linesJson)
                 }.getOrDefault(emptyList())
+                val appliedOffers = entity.appliedOffersJson
+                    ?.let { blob ->
+                        runCatching {
+                            json.decodeFromString<List<InvoiceAppliedOffer>>(blob)
+                        }.getOrDefault(emptyList())
+                    }
+                    .orEmpty()
 
                 val customer = customers.findById(entity.customerId)
                 val salesman = users.findById(entity.salesmanId)
@@ -74,6 +82,7 @@ class VoucherPrintViewModel(
                         salesmanNameAr = salesman?.nameAr.orEmpty(),
                         lines = lines,
                         freeLines = freeLines,
+                        appliedOffers = appliedOffers,
                         subtotal = entity.subtotal,
                         discountAmount = entity.discountAmount,
                         taxAmount = entity.taxAmount,

@@ -46,7 +46,12 @@ class CustomerDashboardViewModel(
     private val log = Logger.withTag("CustomerVisit")
 
     init {
-        if (locationLocked) viewModelScope.launch { setUpProximity() }
+        // On every visit-open, seed a missing store pin from the rep's current GPS — the
+        // rep is physically at the customer. Runs for ALL reps (not just proximity-locked
+        // ones); locked reps additionally get the ~1 km proximity check.
+        viewModelScope.launch {
+            if (locationLocked) setUpProximity() else seedMissingLocation()
+        }
 
         customers.observeById(customerId)
             .onEach { c -> _state.update { it.copy(customer = c, isLoading = c == null) } }
@@ -86,41 +91,48 @@ class CustomerDashboardViewModel(
     }
 
     /**
-     * Location lock (customers.requireProximity). On open: if the customer has no
-     * saved location, seed it from the rep's current GPS (the rep is here); then
-     * decide whether actions are allowed. Fail closed — no GPS fix ⇒ blocked.
+     * If the customer has no saved location, seed it from the rep's current GPS — the rep
+     * is at the store, so this point IS the store. Seed-once server-side (only fills an
+     * empty pin), so it's safe/idempotent. Returns the resolved pin (existing or freshly
+     * seeded), or null when neither a pin nor a GPS fix is available. Runs on every open.
      */
-    private suspend fun setUpProximity() {
+    private suspend fun seedMissingLocation(): Pair<Double, Double>? {
         // Wait for the customer to load from the local cache.
         val customer = customers.observeById(customerId).filterNotNull().first()
+        val cLat = customer.lat
+        val cLng = customer.lng
+        if (cLat != null && cLng != null) return cLat to cLng // already pinned — nothing to do
+
+        val fix = location.lastLocation() ?: return null
+        // Bootstrap the missing store location from the rep's position.
+        val seeded = runCatching { customerApi.seedLocation(customerId, fix.lat, fix.lng) }
+            .getOrElse {
+                log.w("seedLocation failed (offline?): ${it.message}")
+                null
+            }
+        return if (seeded != null) {
+            customers.cacheAll(listOf(seeded.toEntity()))
+            (seeded.latitude?.toDoubleOrNull() ?: fix.lat) to
+                (seeded.longitude?.toDoubleOrNull() ?: fix.lng)
+        } else {
+            // Couldn't reach the server — the rep IS here, so use the live fix. The voucher
+            // carries the coords and the backend seeds on sync.
+            fix.lat to fix.lng
+        }
+    }
+
+    /**
+     * Location lock (customers.requireProximity). Seeds a missing pin (via
+     * [seedMissingLocation]), then decides whether actions are allowed. Fail closed —
+     * no GPS fix ⇒ blocked.
+     */
+    private suspend fun setUpProximity() {
         val fix = location.lastLocation()
         if (fix == null) {
             _state.update { it.copy(proximityBlock = ProximityBlock.NO_GPS) }
             return
         }
-
-        val cLat = customer.lat
-        val cLng = customer.lng
-        val pin: Pair<Double, Double> = if (cLat != null && cLng != null) {
-            cLat to cLng
-        } else {
-            // Bootstrap the missing store location from the rep's position.
-            val seeded = runCatching { customerApi.seedLocation(customerId, fix.lat, fix.lng) }
-                .getOrElse {
-                    log.w("seedLocation failed (offline?): ${it.message}")
-                    null
-                }
-            if (seeded != null) {
-                customers.cacheAll(listOf(seeded.toEntity()))
-                (seeded.latitude?.toDoubleOrNull() ?: fix.lat) to
-                    (seeded.longitude?.toDoubleOrNull() ?: fix.lng)
-            } else {
-                // Couldn't reach the server — the rep IS here, so allow. The voucher
-                // carries the coords and the backend seeds on sync.
-                fix.lat to fix.lng
-            }
-        }
-
+        val pin = seedMissingLocation() ?: (fix.lat to fix.lng)
         val within = isWithinProximity(fix, LatLng(pin.first, pin.second))
         _state.update {
             it.copy(proximityBlock = if (within) ProximityBlock.NONE else ProximityBlock.TOO_FAR)

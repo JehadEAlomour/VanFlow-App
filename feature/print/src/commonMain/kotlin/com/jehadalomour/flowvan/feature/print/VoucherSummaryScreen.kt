@@ -412,14 +412,14 @@ private fun VsReceiptBody(state: VoucherSummaryState) {
                 Image(
                     bitmap = logoBitmap,
                     contentDescription = null,
-                    modifier = Modifier.size(54.dp).padding(bottom = 4.dp),
+                    modifier = Modifier.size(140.dp).padding(bottom = 8.dp),
                 )
             } else {
                 Image(
                     painter = painterResource(Res.drawable.voucher_logo),
                     contentDescription = null,
                     colorFilter = ColorFilter.tint(RcInk),
-                    modifier = Modifier.size(54.dp).padding(bottom = 4.dp),
+                    modifier = Modifier.size(140.dp).padding(bottom = 8.dp),
                 )
             }
             if (companyName.isNotBlank()) {

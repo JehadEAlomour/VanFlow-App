@@ -6,6 +6,7 @@ import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.model.CartLine
+import com.jehadalomour.flowvan.core.model.InvoiceAppliedOffer
 import com.jehadalomour.flowvan.core.model.InvoiceDiscountInput
 import com.jehadalomour.flowvan.core.model.InvoiceLine
 import com.jehadalomour.flowvan.core.model.InvoiceTaxCalculator
@@ -71,6 +72,12 @@ class CreateSaleVoucherUseCase(
          * re-applies offers, so uploading the offer-applied cart would double-discount.
          */
         offerAdjustedCart: List<CartLine>? = null,
+        /**
+         * Offers applied at sale time (name + discount value in JOD), frozen for the printed
+         * receipt so the footer can itemize each offer plus a total. Empty → no offers; the
+         * footer falls back to the generic discount row.
+         */
+        appliedOffers: List<InvoiceAppliedOffer> = emptyList(),
     ): Result<InvoiceEntity> = runCatching {
         if (cart.isEmpty()) throw EmptyCartException()
 
@@ -169,6 +176,10 @@ class CreateSaleVoucherUseCase(
                 if (offersApplied) json.encodeToString(cart.toInvoiceLines()) else null,
             uploadDiscountAmount =
                 if (offersApplied) rawSummary.totalLineDiscounts + rawSummary.invoiceDiscountAmount else null,
+            // Frozen per-offer breakdown for the printed footer (null when no offers applied).
+            appliedOffersJson = appliedOffers
+                .takeIf { it.isNotEmpty() }
+                ?.let { json.encodeToString(it) },
         )
 
         invoices.save(entity)

@@ -400,11 +400,19 @@ object LocalOfferEvaluator {
      * clamp to the line gross still prevents a negative net.
      */
     private fun effectiveAmount(reward: OfferReward.ItemAmount, count: Double, anchor: Double): Double =
-        effectiveAmount(reward.baseAmountFils, reward.dynamic, reward.multiplier, reward.itemsPerStep, reward.maxAmountFils, count, anchor)
+        effectiveAmount(reward.baseAmountFils, reward.dynamic, reward.multiplier, reward.itemsPerStep, reward.maxAmountFils, count, anchor, reward.bundle)
 
     private fun effectiveAmount(reward: OfferReward.LineAmount, count: Double, anchor: Double): Double =
-        effectiveAmount(reward.baseAmountFils, reward.dynamic, reward.multiplier, reward.itemsPerStep, reward.maxAmountFils, count, anchor)
+        effectiveAmount(reward.baseAmountFils, reward.dynamic, reward.multiplier, reward.itemsPerStep, reward.maxAmountFils, count, anchor, reward.bundle)
 
+    /**
+     * [bundle] pays a LUMP SUM per completed group instead of a per-unit rate:
+     * total = base × floor(count / itemsPerStep), capped at maxAmountFils as a TOTAL. It is
+     * returned divided by [count] so the caller's per-line `perUnit × lineQty` machinery spreads
+     * the lump sum across the offer's lines proportionally; the division stays fractional on
+     * purpose so rounding happens once, on each line's fils total. Mirrors the server's
+     * OffersEngineService.effectiveAmount().
+     */
     private fun effectiveAmount(
         baseAmountFils: Double,
         dynamic: Boolean,
@@ -413,7 +421,16 @@ object LocalOfferEvaluator {
         maxAmountFils: Double?,
         count: Double,
         anchor: Double,
+        bundle: Boolean = false,
     ): Double {
+        if (bundle) {
+            val per = if (itemsPerStep != null && itemsPerStep > 0) itemsPerStep else 1
+            val groups = floor(count / per)
+            if (groups <= 0.0 || count <= 0.0) return 0.0
+            val total = baseAmountFils * groups
+            val cap = maxAmountFils ?: Double.POSITIVE_INFINITY
+            return max(0.0, min(total, cap)) / count
+        }
         val steps = if (dynamic && itemsPerStep != null && itemsPerStep > 0)
             floor(max(0.0, count - anchor) / itemsPerStep) else 0.0
         val amt = baseAmountFils * (1 + (multiplier ?: 0.0) * steps)
@@ -484,7 +501,9 @@ object LocalOfferEvaluator {
                     else "${numStr(r.basePercent)}%"
                     "Buy ${r.minQty}× $on → $base off those items"
                 }
-                is OfferReward.ItemAmount -> {
+                is OfferReward.ItemAmount -> if (r.bundle) {
+                    "Buy $on → ${jodString(r.baseAmountFils.roundToLong())} JOD off per ${r.itemsPerStep ?: 1} bought"
+                } else {
                     val base = if (r.dynamic)
                         "${jodString(r.baseAmountFils.roundToLong())}→${jodString((r.maxAmountFils ?: r.baseAmountFils).roundToLong())} JOD dynamic"
                     else "${jodString(r.baseAmountFils.roundToLong())} JOD"

@@ -504,6 +504,7 @@
     <string name="print_item_count">Item Count</string>
     <string name="print_line_discount">Line Discount</string>
     <string name="print_notes_prefix">Notes: %1$s</string>
+    <string name="print_offers_total">Total Offer Discount</string>
     <string name="print_payment_cash">Cash</string>
     <string name="print_payment_method_label">Payment Method</string>
     <string name="print_payment_credit">Credit</string>
@@ -630,6 +631,10 @@
     <string name="voucher_line_discount_total">Total Line Discount</string>
     <string name="voucher_line_total">Line Total</string>
     <string name="voucher_no_products">No products</string>
+    <string name="voucher_filter_category">Category</string>
+    <string name="voucher_filter_all_categories">All categories</string>
+    <string name="voucher_filter_stock_available">Available (qty &gt; 0)</string>
+    <string name="voucher_filter_stock_all">All items</string>
     <string name="voucher_notes_optional">Notes (optional)</string>
     <string name="voucher_payment_cash">Cash</string>
     <string name="voucher_payment_transfer">Transfer</string>

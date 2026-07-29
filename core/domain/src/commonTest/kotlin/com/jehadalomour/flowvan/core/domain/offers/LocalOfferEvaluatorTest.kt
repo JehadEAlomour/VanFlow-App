@@ -114,10 +114,11 @@ class LocalOfferEvaluatorTest {
         maxAmountFils: Double? = null,
         maxPercentOfPrice: Double? = null,
         paymentCondition: String? = null,
+        bundle: Boolean = false,
     ) = OfferDefinition(
         id = id, name = id, type = OfferType.ITEM_QTY_REWARD,
         trigger = OfferTrigger.ItemSet(itemNumbers, paymentCondition),
-        reward = OfferReward.ItemAmount(minQty, baseAmountFils, dynamic, multiplier, itemsPerStep, maxAmountFils, maxPercentOfPrice),
+        reward = OfferReward.ItemAmount(minQty, baseAmountFils, dynamic, multiplier, itemsPerStep, maxAmountFils, maxPercentOfPrice, bundle),
         eligibility = allEligibility,
         validFromMs = null, validToMs = null, daysOfWeek = null, timeFrom = null, timeTo = null,
         totalRedemptionLimit = null, perCustomerLimit = null, priority = 0, redemptionCount = 0, createdAtMs = 0,
@@ -332,6 +333,40 @@ class LocalOfferEvaluatorTest {
         assertEquals(1200, d(12.0)) // 100/unit × 12
         assertEquals(2700, d(18.0)) // 150/unit × 18
         assertEquals(15000, d(60.0)) // capped 250/unit × 60
+    }
+
+    /**
+     * BUNDLE = lump sum per completed group, NOT a per-unit rate: the discount only moves when a
+     * new group of `itemsPerStep` completes, so 2 and 3 tie, then 4 and 5 tie. Mirrors the live
+     * "ال دي سلفر" offer (1.05 JOD per 2 bought).
+     */
+    @Test
+    fun itemAmountBundlePaysLumpSumPerCompletedGroup() {
+        val offer = itemAmtOffer(
+            itemNumbers = listOf("A"), minQty = 2, baseAmountFils = 1050.0,
+            bundle = true, itemsPerStep = 2,
+        )
+        fun d(q: Double) = LocalOfferEvaluator.evaluate(listOf("A" to q), listOf(offer), items, ctx()).disc("A")
+        assertEquals(1050, d(2.0))
+        assertEquals(1050, d(3.0)) // partial pair earns nothing extra
+        assertEquals(2100, d(4.0))
+        assertEquals(2100, d(5.0))
+        assertEquals(3150, d(6.0))
+        // Below minQty the offer does not apply at all.
+        assertTrue(LocalOfferEvaluator.evaluate(listOf("A" to 1.0), listOf(offer), items, ctx()).appliedOffers.isEmpty())
+    }
+
+    /** The lump sum is shared across the trigger's items, not paid once per line. */
+    @Test
+    fun itemAmountBundleSpreadsOneLumpSumAcrossTheItemSet() {
+        val offer = itemAmtOffer(
+            itemNumbers = listOf("A", "B"), minQty = 2, baseAmountFils = 400.0,
+            bundle = true, itemsPerStep = 2,
+        )
+        // Combined qty 4 → 2 groups → 800 total, split proportionally (A×2, B×2) — not 800 each.
+        val r = LocalOfferEvaluator.evaluate(listOf("A" to 2.0, "B" to 2.0), listOf(offer), items, ctx())
+        assertEquals(400, r.disc("A"))
+        assertEquals(400, r.disc("B"))
     }
 
     @Test

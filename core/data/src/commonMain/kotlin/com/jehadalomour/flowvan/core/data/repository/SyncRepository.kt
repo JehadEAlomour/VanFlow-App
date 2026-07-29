@@ -11,10 +11,8 @@ import com.jehadalomour.flowvan.core.network.api.RepApi
 import com.jehadalomour.flowvan.core.network.api.VoucherApi
 import com.jehadalomour.flowvan.core.network.dto.LocationBulkRequest
 import com.jehadalomour.flowvan.core.network.dto.LocationPingRequest
-import com.jehadalomour.flowvan.core.network.mapper.toAdoptedInvoice
 import com.jehadalomour.flowvan.core.network.mapper.toCreateCollectionRequest
 import com.jehadalomour.flowvan.core.network.mapper.toVoucherRequest
-import kotlinx.serialization.encodeToString
 import com.jehadalomour.flowvan.core.network.http.ApiConfig
 import com.jehadalomour.flowvan.core.network.http.NetworkException
 import com.jehadalomour.flowvan.core.datastore.SessionStore
@@ -69,24 +67,15 @@ class SyncRepository(
             try {
                 val customerNumber = customerDao.findById(inv.customerId)?.code
                 val result = voucherApi.create(inv.toVoucherRequest(userCode, customerNumber, json))
-                // Adopt the server's authoritative voucher number (the local one was provisional).
+                // Adopt the server's authoritative voucher NUMBER only (the local one was
+                // provisional) — a serial, not a calculation.
                 result.voucherNumber.takeIf { it.isNotBlank() && it != inv.number }
                     ?.let { invoiceDao.updateNumber(inv.id, it) }
-                // Adopt the server's authoritative computed invoice (money engine + offers applied
-                // server-side) so the saved/printed SALE matches the backend exactly. Offline the
-                // on-device calc already stands; this reconciles it once the sale reaches the server.
-                if (inv.type == "SALE") {
-                    result.toAdoptedInvoice()?.let { a ->
-                        invoiceDao.updateComputed(
-                            id = inv.id,
-                            linesJson = json.encodeToString(a.lines),
-                            subtotal = a.subtotal,
-                            discountAmount = a.discountAmount,
-                            taxAmount = a.taxAmount,
-                            total = a.total,
-                        )
-                    }
-                }
+                // NOTE: we deliberately do NOT adopt the server's computed totals here. All money
+                // math is on-device (the local engines are byte-for-byte twins of the backend and
+                // offers are evaluated locally), so the saved/printed SALE keeps its local totals.
+                // This also guarantees a voucher prints identically right after creation and later
+                // from a report — the stored invoice is never rewritten post-sync.
                 invoiceDao.markSynced(listOf(inv.id), now)
                 invoicesSynced++
             } catch (e: NetworkException) {

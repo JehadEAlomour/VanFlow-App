@@ -11,6 +11,7 @@ import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.OfferRepository
 import com.jehadalomour.flowvan.core.data.repository.PriceListRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
+import com.jehadalomour.flowvan.core.data.repository.TobaccoTaxProfileRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
 import com.jehadalomour.flowvan.core.model.CartLine
@@ -19,6 +20,7 @@ import com.jehadalomour.flowvan.core.model.LineTaxType
 import com.jehadalomour.flowvan.core.model.OfferEvaluation
 import com.jehadalomour.flowvan.core.model.OfferTotals
 import com.jehadalomour.flowvan.core.model.Product
+import com.jehadalomour.flowvan.core.model.TobaccoTaxProfile
 import com.jehadalomour.flowvan.core.model.TaxType
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -81,6 +83,7 @@ class VoucherViewModel(
     private val commitApprovedSale: CommitApprovedSaleUseCase,
     private val offerRepository: OfferRepository,
     private val priceLists: PriceListRepository,
+    private val tobaccoProfiles: TobaccoTaxProfileRepository,
     private val location: LocationProvider,
 ) : ViewModel() {
 
@@ -145,6 +148,11 @@ class VoucherViewModel(
             .onEach { units ->
                 _state.update { it.copy(productUnits = units.groupBy { u -> u.productId }) }
             }
+            .launchIn(viewModelScope)
+
+        // Tobacco tax profiles (by id) so a tobacco item applies its excise/special tax.
+        tobaccoProfiles.observeAll()
+            .onEach { list -> _state.update { it.copy(tobaccoProfiles = list.associateBy { p -> p.id }) } }
             .launchIn(viewModelScope)
 
         appSettings.observe()
@@ -474,6 +482,7 @@ class VoucherViewModel(
                     } else {
                         defaultUnit?.price ?: product.salePrice
                     }
+                    val (isTob, tobProfile, consumerFils) = s.tobaccoFor(product)
                     s.cart + CartLine(
                         productId = product.id,
                         sku = product.sku,
@@ -485,6 +494,9 @@ class VoucherViewModel(
                         taxRate = product.taxRate,
                         lineTaxType = s.taxType,
                         imageUrl = product.imageUrl,
+                        isTobacco = isTob,
+                        tobaccoProfile = tobProfile,
+                        consumerPriceFils = consumerFils,
                     )
                 }
                 existing == null -> s.cart
@@ -495,25 +507,42 @@ class VoucherViewModel(
         }
     }
 
+    /**
+     * Tobacco fields for a cart line built from [product], resolved against the synced
+     * profiles. Non-tobacco item, or profile not cached → defaults (no tobacco tax).
+     */
+    private fun VoucherState.tobaccoFor(product: Product): Triple<Boolean, TobaccoTaxProfile?, Long> {
+        val profile = product.tobaccoProfileId?.let { tobaccoProfiles[it] }
+        return if (product.isTobacco && profile != null)
+            Triple(true, profile, product.consumerPriceFils)
+        else Triple(false, null, 0L)
+    }
+
     private fun confirmDialog(event: VoucherEvent.ConfirmItemDialog) {
         _state.update { s ->
             val qty = capReturnQty(s, event.product.id, event.unitConversionQty, event.qty)
             val existing = s.cart.firstOrNull { it.productId == event.product.id }
             val newCart = when {
                 qty <= 0 -> s.cart.filterNot { it.productId == event.product.id }
-                existing == null -> s.cart + CartLine(
-                    productId = event.product.id,
-                    sku = event.product.sku,
-                    nameAr = event.product.nameAr,
-                    unitPrice = event.unitPrice,
-                    qty = qty,
-                    unit = event.unit,
-                    unitConversionQty = event.unitConversionQty,
-                    discountPct = event.discountPct,
-                    taxRate = event.product.taxRate,
-                    lineTaxType = s.taxType,
-                    imageUrl = event.product.imageUrl,
-                )
+                existing == null -> {
+                    val (isTob, tobProfile, consumerFils) = s.tobaccoFor(event.product)
+                    s.cart + CartLine(
+                        productId = event.product.id,
+                        sku = event.product.sku,
+                        nameAr = event.product.nameAr,
+                        unitPrice = event.unitPrice,
+                        qty = qty,
+                        unit = event.unit,
+                        unitConversionQty = event.unitConversionQty,
+                        discountPct = event.discountPct,
+                        taxRate = event.product.taxRate,
+                        lineTaxType = s.taxType,
+                        imageUrl = event.product.imageUrl,
+                        isTobacco = isTob,
+                        tobaccoProfile = tobProfile,
+                        consumerPriceFils = consumerFils,
+                    )
+                }
                 else -> s.cart.map {
                     if (it.productId == event.product.id)
                         it.copy(
@@ -580,6 +609,8 @@ class VoucherViewModel(
                     // Offer-applied lines → stored as the display invoice so it matches the
                     // cart offline; the raw cart above is still what uploads.
                     offerAdjustedCart = s.displayCart,
+                    // Per-offer discount breakdown, frozen for the printed footer.
+                    appliedOffers = s.printedOffers,
                 )
                 VoucherType.RETURN -> createReturn(
                     customerId = customerId,

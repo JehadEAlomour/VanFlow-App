@@ -17,6 +17,7 @@ import com.jehadalomour.flowvan.core.database.dao.ProductDao
 import com.jehadalomour.flowvan.core.database.dao.ProductUnitDao
 import com.jehadalomour.flowvan.core.database.dao.RouteStopDao
 import com.jehadalomour.flowvan.core.database.dao.ShiftDao
+import com.jehadalomour.flowvan.core.database.dao.TobaccoTaxProfileDao
 import com.jehadalomour.flowvan.core.database.dao.UserDao
 import com.jehadalomour.flowvan.core.database.entity.AiMessageEntity
 import com.jehadalomour.flowvan.core.database.entity.AppSettingsEntity
@@ -30,6 +31,7 @@ import com.jehadalomour.flowvan.core.database.entity.ProductEntity
 import com.jehadalomour.flowvan.core.database.entity.ProductUnitEntity
 import com.jehadalomour.flowvan.core.database.entity.RouteStopEntity
 import com.jehadalomour.flowvan.core.database.entity.ShiftEntity
+import com.jehadalomour.flowvan.core.database.entity.TobaccoTaxProfileEntity
 import com.jehadalomour.flowvan.core.database.entity.UserEntity
 
 @Database(
@@ -47,8 +49,9 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         AppSettingsEntity::class,
         OfferEntity::class,
         PriceListItemEntity::class,
+        TobaccoTaxProfileEntity::class,
     ],
-    version = 13,
+    version = 16,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -76,6 +79,15 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         // v13: app_settings.companyLogo — the company logo (base64 data URI) cached from
         // /company-info so the printed voucher header shows it, even offline.
         AutoMigration(from = 12, to = 13),
+        // v14: tobacco_tax_profiles cache table + products.isTobacco/tobaccoProfileId/
+        // consumerPriceFils — so tobacco items apply the excise/special tax at point of sale.
+        AutoMigration(from = 13, to = 14),
+        // v15: tobacco_tax_profiles.taxIncludedInConsumerPrice — extract the sales tax
+        // from a tax-inclusive consumer price (÷(100+rate)) to match the ERP engine.
+        AutoMigration(from = 14, to = 15),
+        // v16: invoices.appliedOffersJson (nullable) — offers applied at sale time, frozen for
+        // the printed receipt (per-offer name + discount value) so the footer can itemize them.
+        AutoMigration(from = 15, to = 16),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)
@@ -93,6 +105,7 @@ abstract class FlowVanDatabase : RoomDatabase() {
     abstract fun appSettingsDao(): AppSettingsDao
     abstract fun offerDao(): OfferDao
     abstract fun priceListItemDao(): PriceListItemDao
+    abstract fun tobaccoTaxProfileDao(): TobaccoTaxProfileDao
 }
 
 @Suppress("KotlinNoActualForExpect", "NO_ACTUAL_FOR_EXPECT")

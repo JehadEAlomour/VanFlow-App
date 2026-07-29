@@ -94,6 +94,9 @@ fun ProductDto.toEntity(): ProductEntity = ProductEntity(
     brand = null,
     taxRate = taxRate.toDoubleOrNull() ?: 0.16,
     imageUrl = imageUrl,
+    isTobacco = isTobaccoProduct,
+    tobaccoProfileId = tobaccoTaxProfileId,
+    consumerPriceFils = consumerPriceFils ?: 0,
 )
 
 // ---- Invoices ----

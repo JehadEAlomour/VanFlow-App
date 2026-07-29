@@ -1,5 +1,6 @@
 package com.jehadalomour.flowvan.feature.print
 
+import com.jehadalomour.flowvan.core.model.InvoiceAppliedOffer
 import com.jehadalomour.flowvan.core.model.InvoiceLine
 import com.jehadalomour.flowvan.core.model.VoucherTemplate
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
@@ -20,6 +21,11 @@ data class VoucherPrintState(
     val lines: List<InvoiceLine> = emptyList(),
     /** Gift/free items (ITEM_QTY_REWARD picks) resolved for display; unitPrice/lineTotal = 0. */
     val freeLines: List<InvoiceLine> = emptyList(),
+    /**
+     * Offers applied at sale time (name + discount value in JOD), frozen on the invoice. Drives
+     * the itemized per-offer rows + total in the printed footer. Empty → generic discount row.
+     */
+    val appliedOffers: List<InvoiceAppliedOffer> = emptyList(),
     val subtotal: Double = 0.0,
     val discountAmount: Double = 0.0,
     val taxAmount: Double = 0.0,

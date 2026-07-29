@@ -54,7 +54,17 @@ class AccountStatementViewModel(
                     paymentDao.observeByCustomerRange(customerId, from, to),
                 ) { invoices, payments ->
                     val entries = buildList {
-                        invoices.forEach { add(StatementEntry.Invoice(it)) }
+                        invoices.forEach { inv ->
+                            // Only ON-ACCOUNT (credit) sales/returns belong on a receivable
+                            // statement. Cash/cheque/transfer sales are settled at point of sale —
+                            // they create no receivable (only CREDIT adjusts the balance, see
+                            // CreateSaleVoucherUseCase), so they must never appear here or move the
+                            // total. paymentMethod null → keep (unknown/legacy, don't hide silently).
+                            val pm = inv.paymentMethod
+                            val settledAtPos = (inv.type == "SALE" || inv.type == "RETURN") &&
+                                pm != null && pm != "CREDIT"
+                            if (!settledAtPos) add(StatementEntry.Invoice(inv))
+                        }
                         payments.forEach { add(StatementEntry.Payment(it)) }
                     }.sortedByDescending { it.createdAt }
                     entries

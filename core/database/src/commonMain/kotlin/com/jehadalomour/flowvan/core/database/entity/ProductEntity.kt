@@ -20,4 +20,8 @@ data class ProductEntity(
     val brand: String?,
     @ColumnInfo(defaultValue = "0.16") val taxRate: Double = 0.16,
     val imageUrl: String? = null,
+    // ── Tobacco tax (defaults let Room auto-migrate v13→v14) ────────────────────
+    @ColumnInfo(defaultValue = "0") val isTobacco: Boolean = false,
+    val tobaccoProfileId: String? = null,
+    @ColumnInfo(defaultValue = "0") val consumerPriceFils: Long = 0,
 )

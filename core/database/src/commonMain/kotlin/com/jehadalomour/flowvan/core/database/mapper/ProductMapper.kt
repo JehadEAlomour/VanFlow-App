@@ -18,4 +18,7 @@ fun ProductEntity.toDomain(): Product = Product(
     brand = brand,
     taxRate = taxRate,
     imageUrl = imageUrl,
+    isTobacco = isTobacco,
+    tobaccoProfileId = tobaccoProfileId,
+    consumerPriceFils = consumerPriceFils,
 )

@@ -30,6 +30,8 @@ data class ReceiptDetailState(
     val salesmanNameAr: String = "",
     val companyNameAr: String = "",
     val companyNameEn: String? = null,
+    /** Company logo (data:...;base64 URI) cached from /company-info; blank → bundled default. */
+    val companyLogo: String = "",
     // ── Printing ──────────────────────────────────────────────────────────────
     val printerState: PrinterState = PrinterState.Disconnected,
     val connectType: PrinterType = PrinterType.BLUETOOTH,
@@ -91,7 +93,7 @@ class ReceiptDetailViewModel(
         // Company header: server-first when online, else the DB cache. Best-effort.
         viewModelScope.launch {
             val info = companyInfo.getForPrint()
-            _state.update { it.copy(companyNameAr = info.nameAr, companyNameEn = info.nameEn) }
+            _state.update { it.copy(companyNameAr = info.nameAr, companyNameEn = info.nameEn, companyLogo = info.logo) }
         }
     }
 

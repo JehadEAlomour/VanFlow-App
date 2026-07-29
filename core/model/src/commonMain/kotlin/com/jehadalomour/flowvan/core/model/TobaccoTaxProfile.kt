@@ -21,6 +21,8 @@ data class TobaccoTaxProfile(
 
     val salesTaxEnabled: Boolean,
     val salesTaxRate: Int, // percent integer
+    /** Consumer price is tax-inclusive → extract tax ÷(100+rate); else add on top ÷100. */
+    val taxIncludedInConsumerPrice: Boolean,
 
     val specialTaxEnabled: Boolean,
     val specialTaxCalculationType: SpecialTaxCalcType,

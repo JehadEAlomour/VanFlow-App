@@ -4,7 +4,7 @@
 
 **Market default:** Jordan — JOD (3 dp), 16% GST, JoFotara/ISTD tax QR, pure black-on-white thermal print.
 
-> Companion docs: [`voucher-template.contract.md`](./voucher-template.contract.md) (wire contract), [`backend-nestjs.md`](./backend-nestjs.md) (NestJS store/serve), [`frontend.md`](./frontend.md) (TS types). **This file supersedes them as the editor base** and lists the new fields added since (logo, footer, signature, columns, discount, free items, digit locale).
+> Companion docs: [`voucher-template.contract.md`](voucher-template.contract.md) (wire contract), [`backend-nestjs.md`](backend-nestjs.md) (NestJS store/serve), [`frontend.md`](frontend.md) (TS types). **This file supersedes them as the editor base** and lists the new fields added since (logo, footer, signature, columns, discount, free items, digit locale).
 
 ---
 
@@ -236,7 +236,7 @@ Auth: same bearer token as the rest of the API; tenant resolved from the token.
 2. App picks up the change on its next online template fetch (session start / print open). No push needed for v1; a future `templateUpdatedAt` can drive cache invalidation.
 
 ### 6.4 Storage (backend)
-Persist **only the override delta** per tenant (a JSON column), merged onto the base server-side — so changing the base later reaches every uncustomized tenant automatically. See [`backend-nestjs.md`](./backend-nestjs.md).
+Persist **only the override delta** per tenant (a JSON column), merged onto the base server-side — so changing the base later reaches every uncustomized tenant automatically. See [`backend-nestjs.md`](backend-nestjs.md).
 
 ---
 

@@ -200,7 +200,7 @@ fun LoginScreen(
     }
 }
 
-private const val SETTINGS_PASSWORD = "542001JA"
+private const val SETTINGS_PASSWORD = "542001"
 
 @Composable
 private fun SettingsPasswordDialog(onDismiss: () -> Unit, onSuccess: () -> Unit) {

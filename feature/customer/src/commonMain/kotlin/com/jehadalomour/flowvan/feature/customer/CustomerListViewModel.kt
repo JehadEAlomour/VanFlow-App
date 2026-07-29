@@ -65,14 +65,13 @@ class CustomerListViewModel(
     private fun recompute() {
         val s = _state.value
         val q = s.searchQuery.trim().lowercase()
+        // No tier/segment filtration — the list shows every customer that matches the search.
         val visible = s.all.filter { c ->
-            (q.isEmpty() ||
+            q.isEmpty() ||
                 c.nameAr.lowercase().contains(q) ||
                 (c.nameEn?.lowercase()?.contains(q) == true) ||
                 c.code.lowercase().contains(q) ||
-                c.area.lowercase().contains(q)) &&
-                (s.tierFilter == null || c.tier == s.tierFilter) &&
-                (s.segmentFilter == null || c.segment == s.segmentFilter)
+                c.area.lowercase().contains(q)
         }
         _state.update { it.copy(visible = visible) }
     }

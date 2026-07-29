@@ -5,6 +5,7 @@ import com.jehadalomour.flowvan.core.model.AppliedOffer
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.Customer
 import com.jehadalomour.flowvan.core.model.FreeLine
+import com.jehadalomour.flowvan.core.model.InvoiceAppliedOffer
 import com.jehadalomour.flowvan.core.model.InvoiceDiscountInput
 import com.jehadalomour.flowvan.core.model.InvoiceTaxCalculator
 import com.jehadalomour.flowvan.core.model.LineTaxType
@@ -14,6 +15,7 @@ import com.jehadalomour.flowvan.core.model.OfferTotals
 import com.jehadalomour.flowvan.core.model.PaymentMethod
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.ProductUnit
+import com.jehadalomour.flowvan.core.model.TobaccoTaxProfile
 import com.jehadalomour.flowvan.core.model.ServerLine
 import com.jehadalomour.flowvan.core.model.VoucherSummary
 import com.jehadalomour.flowvan.feature.voucher.ReturnReason
@@ -38,6 +40,8 @@ data class VoucherState(
     val products: List<Product> = emptyList(),
     val visibleProducts: List<Product> = emptyList(),
     val productUnits: Map<String, List<ProductUnit>> = emptyMap(),
+    /** Synced tobacco tax profiles by id — resolved when a tobacco item is added. */
+    val tobaccoProfiles: Map<String, TobaccoTaxProfile> = emptyMap(),
     /** The selected customer's price list as sku→base-unit price (JOD). Empty when
      *  unassigned; an item present here prices at the list price, else the base price. */
     val customerPrices: Map<String, Double> = emptyMap(),
@@ -149,6 +153,35 @@ data class VoucherState(
      * the server re-applies offers, so this only drives the stored/display invoice.
      */
     val displayCart: List<CartLine> get() = if (useServerOffers) offerAdjustedCart else cart
+
+    /**
+     * Per-offer discount breakdown for the printed receipt (SALE only): each applied offer's
+     * TOTAL discount value (JOD), summed from its per-line shares ([ServerLine.offers]) plus any
+     * gift/free-line value ([freeLines]). Frozen onto the invoice at save time so the printout can
+     * itemize offers even when reprinted later from a report. Empty when no offers applied.
+     */
+    val printedOffers: List<InvoiceAppliedOffer> get() {
+        if (type != VoucherType.SALE) return emptyList()
+        val amountById = linkedMapOf<String, Double>()   // preserves offer order
+        val nameById = mutableMapOf<String, String>()
+        // Line-level offer discounts (percent / per-unit-amount rewards).
+        serverLines.forEach { sl ->
+            sl.offers.forEach { o ->
+                amountById[o.offerId] = (amountById[o.offerId] ?: 0.0) + o.discountJod
+                nameById[o.offerId] = o.name
+            }
+        }
+        // Gift / free lines (ITEM_QTY_REWARD): the offer's discount is the gift's full value.
+        freeLines.forEach { fl ->
+            val v = fl.qty * fl.unitPriceJod
+            if (v > 0.0) amountById[fl.offerId] = (amountById[fl.offerId] ?: 0.0) + v
+        }
+        // Fill any missing names from the applied-offer banner list.
+        appliedOffers.forEach { ao -> nameById.getOrPut(ao.offerId) { ao.name } }
+        return amountById.entries
+            .filter { it.value > 0.0005 }
+            .map { InvoiceAppliedOffer(name = nameById[it.key] ?: "عرض", discountAmount = it.value) }
+    }
 
     /**
      * The summary that drives the displayed totals. When an offer evaluation is active we

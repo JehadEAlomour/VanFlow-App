@@ -49,4 +49,11 @@ data class InvoiceEntity(
      */
     val uploadLinesJson: String? = null,
     val uploadDiscountAmount: Double? = null,
+    /**
+     * Offers applied at sale time, frozen for the printed receipt as a JSON list of
+     * [com.jehadalomour.flowvan.core.model.InvoiceAppliedOffer] ({name, discountAmount} in JOD).
+     * The live evaluation that knows each offer's amount isn't available when printing later from
+     * a report, so it's captured here. Null/blank → no offers (footer shows the generic discount).
+     */
+    val appliedOffersJson: String? = null,
 )
