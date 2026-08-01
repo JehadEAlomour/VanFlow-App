@@ -625,7 +625,6 @@ private fun ItemColHeader() {
             stringResource(Res.string.print_col_unit),
             stringResource(Res.string.print_col_tax),
             stringResource(Res.string.print_col_price),
-            stringResource(Res.string.print_col_discount),
             stringResource(Res.string.print_col_total),
         ).forEach { label ->
             Text(
@@ -664,28 +663,25 @@ private fun ReceiptItemRow(line: InvoiceLine, amountDecimals: Int) {
             style = TextStyle(textDirection = TextDirection.Rtl),
             modifier = Modifier.fillMaxWidth().padding(bottom = 3.dp),
         )
-        // 6-column data grid
+        // 5-column data grid. The per-line discount column is deliberately NOT
+        // printed: the customer's copy shows what each line cost, and the
+        // discount is already reflected in that line total and summarised once
+        // in the footer. It is still shown on-screen in the voucher detail.
         Row(modifier = Modifier.fillMaxWidth()) {
             val qty = formatQty(line.qty)
             val unit = line.unit.ifBlank { "—" }
             val taxPct = line.taxPctLabel()
             val price = formatAmount(line.unitPrice, amountDecimals)
-            // Discount shown as a VALUE (the amount taken off this line, incl. offers), not a %.
-            val discAmt = line.qty * line.unitPrice * line.discountPct
-            val disc = if (discAmt > 0.0005) formatAmount(discAmt, amountDecimals) else "—"
             val total = formatAmount(line.lineTotal, amountDecimals)
 
-            listOf(qty, unit, taxPct, price, disc, total).forEachIndexed { idx, cell ->
+            listOf(qty, unit, taxPct, price, total).forEachIndexed { idx, cell ->
                 Text(
                     text = cell,
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
                     fontSize = 11.sp,
-                    fontWeight = if (idx == 5) FontWeight.ExtraBold else FontWeight.SemiBold,
-                    color = when (idx) {
-                        4 -> if (line.discountPct > 0.0) c.negative else c.ink
-                        else -> c.ink
-                    },
+                    fontWeight = if (idx == 4) FontWeight.ExtraBold else FontWeight.SemiBold,
+                    color = c.ink,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = LtrNum,
