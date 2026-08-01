@@ -244,21 +244,27 @@ object LocalOfferEvaluator {
             }
             var bestPay: Disc? = null
             var bestPayFils = 0L
+            var bestPayRank = -1
             for (c in payOffers) {
                 val d = discFor(c)
-                if (bestPay == null || d > bestPayFils) {
+                val rank = scopeRank(c.offer)
+                if (bestPay == null || rank > bestPayRank || (rank == bestPayRank && d > bestPayFils)) {
                     bestPay = c
                     bestPayFils = d
+                    bestPayRank = rank
                 }
             }
             var bestItem: Disc? = null
             var bestItemFils = 0L
+            var bestItemRank = -1
             for (c in itemOffers) {
                 if (!c.items!!.contains(itemNumber)) continue
                 val d = discFor(c)
-                if (bestItem == null || d > bestItemFils) {
+                val rank = scopeRank(c.offer)
+                if (bestItem == null || rank > bestItemRank || (rank == bestItemRank && d > bestItemFils)) {
                     bestItem = c
                     bestItemFils = d
+                    bestItemRank = rank
                 }
             }
             var payFils = if (bestPay != null) bestPayFils else 0L
@@ -437,6 +443,17 @@ object LocalOfferEvaluator {
         val cap = maxAmountFils ?: Double.POSITIVE_INFINITY
         return max(0.0, min(amt, cap))
     }
+
+    /**
+     * Conflict-resolution priority for the per-line "best offer wins" comparison: a targeted
+     * offer (SPECIFIC/SEGMENT/NEW_ONLY) always beats a generic ALL offer in the same category
+     * (payment-method vs item), regardless of discount value — amount only breaks a tie WITHIN
+     * the same rank. Without this a customer-specific offer with the same or lower amount than a
+     * general one could never win, defeating the point of scoping an offer to a customer.
+     * Mirrors the server's OffersEngineService.scopeRank().
+     */
+    private fun scopeRank(offer: OfferDefinition): Int =
+        if (offer.eligibility.customerScope == "ALL") 0 else 1
 
     private fun isWithinSchedule(offer: OfferDefinition, ctx: Context): Boolean {
         val from = offer.validFromMs

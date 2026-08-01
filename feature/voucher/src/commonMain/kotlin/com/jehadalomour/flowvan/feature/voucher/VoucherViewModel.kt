@@ -102,8 +102,14 @@ class VoucherViewModel(
     init {
         _state.update {
             it.copy(
-                canDiscount = session.can("vouchers.discount.direct"),
-                canRequestDiscount = session.can("vouchers.discount.approval"),
+                // Discounts are ungated by owner decision: every salesman may
+                // discount any amount with no approval, so the discount always
+                // reaches the voucher and the ERP export. The backend no longer
+                // enforces a limit either (VouchersService.enforceSalesmanPolicy)
+                // and always advertises the `direct` key, so older builds behave
+                // the same way without a rebuild.
+                canDiscount = true,
+                canRequestDiscount = false,
                 canEditPrice = session.can("vouchers.priceOverride"),
                 canCreateReturn = session.can("vouchers.return.create"),
                 returnNeedsApproval = session.can("vouchers.return.approval"),

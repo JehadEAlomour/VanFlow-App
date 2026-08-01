@@ -25,9 +25,13 @@ class LocalOfferEvaluatorTest {
         "C" to LocalOfferEvaluator.ItemInfo(750, 0.0),
     )
 
-    private fun ctx(payment: String? = null, chosen: List<String> = emptyList()) =
+    private fun ctx(
+        payment: String? = null,
+        chosen: List<String> = emptyList(),
+        customerNumber: String? = null,
+    ) =
         LocalOfferEvaluator.Context(
-            customerNumber = null, customerCategory = null, customerRegionId = null,
+            customerNumber = customerNumber, customerCategory = null, customerRegionId = null,
             customerRepId = null, repId = null, storeNumber = null,
             paymentMethod = payment, chosenFreeItems = chosen, isNewCustomer = false,
             at = LocalDateTime(2026, 1, 1, 12, 0), nowMs = 0L,
@@ -436,14 +440,53 @@ class LocalOfferEvaluatorTest {
     private fun tableAmtOffer(
         id: String, condition: String = "CASH", entries: List<TableEntry>,
         minItemCount: Int? = null, maxItemCount: Int? = null,
+        eligibility: OfferEligibilityRule = allEligibility,
     ) = OfferDefinition(
         id = id, name = id, type = OfferType.PAYMENT_METHOD_DISCOUNT,
         trigger = OfferTrigger.PaymentMethod(condition, null, minItemCount, maxItemCount),
         reward = OfferReward.TableAmount(entries),
-        eligibility = allEligibility,
+        eligibility = eligibility,
         validFromMs = null, validToMs = null, daysOfWeek = null, timeFrom = null, timeTo = null,
         totalRedemptionLimit = null, perCustomerLimit = null, priority = 0, redemptionCount = 0, createdAtMs = 0,
     )
+
+    /**
+     * A customer-scoped offer must beat a general one for its customer even when it discounts
+     * LESS — otherwise scoping an offer to a customer has no effect. Mirrors the live setup
+     * where the same item was covered by both a general and a customer-specific table offer.
+     */
+    @Test
+    fun customerSpecificOfferBeatsGeneralOfferEvenWhenLower() {
+        val general = tableAmtOffer(
+            id = "general", entries = listOf(TableEntry("A", amountFils = 300.0)),
+        )
+        val specific = tableAmtOffer(
+            id = "specific", entries = listOf(TableEntry("A", amountFils = 200.0)),
+            eligibility = OfferEligibilityRule("SPECIFIC", null, listOf("1370"), null, null, null),
+        )
+        val r = LocalOfferEvaluator.evaluate(
+            listOf("A" to 2.0), listOf(general, specific), items, ctx("CASH", customerNumber = "1370"),
+        )
+        assertEquals(400, r.disc("A")) // 200/unit × 2, NOT 600
+        assertEquals(listOf("specific"), r.appliedOffers.map { it.offerId })
+    }
+
+    /** A customer the specific offer does not target still gets the general offer. */
+    @Test
+    fun generalOfferStillAppliesToUntargetedCustomer() {
+        val general = tableAmtOffer(
+            id = "general", entries = listOf(TableEntry("A", amountFils = 300.0)),
+        )
+        val specific = tableAmtOffer(
+            id = "specific", entries = listOf(TableEntry("A", amountFils = 200.0)),
+            eligibility = OfferEligibilityRule("SPECIFIC", null, listOf("1370"), null, null, null),
+        )
+        val r = LocalOfferEvaluator.evaluate(
+            listOf("A" to 2.0), listOf(general, specific), items, ctx("CASH", customerNumber = "9999"),
+        )
+        assertEquals(600, r.disc("A")) // 300/unit × 2
+        assertEquals(listOf("general"), r.appliedOffers.map { it.offerId })
+    }
 
     private fun tablePctOffer(
         id: String, condition: String = "CASH", entries: List<TableEntry>,
