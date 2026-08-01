@@ -244,7 +244,15 @@ private fun LineRow(line: InvoiceLine) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 SmallStat(stringResource(Res.string.van_stock_qty), if (line.qty == line.qty.toLong().toDouble()) line.qty.toLong().toString() else "%.2f".format(line.qty))
                 SmallStat(stringResource(Res.string.voucher_detail_unit_price), line.unitPrice.formatJod(AppLanguage.AR))
-                if (line.discountPct > 0) SmallStat(stringResource(Res.string.voucher_detail_discount_short), "%.0f%%".format(line.discountPct))
+                // Show the discount as an AMOUNT, not a rate. `discountPct` is a
+                // fraction (0.1 = 10%), so "%.0f%%" printed "0%" for anything under
+                // 50% — and a rate is harder to reconcile against the printed total
+                // than the money actually taken off, which is what the rep is asked
+                // about. Same expression the print layout uses for its discount column.
+                if (line.discountPct > 0) SmallStat(
+                    stringResource(Res.string.voucher_detail_discount_short),
+                    (line.qty * line.unitPrice * line.discountPct).formatJod(AppLanguage.AR),
+                )
             }
         }
     }
