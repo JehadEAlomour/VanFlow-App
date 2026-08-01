@@ -102,11 +102,10 @@ class VoucherViewModel(
     init {
         _state.update {
             it.copy(
-                // No discount permission is read here on purpose. Discounts are
-                // ungated (the backend approves every one), and reading the
-                // session key left the field hidden for any rep whose cached
-                // login predated the policy change. VoucherState.canDiscount
-                // defaults to true.
+                // Admin switch for showing the discount fields. UI-only: the
+                // server accepts a discount regardless, so this decides what the
+                // rep can see, not what the backend will take.
+                canDiscount = session.can("vouchers.discount.direct"),
                 canEditPrice = session.can("vouchers.priceOverride"),
                 canCreateReturn = session.can("vouchers.return.create"),
                 returnNeedsApproval = session.can("vouchers.return.approval"),

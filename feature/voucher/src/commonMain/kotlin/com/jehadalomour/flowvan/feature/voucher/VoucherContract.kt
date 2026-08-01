@@ -61,13 +61,14 @@ data class VoucherState(
     /** Driven from AppSettings — stamps each new CartLine at add-time. */
     val taxType: LineTaxType = LineTaxType.TAXABLE,
     /**
-     * Discounts are ungated (owner decision) — the backend approves every
-     * discount, so this is always true and exists only so the UI has one place
-     * to flip if the policy is ever reinstated. It is NOT read from the session
-     * permission keys any more: doing so left the field hidden for reps whose
-     * cached login predated the policy change.
+     * Admin switch (`vouchers.discount.direct`): show the discount fields at all.
+     *
+     * UI-only. The server accepts a discount from any rep — it no longer rejects
+     * one or routes it through approval — so this controls what the salesman can
+     * SEE, not what the backend will take. Default false so a session that has
+     * not loaded permissions yet doesn't flash the field on.
      */
-    val canDiscount: Boolean = true,
+    val canDiscount: Boolean = false,
     /** Salesman permission: may change an item's unit price when selling. */
     val canEditPrice: Boolean = false,
     /** Salesman permission: may create returns at all. */
@@ -246,7 +247,7 @@ data class VoucherState(
     val hasDiscount: Boolean get() =
         cart.any { it.discountPct > 0.0 } || (voucherDiscountInput.toDoubleOrNull() ?: 0.0) > 0.0
 
-    /** Discount inputs are always available. */
+    /** Discount inputs appear only when the admin enabled them for this rep. */
     val showDiscountInputs: Boolean get() = canDiscount
 
     /** No discount ever needs approval — the backend accepts them all. */

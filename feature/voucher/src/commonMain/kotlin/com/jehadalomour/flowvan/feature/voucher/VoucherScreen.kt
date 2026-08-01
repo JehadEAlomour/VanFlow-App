@@ -8,10 +8,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -1528,9 +1530,13 @@ private fun AddItemBottomSheet(
     val heroGradient = Brush.linearGradient(listOf(Color(0xFFEEF4FF), Color(0xFFE6F1FB), Color(0xFFE1F5EE)))
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        // BoxWithConstraints so the sheet can be capped against the ACTUAL screen
+        // height: with the discount fields shown the content is tall enough to
+        // push the confirm button off-screen on a short device.
+        BoxWithConstraints(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            val sheetMaxHeight = maxHeight * 0.92f
             Surface(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().heightIn(max = sheetMaxHeight),
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
                 color = Color.White,
             ) {
@@ -1579,8 +1585,15 @@ private fun AddItemBottomSheet(
                         }
                     }
 
-                    // Body
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Body — scrolls on its own. weight(fill = false) keeps the sheet
+                    // compact for short content instead of always filling the cap.
+                    Column(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
                         // Qty stepper
                         Row(
                             modifier = Modifier.fillMaxWidth().background(Color(0xFFF5F8FC), RoundedCornerShape(14.dp)).border(0.5.dp, Color(0xFFDDE8F5), RoundedCornerShape(14.dp)).padding(horizontal = 14.dp, vertical = 10.dp),
