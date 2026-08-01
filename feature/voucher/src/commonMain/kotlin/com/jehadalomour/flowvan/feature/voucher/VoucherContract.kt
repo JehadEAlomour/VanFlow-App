@@ -60,10 +60,14 @@ data class VoucherState(
     val errorAr: String? = null,
     /** Driven from AppSettings — stamps each new CartLine at add-time. */
     val taxType: LineTaxType = LineTaxType.TAXABLE,
-    /** Salesman permission: may apply discounts directly (else discount fields hidden). */
-    val canDiscount: Boolean = false,
-    /** Salesman permission: may ENTER a discount that needs admin approval before saving. */
-    val canRequestDiscount: Boolean = false,
+    /**
+     * Discounts are ungated (owner decision) — the backend approves every
+     * discount, so this is always true and exists only so the UI has one place
+     * to flip if the policy is ever reinstated. It is NOT read from the session
+     * permission keys any more: doing so left the field hidden for reps whose
+     * cached login predated the policy change.
+     */
+    val canDiscount: Boolean = true,
     /** Salesman permission: may change an item's unit price when selling. */
     val canEditPrice: Boolean = false,
     /** Salesman permission: may create returns at all. */
@@ -242,12 +246,11 @@ data class VoucherState(
     val hasDiscount: Boolean get() =
         cart.any { it.discountPct > 0.0 } || (voucherDiscountInput.toDoubleOrNull() ?: 0.0) > 0.0
 
-    /** Discount inputs are shown when the salesman may apply OR request a discount. */
-    val showDiscountInputs: Boolean get() = canDiscount || canRequestDiscount
+    /** Discount inputs are always available. */
+    val showDiscountInputs: Boolean get() = canDiscount
 
-    /** SALE with a discount that the salesman may only request → blocks for approval. */
-    val needsDiscountApproval: Boolean get() =
-        type == VoucherType.SALE && hasDiscount && !canDiscount && canRequestDiscount
+    /** No discount ever needs approval — the backend accepts them all. */
+    val needsDiscountApproval: Boolean get() = false
 
     // A salesman may build a RETURN if they can create directly OR if returns need
     // approval (the button becomes "request approval"). Either flag enables it.

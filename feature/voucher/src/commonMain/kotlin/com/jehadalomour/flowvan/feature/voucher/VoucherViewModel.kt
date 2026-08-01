@@ -102,14 +102,11 @@ class VoucherViewModel(
     init {
         _state.update {
             it.copy(
-                // Discounts are ungated by owner decision: every salesman may
-                // discount any amount with no approval, so the discount always
-                // reaches the voucher and the ERP export. The backend no longer
-                // enforces a limit either (VouchersService.enforceSalesmanPolicy)
-                // and always advertises the `direct` key, so older builds behave
-                // the same way without a rebuild.
-                canDiscount = true,
-                canRequestDiscount = false,
+                // No discount permission is read here on purpose. Discounts are
+                // ungated (the backend approves every one), and reading the
+                // session key left the field hidden for any rep whose cached
+                // login predated the policy change. VoucherState.canDiscount
+                // defaults to true.
                 canEditPrice = session.can("vouchers.priceOverride"),
                 canCreateReturn = session.can("vouchers.return.create"),
                 returnNeedsApproval = session.can("vouchers.return.approval"),
@@ -582,12 +579,9 @@ class VoucherViewModel(
             requestApproval()
             return
         }
-        // Blocking discount approval: a SALE with a discount, when the salesman may
-        // only request (not apply) discounts → file it and wait for the admin.
-        if (type == VoucherType.SALE && s.needsDiscountApproval) {
-            requestDiscountApprovalFlow()
-            return
-        }
+        // Discounts no longer route through approval — needsDiscountApproval is
+        // permanently false, so the branch that filed a VOUCHER_DISCOUNT request
+        // here is gone.
         _state.update { it.copy(isSaving = true, showSaveSheet = false) }
         viewModelScope.launch {
             // Location lock: a restricted rep must be at the customer to create the
