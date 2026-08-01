@@ -412,8 +412,9 @@ object LocalOfferEvaluator {
         effectiveAmount(reward.baseAmountFils, reward.dynamic, reward.multiplier, reward.itemsPerStep, reward.maxAmountFils, count, anchor, reward.bundle)
 
     /**
-     * [bundle] pays a LUMP SUM per completed group instead of a per-unit rate:
-     * total = base × floor(count / itemsPerStep), capped at maxAmountFils as a TOTAL. It is
+     * [bundle] pays a LUMP SUM per completed group instead of a per-unit rate: the
+     * first group lands at the reward's minQty and each itemsPerStep above it adds
+     * another, capped at maxAmountFils as a TOTAL. It is
      * returned divided by [count] so the caller's per-line `perUnit × lineQty` machinery spreads
      * the lump sum across the offer's lines proportionally; the division stays fractional on
      * purpose so rounding happens once, on each line's fils total. Mirrors the server's
@@ -431,7 +432,13 @@ object LocalOfferEvaluator {
     ): Double {
         if (bundle) {
             val per = if (itemsPerStep != null && itemsPerStep > 0) itemsPerStep else 1
-            val groups = floor(count / per)
+            // The FIRST group completes at [anchor] (the reward's minQty), and every
+            // [per] items after that adds another. Plain floor(count / per) ignored
+            // minQty, so an offer set to start at 1 with a step of 2 paid nothing
+            // until the 2nd unit. Falling back to [per] when there is no anchor
+            // keeps the old floor(count / per) behaviour exactly.
+            val firstAt = if (anchor >= 1.0) anchor else per.toDouble()
+            val groups = if (count < firstAt) 0.0 else 1.0 + floor((count - firstAt) / per)
             if (groups <= 0.0 || count <= 0.0) return 0.0
             val total = baseAmountFils * groups
             val cap = maxAmountFils ?: Double.POSITIVE_INFINITY

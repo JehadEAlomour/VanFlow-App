@@ -360,6 +360,38 @@ class LocalOfferEvaluatorTest {
         assertTrue(LocalOfferEvaluator.evaluate(listOf("A" to 1.0), listOf(offer), items, ctx()).appliedOffers.isEmpty())
     }
 
+    /**
+     * Reported from the field: an offer set to start at 1 paid nothing until the 2nd
+     * unit, because groups were counted as floor(qty / itemsPerStep) and so ignored
+     * minQty. The first group must land ON minQty.
+     */
+    @Test
+    fun itemAmountBundleWithMinQtyOnePaysFromTheFirstUnit() {
+        val offer = itemAmtOffer(
+            // 400, not the live 1050: at qty 1 the line gross is 1000 fils and the
+            // per-line clamp would cap the discount and hide the bug.
+            itemNumbers = listOf("A"), minQty = 1, baseAmountFils = 400.0,
+            bundle = true, itemsPerStep = 2,
+        )
+        fun d(q: Double) = LocalOfferEvaluator.evaluate(listOf("A" to q), listOf(offer), items, ctx()).disc("A")
+        assertEquals(400, d(1.0)) // was 0
+        assertEquals(400, d(2.0))
+        assertEquals(800, d(3.0)) // one full step past the anchor
+        assertEquals(1200, d(5.0))
+    }
+
+    /** minQty 1 with a step of 1 pays on every single unit. */
+    @Test
+    fun itemAmountBundleWithStepOnePaysEveryUnit() {
+        val offer = itemAmtOffer(
+            itemNumbers = listOf("A"), minQty = 1, baseAmountFils = 500.0,
+            bundle = true, itemsPerStep = 1,
+        )
+        fun d(q: Double) = LocalOfferEvaluator.evaluate(listOf("A" to q), listOf(offer), items, ctx()).disc("A")
+        assertEquals(500, d(1.0))
+        assertEquals(1500, d(3.0))
+    }
+
     /** The lump sum is shared across the trigger's items, not paid once per line. */
     @Test
     fun itemAmountBundleSpreadsOneLumpSumAcrossTheItemSet() {
