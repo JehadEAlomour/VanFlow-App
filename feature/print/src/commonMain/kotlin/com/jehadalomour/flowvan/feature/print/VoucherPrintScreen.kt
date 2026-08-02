@@ -663,16 +663,21 @@ private fun ReceiptItemRow(line: InvoiceLine, amountDecimals: Int) {
             style = TextStyle(textDirection = TextDirection.Rtl),
             modifier = Modifier.fillMaxWidth().padding(bottom = 3.dp),
         )
-        // 5-column data grid. The per-line discount column is deliberately NOT
-        // printed: the customer's copy shows what each line cost, and the
-        // discount is already reflected in that line total and summarised once
-        // in the footer. It is still shown on-screen in the voucher detail.
+        // 5-column data grid. The per-line discount column is deliberately NOT printed.
+        //
+        // The printed line total is the GROSS (qty × unitPrice) — it deliberately excludes
+        // both the discount and the tax. Those are each stated ONCE, in the footer, which
+        // opens with a Subtotal of Σ(qty × unitPrice) and then subtracts the discount and
+        // adds the tax. Printing the net here instead (lineTotal, which nets the discount
+        // and adds the line's tax) made the column foot to nothing and showed the customer
+        // the same discount twice — once silently inside every line, once in the footer.
+        // The net per line is still shown on-screen in the voucher detail.
         Row(modifier = Modifier.fillMaxWidth()) {
             val qty = formatQty(line.qty)
             val unit = line.unit.ifBlank { "—" }
             val taxPct = line.taxPctLabel()
             val price = formatAmount(line.unitPrice, amountDecimals)
-            val total = formatAmount(line.lineTotal, amountDecimals)
+            val total = formatAmount(line.qty * line.unitPrice, amountDecimals)
 
             listOf(qty, unit, taxPct, price, total).forEachIndexed { idx, cell ->
                 Text(
@@ -878,7 +883,7 @@ private fun taxTotalLabel(lines: List<InvoiceLine>): String {
     return "$base ($pct%)"
 }
 
-private fun formatQty(qty: Double): String =
+internal fun formatQty(qty: Double): String =
     if (qty == qty.toLong().toDouble()) qty.toLong().toString() else formatAmount(qty, 2)
 
 /**

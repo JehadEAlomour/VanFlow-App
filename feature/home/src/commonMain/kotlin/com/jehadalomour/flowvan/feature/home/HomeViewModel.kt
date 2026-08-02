@@ -81,8 +81,13 @@ class HomeViewModel(
                     // Restart so points carry the shift id while a shift is active.
                     if (!coordinator.isTracking) coordinator.start(shift.id, shift.userId)
                 } else {
-                    // Shift ended — tracking is always-on, never stop while signed in.
+                    // No active shift → keep the trail alive on the always-on id, then open a
+                    // shift automatically. The rep never has to press "بدء اليوم": the shift is
+                    // always on for a signed-in user. StartShiftUseCase is idempotent and purely
+                    // local, and inserting re-fires this observer with the new shift, which takes
+                    // the branch above — so this cannot loop.
                     coordinator.start(LocationTrackingCoordinator.ALWAYS_ON_SHIFT_ID, userId)
+                    handleStartShift()
                 }
             }
             .launchIn(viewModelScope)

@@ -1493,6 +1493,15 @@ private fun AddItemBottomSheet(
         val initial = offerDiscountPct ?: currentLine?.discountPct ?: 0.0
         mutableStateOf(if (initial > 0) (initial * 100).toInt().toString() else "")
     }
+    // The text this field was seeded with when it came from the OFFER rather than a manual
+    // discount. The offer % is shown here for information only: the engine re-applies the offer
+    // on top of the line's manual discount, so persisting this value as the manual discount
+    // would count the offer TWICE (tap a discounted line, confirm, and the discount doubles).
+    // Confirming while the field still holds this exact value therefore keeps the line's own
+    // manual discount instead. Editing it makes it a real manual discount, as typed.
+    val offerSeedText = remember(product.id) {
+        offerDiscountPct?.takeIf { it > 0 }?.let { (it * 100).toInt().toString() }
+    }
     var unitDropdownExpanded by remember { mutableStateOf(false) }
     // Editable price (only when the salesman has canEditPrice). Resets per unit.
     var priceText by remember(selectedUnit) {
@@ -1791,11 +1800,20 @@ private fun AddItemBottomSheet(
                             modifier = Modifier.weight(if (onDelete != null) 1.8f else 2f).height(52.dp).clip(RoundedCornerShape(16.dp))
                                 .then(if (canConfirm) Modifier.background(greenGradient) else Modifier.background(Fv.SurfaceTop))
                                 .clickable(enabled = canConfirm) {
+                                    // Untouched offer-seeded field → keep the line's own manual
+                                    // discount, so the offer isn't persisted as a manual one and
+                                    // then added again by the engine (see [offerSeedText]).
+                                    val confirmedDiscountPct =
+                                        if (offerSeedText != null &&
+                                            lineDiscountType == DiscountType.PERCENT &&
+                                            discountText == offerSeedText
+                                        ) currentLine?.discountPct ?: 0.0
+                                        else discountPct
                                     Logger.withTag("UnitPrice").d(
                                         "confirm qty=$qty unit=${selectedUnit.name} conv=${selectedUnit.conversionQty} " +
-                                            "effectivePrice=$effectivePrice discountPct=$discountPct lineTotal=$lineTotal",
+                                            "effectivePrice=$effectivePrice discountPct=$confirmedDiscountPct lineTotal=$lineTotal",
                                     )
-                                    onConfirm(qty, selectedUnit.name, effectivePrice, selectedUnit.conversionQty, discountPct)
+                                    onConfirm(qty, selectedUnit.name, effectivePrice, selectedUnit.conversionQty, confirmedDiscountPct)
                                 },
                             contentAlignment = Alignment.Center,
                         ) {

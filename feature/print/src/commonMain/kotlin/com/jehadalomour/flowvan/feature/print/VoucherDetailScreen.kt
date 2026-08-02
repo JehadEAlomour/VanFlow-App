@@ -242,7 +242,10 @@ private fun LineRow(line: InvoiceLine) {
             }
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                SmallStat(stringResource(Res.string.van_stock_qty), if (line.qty == line.qty.toLong().toDouble()) line.qty.toLong().toString() else "%.2f".format(line.qty))
+                // formatQty, not "%.2f".format: String.format is JVM-only (breaks the iOS
+                // build from commonMain) and follows the default locale, which the app forces
+                // to Arabic — so it would print Arabic-Indic numerals (٠١٢) here.
+                SmallStat(stringResource(Res.string.van_stock_qty), formatQty(line.qty))
                 SmallStat(stringResource(Res.string.voucher_detail_unit_price), line.unitPrice.formatJod(AppLanguage.AR))
                 // Show the discount as an AMOUNT, not a rate. `discountPct` is a
                 // fraction (0.1 = 10%), so "%.0f%%" printed "0%" for anything under
