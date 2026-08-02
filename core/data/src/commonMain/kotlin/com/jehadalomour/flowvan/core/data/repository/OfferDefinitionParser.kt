@@ -78,7 +78,11 @@ internal fun OfferEntity.toDefinition(json: Json): OfferDefinition? {
             maxFreeQty = r.maxFreeQty,
         )
         "ITEM_PERCENT_DISCOUNT" -> OfferReward.ItemPercent(
-            minQty = r.minQty ?: 0,
+            // 1, not 0, to match the server's minQtyOf(): absent / 0 / negative all
+            // mean "applies from the first unit". The value is also the stepping
+            // ANCHOR, so a 0 here made the device price a DYNAMIC or BUNDLE offer
+            // differently from the server that authorises it online.
+            minQty = (r.minQty ?: 1).coerceAtLeast(1),
             basePercent = r.basePercent ?: 0.0,
             dynamic = r.mode == "DYNAMIC",
             multiplier = r.multiplier,
@@ -86,7 +90,7 @@ internal fun OfferEntity.toDefinition(json: Json): OfferDefinition? {
             maxPercent = r.maxPercent,
         )
         "ITEM_AMOUNT_DISCOUNT" -> OfferReward.ItemAmount(
-            minQty = r.minQty ?: 0,
+            minQty = (r.minQty ?: 1).coerceAtLeast(1),
             baseAmountFils = r.baseAmountFils ?: 0.0,
             dynamic = r.mode == "DYNAMIC",
             multiplier = r.multiplier,
