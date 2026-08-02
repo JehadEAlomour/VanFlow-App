@@ -52,6 +52,15 @@ class CustomerDashboardViewModel(
         viewModelScope.launch {
             if (locationLocked) setUpProximity() else seedMissingLocation()
         }
+        // Log the call the moment the rep JOINS the customer, not only when they
+        // leave. A rep who backs out with the system gesture, loses signal, or has
+        // the app killed never reaches the leave flow — and the visit vanished
+        // with it, which is why a full selling day could report zero visits.
+        //
+        // Safe to send early because the server keeps one visit per rep, per
+        // customer, per day and latches hadSale: this entry row is later upgraded
+        // by the leave call, or by the voucher itself.
+        logVisit(hadSale = false, note = null)
 
         customers.observeById(customerId)
             .onEach { c -> _state.update { it.copy(customer = c, isLoading = c == null) } }
@@ -170,14 +179,29 @@ class CustomerDashboardViewModel(
         }
     }
 
-    /** Record the visit on the server so it reflects on the dashboard weekly route. */
+    /**
+     * Record the visit on the server so it reflects on the dashboard and the
+     * visit reports.
+     *
+     * Called on entry (hadSale = false) and again on leave. The server merges
+     * both into the day's single row, so calling it twice is not a double count
+     * and a dropped call is not a lost visit.
+     */
     private fun logVisit(hadSale: Boolean, note: String?) {
         val repId = session.currentRepId ?: return
         viewModelScope.launch {
             try {
+                // Never throws by contract, but a null fix is normal indoors.
+                val fix = location.lastLocation()
                 customerApi.logVisit(
                     customerId,
-                    LogVisitRequest(repId = repId, hadSale = hadSale, visitNote = note),
+                    LogVisitRequest(
+                        repId = repId,
+                        hadSale = hadSale,
+                        visitNote = note,
+                        lat = fix?.lat,
+                        lng = fix?.lng,
+                    ),
                 )
             } catch (e: Exception) {
                 log.w("logVisit failed: ${e.message}")
