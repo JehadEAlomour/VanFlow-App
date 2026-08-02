@@ -19,6 +19,7 @@ dependencies {
     "commonMainImplementation"(libs.ktor.client.content.negotiation)
     "commonMainImplementation"(libs.ktor.serialization.json)
     "commonMainImplementation"(libs.ktor.client.logging)
+    "commonMainApi"(libs.ktor.client.websockets)
     "commonTestImplementation"(libs.kotlin.test)
     "androidMainImplementation"(libs.ktor.client.okhttp)
     // `iosMain` is a lazily-created intermediate source set, so its configuration

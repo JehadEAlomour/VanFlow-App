@@ -10,6 +10,7 @@ import com.jehadalomour.flowvan.core.domain.sync.SyncScheduler
 import com.jehadalomour.flowvan.core.domain.tracking.LocationTrackingCoordinator
 import com.jehadalomour.flowvan.core.domain.usecase.GetCurrentUserUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetDailyKpiUseCase
+import com.jehadalomour.flowvan.core.domain.sync.RealtimeSyncCoordinator
 import com.jehadalomour.flowvan.core.domain.usecase.RefreshCatalogUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.StartShiftUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +31,7 @@ class HomeViewModel(
     private val coordinator: LocationTrackingCoordinator,
     private val syncScheduler: SyncScheduler,
     private val refreshCatalog: RefreshCatalogUseCase,
+    private val realtimeSync: RealtimeSyncCoordinator,
     private val locationPointDao: LocationPointDao,
 ) : ViewModel() {
 
@@ -39,6 +41,9 @@ class HomeViewModel(
     init {
         // Keep pushing pending offline transactions + retrying on reconnect, shift or not.
         syncScheduler.start()
+        // Listen for server-pushed "your data changed" signals. Owns its own scope,
+        // so it keeps running once the rep leaves this screen to sell.
+        realtimeSync.start()
         // Always-on tracking: the trail starts the moment a signed-in user lands here,
         // shift or no shift. An active shift only relabels the points (observeActiveShift).
         sessionStore.currentUserId?.let { userId ->

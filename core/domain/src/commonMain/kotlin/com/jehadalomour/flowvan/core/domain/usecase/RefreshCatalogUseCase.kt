@@ -5,6 +5,7 @@ import com.jehadalomour.flowvan.core.network.api.AuthApi
 import com.jehadalomour.flowvan.core.network.api.CustomerApi
 import com.jehadalomour.flowvan.core.network.api.ProductApi
 import com.jehadalomour.flowvan.core.network.api.RepApi
+import com.jehadalomour.flowvan.core.network.realtime.SyncResource
 import com.jehadalomour.flowvan.core.network.mapper.toEntity
 import com.jehadalomour.flowvan.core.network.http.ApiConfig
 import com.jehadalomour.flowvan.core.network.http.OffsetPage
@@ -61,14 +62,7 @@ class RefreshCatalogUseCase(
         tobaccoProfiles.refresh().onFailure { log.w("tobacco profiles refresh failed: ${it.message}") }
         return try {
             coroutineScope {
-                val customersJob = async {
-                    // Page through ALL customers (server caps each page at 200).
-                    val all = fetchAllPages { limit, offset -> customerApi.list(limit = limit, offset = offset) }
-                    // Full replace (not upsert): the server list is scoped to this
-                    // salesman, so customers no longer assigned to them are removed.
-                    customers.replaceAll(all.map { it.toEntity() })
-                    all.size
-                }
+                val customersJob = async { refreshCustomers() }
                 // Products first (upsert replaces the row, zeroing stock)…
                 val productCount = run {
                     // Page through ALL products so large catalogs (e.g. 1000 items)
@@ -104,6 +98,39 @@ class RefreshCatalogUseCase(
             log.e("Catalog refresh failed: ${e.message}")
             Result.failure(e)
         }
+    }
+
+    private suspend fun refreshCustomers(): Int {
+        // Page through ALL customers (server caps each page at 200).
+        val all = fetchAllPages { limit, offset -> customerApi.list(limit = limit, offset = offset) }
+        // Full replace (not upsert): the server list is scoped to this
+        // salesman, so customers no longer assigned to them are removed.
+        customers.replaceAll(all.map { it.toEntity() })
+        return all.size
+    }
+
+    /**
+     * Re-pull ONE slice, in response to a realtime signal from the server.
+     *
+     * Deliberately narrow: a signal that offers changed should not drag the whole
+     * product catalog over a patchy mobile connection. Each branch mirrors the
+     * matching part of [invoke], so a targeted refresh and a full one leave the
+     * same local state.
+     *
+     * Best-effort by contract — the caller is a socket event, not a user waiting
+     * on a result. A failure leaves the previous cache in place and the next
+     * foreground refresh corrects it.
+     */
+    suspend fun refreshOnly(resource: SyncResource): Result<Unit> {
+        if (!apiConfig.isEnabled) return Result.success(Unit)
+        return runCatching {
+            when (resource) {
+                SyncResource.OFFERS -> offers.refresh().getOrThrow()
+                SyncResource.CUSTOMERS -> refreshCustomers()
+                SyncResource.STOCK -> refreshVanStock()
+            }
+            Unit
+        }.onFailure { log.w("targeted refresh ($resource) failed: ${it.message}") }
     }
 
     /**
