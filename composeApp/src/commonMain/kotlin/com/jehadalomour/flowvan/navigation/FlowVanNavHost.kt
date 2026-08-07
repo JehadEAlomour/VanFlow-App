@@ -34,6 +34,7 @@ import com.jehadalomour.flowvan.feature.print.VoucherDetailScreen
 import com.jehadalomour.flowvan.feature.reports.VoucherReportScreen
 import com.jehadalomour.flowvan.feature.voucher.CollectionScreen
 import com.jehadalomour.flowvan.feature.customer.CreateCustomerScreen
+import com.jehadalomour.flowvan.feature.voucher.ReturnByItemScreen
 import com.jehadalomour.flowvan.feature.customer.CustomerDashboardScreen
 import com.jehadalomour.flowvan.feature.customer.CustomerListScreen
 import com.jehadalomour.flowvan.feature.home.EndOfDayScreen
@@ -57,6 +58,7 @@ object Routes {
     const val ROUTE = "route"
     const val CUSTOMERS = "customers"
     const val CREATE_CUSTOMER = "create_customer"
+    const val RETURN_BY_ITEM = "return_by_item"
     const val VAN_STOCK = "van_stock"
     const val AI = "ai?customerId={customerId}"
     const val END_OF_DAY = "end_of_day"
@@ -146,6 +148,7 @@ fun FlowVanNavHost(
                 onOpenEndOfDay = { navController.navigate(Routes.END_OF_DAY) },
                 onOpenReports = { navController.navigate(Routes.REPORTS_HUB) },
                 onOpenOffers = { navController.navigate(Routes.OFFERS) },
+                onOpenReturnByItem = { navController.navigate(Routes.RETURN_BY_ITEM) },
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
                 onLogout = {
                     scope.launch {
@@ -168,6 +171,14 @@ fun FlowVanNavHost(
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
                 onNavigateTo = { id -> navController.navigate(Routes.map(id)) },
                 onAddCustomer = { navController.navigate(Routes.CREATE_CUSTOMER) },
+            )
+        }
+        composable(Routes.RETURN_BY_ITEM) {
+            ReturnByItemScreen(
+                onBack = { navController.popBackStack() },
+                // Back to wherever the rep started; the created vouchers are
+                // already shown on the screen before they press Done.
+                onDone = { navController.popBackStack() },
             )
         }
         composable(Routes.CREATE_CUSTOMER) {

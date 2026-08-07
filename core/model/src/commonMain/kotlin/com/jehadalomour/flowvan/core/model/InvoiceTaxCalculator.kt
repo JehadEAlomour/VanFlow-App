@@ -47,6 +47,24 @@ data class VoucherSummary(
 
     // ── Grand total ─────────────────────────────────────────────────────────
     val grandTotal: Double,
+
+    /**
+     * THE sub-total to SHOW — on the cart, the voucher detail and the printed receipt.
+     *
+     *   INCLUSIVE   grandTotal − totalTax
+     *               The entered price already contains the tax, so stripping the tax
+     *               content out of what the customer pays IS the pre-tax figure. The
+     *               discount is already inside that price and is not added back.
+     *
+     *   EXCLUSIVE   subtotalBeforeDiscounts, i.e. Σ(qty × unitPrice)
+     *               Prices exclude tax, so the sub-total is what the goods cost before
+     *               discount and before tax is added on top.
+     *
+     * [subtotalBeforeDiscounts] stays as the raw Σ(qty × unitPrice) for the money
+     * engine's own arithmetic; this is the display figure and matches the backend's
+     * voucher-summary report and the dashboard's voucherSubtotal() exactly.
+     */
+    val displaySubtotal: Double,
 ) {
     companion object {
         val ZERO = VoucherSummary(
@@ -61,6 +79,7 @@ data class VoucherSummary(
             taxInInclusive = 0.0,
             totalTax = 0.0,
             grandTotal = 0.0,
+            displaySubtotal = 0.0,
         )
     }
 }
@@ -79,11 +98,36 @@ object InvoiceTaxCalculator {
      * expects. All lines share one tax mode (from the global setting); EXEMPT and
      * zero-rate lines simply carry rate 0.
      */
+    /**
+     * @param taxExempt the customer is tax-exempt, so this document carries no tax.
+     *   The server decides and freezes this; the app passes the same flag so the
+     *   cart total the rep reads matches the voucher that will be posted. Under
+     *   INCLUSIVE pricing the tax is STRIPPED OUT of the price rather than merely
+     *   zeroed — the exempt customer pays less, which is the backend's
+     *   REMOVE_INCLUDED_TAX behaviour and the ERP's default.
+     */
     fun calculateInvoice(
         cart: List<CartLine>,
         invoiceDiscount: InvoiceDiscountInput = InvoiceDiscountInput.None,
+        taxExempt: Boolean = false,
     ): VoucherSummary {
         if (cart.isEmpty()) return VoucherSummary.ZERO
+
+        if (taxExempt) {
+            val inclusive = cart.any { it.lineTaxType == LineTaxType.INCLUSIVE }
+            val exemptCart = cart.map { line ->
+                val rate = line.taxRate
+                line.copy(
+                    // Strip the contained tax out of an INCLUSIVE price; an EXCLUSIVE
+                    // price never held any, so it is left alone.
+                    unitPrice = if (inclusive && rate > 0.0) line.unitPrice / (1.0 + rate)
+                                else line.unitPrice,
+                    taxRate = 0.0,
+                    lineTaxType = LineTaxType.EXEMPT,
+                )
+            }
+            return calculateInvoice(exemptCart, invoiceDiscount, taxExempt = false)
+        }
 
         val mode =
             if (cart.any { it.lineTaxType == LineTaxType.INCLUSIVE }) TaxMode.INCLUSIVE
@@ -151,8 +195,13 @@ object InvoiceTaxCalculator {
             }
         }
 
+        val grandTotalJod =
+            (result.grandTotalFils + if (mode == TaxMode.INCLUSIVE) 0L else tobaccoTaxFils).filsToJod()
+        val totalTaxJod = (result.totalTaxFils + tobaccoTaxFils).filsToJod()
+        val grossJod = result.lines.sumOf { it.grossFils }.filsToJod()
+
         return VoucherSummary(
-            subtotalBeforeDiscounts = result.lines.sumOf { it.grossFils }.filsToJod(),
+            subtotalBeforeDiscounts = grossJod,
             totalLineDiscounts      = result.totalLineDiscountFils.filsToJod(),
             netAfterLineDiscounts   = result.lines.sumOf { it.netBeforeHeaderFils }.filsToJod(),
             invoiceDiscountAmount   = result.headerDiscountFils.filsToJod(),
@@ -163,14 +212,16 @@ object InvoiceTaxCalculator {
             taxInInclusive          = taxInInclusive.filsToJod(),
             // totalTax always reports the full tobacco tax content, informationally,
             // regardless of tax mode.
-            totalTax                = (result.totalTaxFils + tobaccoTaxFils).filsToJod(),
+            totalTax                = totalTaxJod,
             // grandTotal only adds tobacco tax on top under EXCLUSIVE mode. Under
             // INCLUSIVE mode the entered price already contains it (r.netFils/
             // result.grandTotalFils for a zero-rated tobacco line IS the tax-inclusive
             // entered price) — adding tobaccoTaxFils again would double-count it. This
             // mirrors the ERP backend's DirectInvoiceClient.tsx/SalesOrderBuilderClient.tsx,
             // which gate the same way on the document tax mode.
-            grandTotal              = (result.grandTotalFils + if (mode == TaxMode.INCLUSIVE) 0L else tobaccoTaxFils).filsToJod(),
+            grandTotal              = grandTotalJod,
+            displaySubtotal         = if (mode == TaxMode.INCLUSIVE) grandTotalJod - totalTaxJod
+                                      else grossJod,
         )
     }
 }

@@ -758,4 +758,14 @@
     <string name="offers_reward_discount">خصم</string>
     <string name="offers_all_days">كل الأيام</string>
     <string name="offers_priority">الأولوية</string>
+    <string name="print_compact_title">دمج أصناف الفاتورة؟</string>
+    <string name="print_compact_body">تحتوي الفاتورة على صنف واحد بوحدات مختلفة. يمكن دمج الأسطر التي لها نفس الصنف ونفس معامل الوحدة في سطر واحد عند الطباعة فقط — الفاتورة المحفوظة لا تتغيّر.</string>
+    <string name="print_compact_yes">دمج عند الطباعة</string>
+    <string name="print_compact_no">طباعة كل الأسطر</string>
+    <string name="print_compacted_note">أسطر مدمجة</string>
+    <string name="voucher_tax_exempt_banner">فاتورة معفاة من الضريبة</string>
+    <string name="voucher_tax_exempt_number">رقم الإعفاء</string>
+    <string name="cust_tax_exempt">معفى من الضريبة</string>
+    <string name="cust_tax_exempt_hint">كل فاتورة لهذا العميل تصدر بدون ضريبة</string>
+    <string name="cust_tax_exempt_number">رقم الإعفاء</string>
 </resources>

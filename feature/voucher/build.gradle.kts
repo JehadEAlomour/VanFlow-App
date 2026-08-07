@@ -25,9 +25,8 @@ dependencies {
     "commonMainImplementation"(projects.core.data)
     "commonMainImplementation"(projects.core.database)
     "commonMainImplementation"(projects.core.datastore)
+    "commonMainImplementation"(projects.core.network)
     "commonMainImplementation"(projects.core.domain)
     "commonMainImplementation"(projects.core.designSystem)
-
-    // AppBackHandler.android uses androidx.activity.compose.BackHandler
     "androidMainImplementation"(libs.androidx.activity.compose)
 }

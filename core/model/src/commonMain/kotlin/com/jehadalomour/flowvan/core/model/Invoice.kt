@@ -18,6 +18,12 @@ data class InvoiceLine(
     val taxType: String = "TAXABLE",    // LineTaxType.name — defaults to TAXABLE for old records
     val taxAmount: Double = 0.0,        // per-line tax (before invoice discount)
     val unit: String = "",              // unit name (حبة, كرتونة, etc.)
+    /**
+     * `item_units.id` of the chosen unit ("" = base pool). Has a default because unsynced
+     * invoices already sitting in `linesJson` on a rep's phone are deserialized after the
+     * update — without it they would fail to parse and never upload.
+     */
+    val unitId: String = "",
     val unitConversionQty: Double = 1.0, // pieces per unit (base = 1) — for stock + ERP per-piece
     val taxRate: Double = 0.0,          // per-product rate used when the line was created
 )

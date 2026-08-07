@@ -20,6 +20,7 @@ import com.jehadalomour.flowvan.core.model.LineTaxType
 import com.jehadalomour.flowvan.core.model.OfferEvaluation
 import com.jehadalomour.flowvan.core.model.OfferTotals
 import com.jehadalomour.flowvan.core.model.Product
+import com.jehadalomour.flowvan.core.model.ProductUnit
 import com.jehadalomour.flowvan.core.model.TobaccoTaxProfile
 import com.jehadalomour.flowvan.core.model.TaxType
 import kotlinx.serialization.decodeFromString
@@ -293,9 +294,9 @@ class VoucherViewModel(
             }
             is VoucherEvent.StepItem -> stepItem(event.product, event.delta)
             is VoucherEvent.ConfirmItemDialog -> confirmDialog(event)
-            is VoucherEvent.ChangeQty -> changeQty(event.productId, event.qty)
+            is VoucherEvent.ChangeQty -> changeQty(event.productId, event.unitId, event.qty)
             is VoucherEvent.RemoveLine -> _state.update { s ->
-                s.copy(cart = s.cart.filterNot { it.productId == event.productId })
+                s.copy(cart = s.cart.filterNot { it.isLine(event.productId, event.unitId) })
             }
             is VoucherEvent.PaymentMethodSelected -> _state.update { it.copy(paymentMethod = event.method) }
             is VoucherEvent.PaymentMethodChosen -> _state.update {
@@ -359,8 +360,13 @@ class VoucherViewModel(
                 json.decodeFromString<List<InvoiceLine>>(invoice.linesJson)
             }.getOrDefault(emptyList())
 
+            // Re-resolve the saved line's unit BY ID, not by name: two colours of one item
+            // can share a display name, and matching on the name picked whichever came first.
+            fun unitFor(line: InvoiceLine): ProductUnit? =
+                s.productUnits[line.productId]?.firstOrNull { it.id == line.unitId }
+
             fun conversionFor(line: InvoiceLine): Double =
-                s.productUnits[line.productId]?.firstOrNull { it.name == line.unit }?.conversionQty ?: 1.0
+                unitFor(line)?.conversionQty ?: line.unitConversionQty
 
             val cart = lines.map { line ->
                 CartLine(
@@ -371,13 +377,18 @@ class VoucherViewModel(
                     qty = line.qty,
                     discountPct = line.discountPct,
                     unit = line.unit,
+                    unitId = line.unitId,
                     unitConversionQty = conversionFor(line),
                     taxRate = line.taxRate,
                     lineTaxType = runCatching { LineTaxType.valueOf(line.taxType) }.getOrDefault(s.taxType),
                     imageUrl = s.products.firstOrNull { it.id == line.productId }?.imageUrl,
                 )
             }
-            val sold = lines.associate { it.productId to it.qty * conversionFor(it) }
+            // Per (product, unit): a sale of 3 red + 2 blue caps each colour on its own,
+            // where a productId-keyed map would have kept only the last line's quantity.
+            val sold = lines.associate {
+                lineKey(it.productId, it.unitId) to it.qty * conversionFor(it)
+            }
 
             s.copy(
                 cart = cart,
@@ -418,9 +429,12 @@ class VoucherViewModel(
                 val cart = lines.map { sl ->
                     val product = s.products.firstOrNull { it.sku == sl.sku }
                     val productId = product?.id ?: sl.sku
-                    val conversion = sl.unitBaseQty?.toDouble()
-                        ?: s.productUnits[productId]?.firstOrNull { it.name == sl.unitName }?.conversionQty
-                        ?: 1.0
+                    // Resolve the unit by the id the server sent; the name is only a fallback
+                    // for a backend that doesn't carry itemUnitId on a sale detail line yet.
+                    val units = s.productUnits[productId].orEmpty()
+                    val unit = units.firstOrNull { it.id == sl.itemUnitId && sl.itemUnitId.isNotBlank() }
+                        ?: units.firstOrNull { it.name == sl.unitName }
+                    val conversion = unit?.conversionQty ?: sl.unitBaseQty?.toDouble() ?: 1.0
                     CartLine(
                         productId = productId,
                         sku = sl.sku,
@@ -428,14 +442,17 @@ class VoucherViewModel(
                         unitPrice = sl.unitPrice,
                         qty = sl.qty,
                         discountPct = sl.discountPct,
-                        unit = sl.unitName ?: product?.unit ?: "",
+                        unit = unit?.name ?: sl.unitName ?: product?.unit ?: "",
+                        unitId = unit?.id.orEmpty(),
                         unitConversionQty = conversion,
                         taxRate = sl.taxRate,
                         lineTaxType = s.taxType,
                         imageUrl = product?.imageUrl,
                     )
                 }
-                val sold = cart.associate { it.productId to it.qty * it.unitConversionQty }
+                val sold = cart.associate {
+                    lineKey(it.productId, it.unitId) to it.qty * it.unitConversionQty
+                }
                 s.copy(
                     cart = cart,
                     referenceInvoiceId = sale.id,
@@ -452,10 +469,16 @@ class VoucherViewModel(
         }
     }
 
-    /** RETURN can't exceed what was sold on the source invoice (compared in base units). */
-    private fun capReturnQty(state: VoucherState, productId: String, unitConversionQty: Double, qty: Double): Double {
+    /** RETURN can't exceed what the source invoice sold of THIS unit (compared in base units). */
+    private fun capReturnQty(
+        state: VoucherState,
+        productId: String,
+        unitId: String,
+        unitConversionQty: Double,
+        qty: Double,
+    ): Double {
         if (!state.requiresSourceInvoice) return qty
-        val soldBase = state.soldQtyByProduct[productId] ?: return qty
+        val soldBase = state.soldQtyByProduct[lineKey(productId, unitId)] ?: return qty
         if (unitConversionQty <= 0.0) return qty
         return qty.coerceAtMost(soldBase / unitConversionQty)
     }
@@ -473,7 +496,10 @@ class VoucherViewModel(
 
     private fun stepItem(product: Product, delta: Int) {
         _state.update { s ->
-            val existing = s.cart.firstOrNull { it.productId == product.id }
+            // The +/- stepper always means the item's default (smallest) unit, so it steps
+            // THAT line — never a variant line the rep added deliberately from the sheet.
+            val defaultUnitId = s.productUnits[product.id]?.minByOrNull { it.conversionQty }?.id.orEmpty()
+            val existing = s.cart.firstOrNull { it.isLine(product.id, defaultUnitId) }
             val newCart = when {
                 existing == null && delta > 0 -> {
                     val defaultUnit = s.productUnits[product.id]?.minByOrNull { it.conversionQty }
@@ -492,6 +518,7 @@ class VoucherViewModel(
                         unitPrice = resolvedPrice,
                         qty = 1.0,
                         unit = defaultUnit?.name ?: product.unit,
+                        unitId = defaultUnitId,
                         unitConversionQty = defaultUnit?.conversionQty ?: 1.0,
                         taxRate = product.taxRate,
                         lineTaxType = s.taxType,
@@ -502,8 +529,10 @@ class VoucherViewModel(
                     )
                 }
                 existing == null -> s.cart
-                (existing.qty + delta) <= 0 -> s.cart.filterNot { it.productId == product.id }
-                else -> s.cart.map { if (it.productId == product.id) it.copy(qty = it.qty + delta) else it }
+                (existing.qty + delta) <= 0 -> s.cart.filterNot { it.isLine(product.id, defaultUnitId) }
+                else -> s.cart.map {
+                    if (it.isLine(product.id, defaultUnitId)) it.copy(qty = it.qty + delta) else it
+                }
             }
             s.copy(cart = newCart)
         }
@@ -520,12 +549,20 @@ class VoucherViewModel(
         else Triple(false, null, 0L)
     }
 
+    /**
+     * Add or update the line for (product, chosen unit).
+     *
+     * This is the fix at the heart of the feature: the old version matched on productId alone
+     * and then OVERWROTE the line's unit, so picking a second colour of the same item replaced
+     * the first instead of adding a line — 3 red + 2 blue was structurally impossible.
+     */
     private fun confirmDialog(event: VoucherEvent.ConfirmItemDialog) {
         _state.update { s ->
-            val qty = capReturnQty(s, event.product.id, event.unitConversionQty, event.qty)
-            val existing = s.cart.firstOrNull { it.productId == event.product.id }
+            val unitId = event.unit.id
+            val qty = capReturnQty(s, event.product.id, unitId, event.unit.conversionQty, event.qty)
+            val existing = s.cart.firstOrNull { it.isLine(event.product.id, unitId) }
             val newCart = when {
-                qty <= 0 -> s.cart.filterNot { it.productId == event.product.id }
+                qty <= 0 -> s.cart.filterNot { it.isLine(event.product.id, unitId) }
                 existing == null -> {
                     val (isTob, tobProfile, consumerFils) = s.tobaccoFor(event.product)
                     s.cart + CartLine(
@@ -534,8 +571,9 @@ class VoucherViewModel(
                         nameAr = event.product.nameAr,
                         unitPrice = event.unitPrice,
                         qty = qty,
-                        unit = event.unit,
-                        unitConversionQty = event.unitConversionQty,
+                        unit = event.unit.name,
+                        unitId = unitId,
+                        unitConversionQty = event.unit.conversionQty,
                         discountPct = event.discountPct,
                         taxRate = event.product.taxRate,
                         lineTaxType = s.taxType,
@@ -546,12 +584,12 @@ class VoucherViewModel(
                     )
                 }
                 else -> s.cart.map {
-                    if (it.productId == event.product.id)
+                    if (it.isLine(event.product.id, unitId))
                         it.copy(
                             qty = qty,
-                            unit = event.unit,
+                            unit = event.unit.name,
                             unitPrice = event.unitPrice,
-                            unitConversionQty = event.unitConversionQty,
+                            unitConversionQty = event.unit.conversionQty,
                             discountPct = event.discountPct,
                         )
                     else it
@@ -561,10 +599,10 @@ class VoucherViewModel(
         }
     }
 
-    private fun changeQty(productId: String, qty: Double) {
+    private fun changeQty(productId: String, unitId: String, qty: Double) {
         _state.update { s ->
-            val newCart = if (qty <= 0.0) s.cart.filterNot { it.productId == productId }
-            else s.cart.map { if (it.productId == productId) it.copy(qty = qty) else it }
+            val newCart = if (qty <= 0.0) s.cart.filterNot { it.isLine(productId, unitId) }
+            else s.cart.map { if (it.isLine(productId, unitId)) it.copy(qty = qty) else it }
             s.copy(cart = newCart)
         }
     }

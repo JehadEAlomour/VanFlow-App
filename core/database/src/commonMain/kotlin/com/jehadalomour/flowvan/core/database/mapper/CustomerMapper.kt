@@ -28,4 +28,10 @@ fun CustomerEntity.toDomain(): Customer = Customer(
     regionId = regionId,
     repId = repId,
     priceListId = priceListId,
+    isTaxExempt = isTaxExempt,
+    taxExemptionType = taxExemptionType,
+    taxExemptionNumber = taxExemptionNumber,
+    taxExemptionReason = taxExemptionReason,
+    taxExemptionValidFrom = taxExemptionValidFrom,
+    taxExemptionValidTo = taxExemptionValidTo,
 )

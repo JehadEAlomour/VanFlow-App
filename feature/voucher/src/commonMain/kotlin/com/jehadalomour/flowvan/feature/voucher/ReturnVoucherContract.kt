@@ -2,6 +2,8 @@ package com.jehadalomour.flowvan.feature.voucher
 
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.Customer
+import com.jehadalomour.flowvan.core.model.InvoiceTaxCalculator
+import com.jehadalomour.flowvan.core.model.VoucherSummary
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.feature.voucher.VoucherView
 import com.jehadalomour.flowvan.core.designsystem.resources.Res
@@ -33,16 +35,24 @@ data class ReturnVoucherState(
     val savedNumber: String? = null,
     val errorAr: String? = null,
 ) {
-    val subtotal: Double get() = cart.sumOf { it.lineTotal }
-    val taxAmount: Double get() = subtotal * 0.16
-    val total: Double get() = subtotal + taxAmount
+    /**
+     * Same money engine as the SALE cart, instead of the flat `subtotal × 0.16` that used
+     * to live here. That hardcode was wrong twice over: it ignored each item's own rate,
+     * and under INCLUSIVE pricing it ADDED tax to a price that already contained it, so a
+     * return credited the customer more than the sale had charged.
+     */
+    private val summary: VoucherSummary get() = InvoiceTaxCalculator.calculateInvoice(cart = cart)
+    val subtotal: Double get() = summary.displaySubtotal
+    val taxAmount: Double get() = summary.totalTax
+    val total: Double get() = summary.grandTotal
 }
 
 sealed interface ReturnVoucherEvent {
     data class SearchChanged(val q: String) : ReturnVoucherEvent
     data class AddToCart(val product: Product) : ReturnVoucherEvent
-    data class ChangeQty(val productId: String, val qty: Double) : ReturnVoucherEvent
-    data class RemoveLine(val productId: String) : ReturnVoucherEvent
+    /** [unitId] "" = the item's base pool; a line is identified by (productId, unitId). */
+    data class ChangeQty(val productId: String, val unitId: String = "", val qty: Double) : ReturnVoucherEvent
+    data class RemoveLine(val productId: String, val unitId: String = "") : ReturnVoucherEvent
     data class ReasonSelected(val reason: ReturnReason) : ReturnVoucherEvent
     data class NotesChanged(val notes: String) : ReturnVoucherEvent
     data object ToggleView : ReturnVoucherEvent

@@ -88,6 +88,8 @@ class VoucherPrintViewModel(
                         taxAmount = entity.taxAmount,
                         total = entity.total,
                         notes = entity.notes,
+                        isTaxExempt = entity.isTaxExempt,
+                        taxExemptionNumber = entity.taxExemptionNumber,
                         branch = settings.branch,
                     )
                 }

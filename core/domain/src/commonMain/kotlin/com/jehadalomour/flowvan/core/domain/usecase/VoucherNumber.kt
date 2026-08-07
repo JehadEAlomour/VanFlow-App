@@ -59,6 +59,6 @@ class VoucherNumberGenerator(
         // number is never reused after a voucher is cancelled/removed.
         val seq = invoices.nextSeqForType(type, yearStart, yearEnd)
         val userCode = session.currentUserCode?.takeIf { it.isNotBlank() } ?: "U-0000"
-        return "$prefix-$year-$userCode-$seq"
+        return "$prefix-$userCode-$seq"
     }
 }

@@ -51,6 +51,7 @@ class CreateRequestVoucherUseCase(
                 taxType     = it.lineTaxType.name,
                 taxAmount   = it.lineTax,
                 unit        = it.unit,
+                unitId      = it.unitId,
                 unitConversionQty = it.unitConversionQty,
                 taxRate     = it.taxRate,
             )
@@ -70,7 +71,7 @@ class CreateRequestVoucherUseCase(
             salesmanId     = salesmanId,
             createdAt      = now,
             linesJson      = json.encodeToString(invoiceLines),
-            subtotal       = summary.subtotalBeforeDiscounts,
+            subtotal       = summary.displaySubtotal,
             discountAmount = summary.totalLineDiscounts,
             taxAmount      = summary.totalTax,
             total          = summary.grandTotal,

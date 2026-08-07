@@ -38,9 +38,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -52,6 +55,17 @@ import com.jehadalomour.flowvan.core.common.format.formatJod
 import com.jehadalomour.flowvan.core.common.i18n.AppLanguage
 
 val standardUnits = listOf("حبة", "علبة", "كرتونة", "طرد", "كيس", "دزينة")
+
+/**
+ * How the unit reads inside a cart row's muted sku/price line: bigger, black and bold.
+ * With colour units every line of an item shares one sku, so the unit is the only thing
+ * telling أحمر from أزرق — it has to win the row, not blend into it.
+ */
+private val UnitSpan = SpanStyle(
+    color = Fv.TextHigh,
+    fontSize = 14.sp,
+    fontWeight = FontWeight.Bold,
+)
 
 @Composable
 fun ProductPickerColumn(
@@ -227,9 +241,16 @@ fun CartLineRow(
                 )
                 val unitStr = line.unit.takeIf { it.isNotBlank() } ?: ""
                 Text(
-                    buildString {
+                    // The unit is the one thing on this row that says WHICH variant was
+                    // sold — with colour units the sku is identical across lines, so it
+                    // carries the whole distinction and is set bigger, black and bold
+                    // against the muted sku/price around it.
+                    buildAnnotatedString {
                         append(line.sku)
-                        if (unitStr.isNotBlank()) append(" · $unitStr")
+                        if (unitStr.isNotBlank()) {
+                            append(" · ")
+                            withStyle(UnitSpan) { append(unitStr) }
+                        }
                         append(" · ${line.unitPrice.formatJod(AppLanguage.AR)}")
                     },
                     color = Fv.TextMid,
@@ -314,9 +335,12 @@ fun CartItemCard(line: CartLine, onTap: () -> Unit) {
                     )
                     val unitStr = line.unit.takeIf { it.isNotBlank() } ?: ""
                     Text(
-                        buildString {
+                        buildAnnotatedString {
                             append(line.sku)
-                            if (unitStr.isNotBlank()) append(" · $unitStr")
+                            if (unitStr.isNotBlank()) {
+                                append(" · ")
+                                withStyle(UnitSpan) { append(unitStr) }
+                            }
                         },
                         color = Fv.TextMid,
                         fontSize = 11.sp,

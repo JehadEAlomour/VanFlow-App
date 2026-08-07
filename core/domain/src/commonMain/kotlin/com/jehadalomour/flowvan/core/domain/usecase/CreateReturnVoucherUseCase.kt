@@ -5,6 +5,7 @@ import com.jehadalomour.flowvan.core.data.location.LocationProvider
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
+import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.InvoiceDiscountInput
 import com.jehadalomour.flowvan.core.model.InvoiceLine
@@ -19,6 +20,7 @@ import kotlin.time.ExperimentalTime
 class CreateReturnVoucherUseCase(
     private val invoices: InvoiceRepository,
     private val products: ProductRepository,
+    private val productUnits: ProductUnitRepository,
     private val customers: CustomerRepository,
     private val json: Json,
     private val syncScheduler: SyncScheduler,
@@ -60,6 +62,7 @@ class CreateReturnVoucherUseCase(
                 taxType     = it.lineTaxType.name,
                 taxAmount   = it.lineTax,
                 unit        = it.unit,
+                unitId      = it.unitId,
                 unitConversionQty = it.unitConversionQty,
                 taxRate     = it.taxRate,
             )
@@ -74,7 +77,7 @@ class CreateReturnVoucherUseCase(
             salesmanId     = salesmanId,
             createdAt      = now,
             linesJson      = json.encodeToString(invoiceLines),
-            subtotal       = summary.subtotalBeforeDiscounts,
+            subtotal       = summary.displaySubtotal,
             discountAmount = summary.totalLineDiscounts,
             taxAmount      = summary.totalTax,
             total          = summary.grandTotal,
@@ -90,7 +93,7 @@ class CreateReturnVoucherUseCase(
         invoices.save(entity)
         // Local van stock only — the server derives stock from the posted voucher transaction.
         for (line in cart) {
-            products.adjustStock(line.productId, line.stockQty.toInt())
+            applyVanStockDelta(products, productUnits, line, line.stockQty.toInt())
         }
         // A CREDIT return is a credit note → reduces the customer's balance (debt).
         // A CASH return refunds cash from the drawer → no balance change.

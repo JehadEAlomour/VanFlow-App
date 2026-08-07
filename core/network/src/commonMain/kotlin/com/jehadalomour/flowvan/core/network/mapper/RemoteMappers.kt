@@ -1,5 +1,6 @@
 package com.jehadalomour.flowvan.core.network.mapper
 
+import kotlinx.datetime.Instant
 import com.jehadalomour.flowvan.core.database.entity.CustomerEntity
 import com.jehadalomour.flowvan.core.database.entity.ProductEntity
 import com.jehadalomour.flowvan.core.network.dto.ApiUserDto
@@ -72,7 +73,19 @@ fun CustomerDto.toEntity(): CustomerEntity = CustomerEntity(
     regionId = regionId,
     repId = repId,
     priceListId = priceListId,
+    // Written on every sync, including when it turns OFF — revoking an exemption
+    // has to reach the van, not just granting one.
+    isTaxExempt = isTaxExempt == true,
+    taxExemptionType = taxExemptionType,
+    taxExemptionNumber = taxExemptionNumber,
+    taxExemptionReason = taxExemptionReason,
+    taxExemptionValidFrom = taxExemptionValidFrom?.let { parseIsoMillis(it) },
+    taxExemptionValidTo = taxExemptionValidTo?.let { parseIsoMillis(it) },
 )
+
+/** ISO-8601 → epoch millis, null when the server sends something unparseable. */
+private fun parseIsoMillis(iso: String): Long? =
+    runCatching { Instant.parse(iso).toEpochMilliseconds() }.getOrNull()
 
 // ---- Products ----
 

@@ -68,26 +68,47 @@ class RefreshCatalogUseCase(
                     // Page through ALL products so large catalogs (e.g. 1000 items)
                     // import fully, not just the first page.
                     val allItems = fetchAllPages { limit, offset -> productApi.list(limit = limit, offset = offset) }
-                    products.cacheAll(allItems.map { it.toEntity() })
+                    // REPLACE, not upsert: an item deleted in the ERP used to linger on the
+                    // device with its last-known stock, and since the catalog list filters on
+                    // vanStock > 0, those dead rows were the only ones a rep could see.
+                    products.replaceAll(allItems.map { it.toEntity() })
                     // …then refill each item's REAL units (base + larger) so the app
                     // shows the item's own units, not a hardcoded list.
                     val units = allItems.flatMap { p ->
-                        // The base unit (smallest conversion) is always labelled "حبة" (piece),
-                        // regardless of what the ERP names it; larger units keep their own names.
-                        val baseConv = p.units.minOfOrNull { it.conversionQty }
                         p.units.map { u ->
-                            val isBaseUnit = u.isBase || u.conversionQty == baseConv
+                            // Trust the server's `isBase` flag. This used to also treat
+                            // "smallest conversionQty" as the base, which broke the moment a
+                            // product had SAME-SIZE units: a colour or flavour variant has
+                            // conversionQty 1 like the base does, so every one of them matched
+                            // and got renamed "حبة" — six colours showing as six identical
+                            // pieces, with no way for the rep to tell them apart. The backend
+                            // already marks exactly one unit isBase=true, so infer nothing.
+                            //
+                            // The rename still applies to a base whose ERP name is meaningless
+                            // in the field ("PCS", "Each"), but never overwrites a real name.
                             ProductUnit(
-                                id = u.barcode.ifBlank { "${p.id}:${u.code}:${u.conversionQty}" },
+                                // The server's item_units.id is the only stable identity: the old
+                                // barcode-or-"$id:$code:$qty" expression collapsed every
+                                // blank-barcode colour of an item onto ONE id, so six colours
+                                // became one row. Kept only as the fallback for a backend that
+                                // doesn't send itemUnitId yet.
+                                id = u.itemUnitId.ifBlank {
+                                    u.barcode.ifBlank { "${p.id}:${u.code}:${u.conversionQty}" }
+                                },
                                 productId = p.id,
-                                name = if (isBaseUnit) BASE_UNIT_NAME else u.name,
+                                name = if (u.isBase) BASE_UNIT_NAME else u.name.ifBlank { BASE_UNIT_NAME },
                                 price = u.priceFils / 1000.0,
                                 conversionQty = u.conversionQty,
+                                code = u.code,
+                                isBase = u.isBase,
+                                isStockUnit = u.isStockUnit,
                             )
                         }
                     }
-                    productUnits.deleteAll()
-                    if (units.isNotEmpty()) productUnits.upsertAll(units)
+                    // MERGE, never wipe: this refresh runs on login and on every home pull, and
+                    // the products endpoint carries no stock — a delete-then-insert zeroed every
+                    // variant pool each time. mergeAll keeps each surviving unit's vanStock.
+                    productUnits.mergeAll(units)
                     allItems.size
                 }
                 // …then overlay the real per-rep van stock.
@@ -155,10 +176,28 @@ class RefreshCatalogUseCase(
         return all
     }
 
+    /**
+     * Overlay the rep's stock, one row per POOL. A base-pool row (`stockUnitCode` blank) sets
+     * `products.vanStock` exactly as before; a variant row sets that unit's own pool instead,
+     * so red and blue no longer share one number. A variant row we cannot resolve to a local
+     * unit is skipped rather than folded into the base pool — folding it would let the rep
+     * sell blue against red's stock.
+     */
     private suspend fun refreshVanStock(): Int {
         val repId = session.currentRepId ?: return 0
         val stock = repApi.vanStock(repId)
-        stock.forEach { products.setStock(it.productId, it.quantity) }
+        stock.forEach { row ->
+            val poolCode = row.stockUnitCode.orEmpty()
+            if (poolCode.isBlank()) {
+                products.setStock(row.productId, row.quantity)
+            } else {
+                val unitId = row.itemUnitId.orEmpty().ifBlank {
+                    productUnits.findByProductAndCode(row.productId, poolCode)?.id.orEmpty()
+                }
+                if (unitId.isNotBlank()) productUnits.setStock(unitId, row.quantity)
+                else log.w("van-stock row for unresolved unit $poolCode on ${row.productId}")
+            }
+        }
         return stock.size
     }
 

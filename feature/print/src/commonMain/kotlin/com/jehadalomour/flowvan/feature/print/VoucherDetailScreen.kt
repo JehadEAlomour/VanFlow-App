@@ -235,7 +235,17 @@ private fun LineRow(line: InvoiceLine) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(line.nameAr, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    // Name and unit read as one thing — "فريز واكس 150 غم (أحمر)". Two colour
+                    // lines of one item share a name AND a sku, so the unit has to sit in the
+                    // title or the two rows are indistinguishable at a glance.
+                    Text(
+                        line.unit.takeIf { it.isNotBlank() }
+                            ?.let { "${line.nameAr} ($it)" }
+                            ?: line.nameAr,
+                        color = Fv.TextHigh,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                     Text(line.sku, color = Fv.TextMid, fontSize = 10.sp)
                 }
                 Text(line.lineTotal.formatJod(AppLanguage.AR), color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.Bold)

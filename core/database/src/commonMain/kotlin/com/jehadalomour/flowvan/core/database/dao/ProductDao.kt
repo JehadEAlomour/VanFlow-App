@@ -33,6 +33,12 @@ interface ProductDao {
     @Query("UPDATE products SET vanStock = :qty WHERE id = :id")
     suspend fun setStock(id: String, qty: Int)
 
+    @Query("SELECT id FROM products")
+    suspend fun allIds(): List<String>
+
+    @Query("DELETE FROM products WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<String>)
+
     @Query("DELETE FROM products")
     suspend fun deleteAll()
 }

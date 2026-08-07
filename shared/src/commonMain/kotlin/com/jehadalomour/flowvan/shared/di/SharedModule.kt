@@ -73,6 +73,7 @@ import org.koin.dsl.module
 import com.jehadalomour.flowvan.core.network.createWebSocketClient
 import com.jehadalomour.flowvan.core.network.realtime.SyncSocketClient
 import com.jehadalomour.flowvan.core.domain.sync.RealtimeSyncCoordinator
+import com.jehadalomour.flowvan.core.network.api.ReturnByItemApi
 
 fun sharedModule(): Module = module {
     single { Settings() }
@@ -139,6 +140,7 @@ fun sharedModule(): Module = module {
     single { AuthApi(get()) }
     single { ApprovalApi(get()) }
     single { CustomerApi(get()) }
+    single { ReturnByItemApi(get()) }
     single { ProductApi(get()) }
     single { InvoiceApi(get()) }
     single { CollectionApi(get()) }
@@ -154,16 +156,16 @@ fun sharedModule(): Module = module {
     factory { LogoutUseCase(get(), get(), get()) }
     factory { GetDailyKpiUseCase(get(), get(), get()) }
     factory { VoucherNumberGenerator(get(), get()) }
-    factory { CreateSaleVoucherUseCase(get(), get(), get(), get(), get(), get(), get()) }
+    factory { CreateSaleVoucherUseCase(get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { EvaluateOffersOfflineUseCase(get(), get(), get(), get(), get()) }
     factory { EvaluateOffersUseCase(get(), get()) }
-    factory { CreateReturnVoucherUseCase(get(), get(), get(), get(), get(), get(), get()) }
+    factory { CreateReturnVoucherUseCase(get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { RequestReturnApprovalUseCase(get(), get(), get()) }
     factory { PollApprovalUseCase(get()) }
     factory { CancelApprovalUseCase(get()) }
-    factory { CommitApprovedReturnUseCase(get(), get(), get(), get()) }
+    factory { CommitApprovedReturnUseCase(get(), get(), get(), get(), get()) }
     factory { RequestDiscountApprovalUseCase(get(), get(), get()) }
-    factory { CommitApprovedSaleUseCase(get(), get(), get(), get()) }
+    factory { CommitApprovedSaleUseCase(get(), get(), get(), get(), get()) }
     factory { GetCustomerSalesUseCase(get()) }
     factory { CreateRequestVoucherUseCase(get(), get(), get(), get(), get()) }
     factory { RecordCollectionUseCase(get(), get(), get(), get()) }

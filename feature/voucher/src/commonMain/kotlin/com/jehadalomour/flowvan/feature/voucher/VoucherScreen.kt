@@ -126,6 +126,10 @@ fun VoucherScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var dialogProduct by remember { mutableStateOf<Product?>(null) }
+    // Which unit's line the sheet was opened on (null = opened from the picker, so the
+    // sheet starts on the item's first unit). The cart is per (product, unit), so the
+    // product alone no longer says which line the rep tapped.
+    var dialogUnitId by remember { mutableStateOf<String?>(null) }
     var expandedImage by remember { mutableStateOf<String?>(null) }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
     var stockFilter by remember { mutableStateOf(StockFilter.IN_STOCK) }
@@ -212,7 +216,7 @@ fun VoucherScreen(
                         onSearch = { viewModel.onEvent(VoucherEvent.SearchChanged(it)) },
                         onSelectCategory = { selectedCategory = it },
                         onSelectStockFilter = { stockFilter = it },
-                        onTapProduct = { dialogProduct = it },
+                        onTapProduct = { dialogProduct = it; dialogUnitId = null },
                         onExpandImage = { expandedImage = it },
                         modifier = Modifier.weight(1f),
                     )
@@ -223,8 +227,9 @@ fun VoucherScreen(
                 VoucherView.CART -> {
                     CartView(
                         state = state,
-                        onTapLine = { productId ->
+                        onTapLine = { productId, unitId ->
                             dialogProduct = state.products.firstOrNull { it.id == productId }
+                            dialogUnitId = unitId
                         },
                         onNotesChange = { viewModel.onEvent(VoucherEvent.NotesChanged(it)) },
                         onReasonSelect = { viewModel.onEvent(VoucherEvent.ReasonSelected(it)) },
@@ -307,12 +312,13 @@ fun VoucherScreen(
 
     // ── Item bottom sheet ─────────────────────────────────────────────────────
     dialogProduct?.let { product ->
-        // Match the existing cart line to EDIT. Fall back to sku: when offers are active the
-        // cart renders server lines keyed by sku (itemNumber), and a line's productId can
+        // ALL of this item's cart lines — one per unit. The sheet edits the one matching the
+        // unit currently selected in its dropdown. Fall back to sku: when offers are active
+        // the cart renders server lines keyed by sku (itemNumber), and a line's productId can
         // differ from productBySku[sku].id — without the sku fallback the tap opens a blank
         // "add" sheet (qty 1, base unit) instead of the real line.
-        val currentLine = state.cart.firstOrNull { it.productId == product.id }
-            ?: state.cart.firstOrNull { it.sku == product.sku }
+        val productLines = state.cart.filter { it.productId == product.id }
+            .ifEmpty { state.cart.filter { it.sku == product.sku } }
         // SALE + server offers: seed the line-discount field with the offer discount
         // applied to this line, so tapping a discounted line shows its % (not blank).
         val offerDiscountPct = if (state.useServerOffers) {
@@ -322,23 +328,27 @@ fun VoucherScreen(
         } else null
         AddItemBottomSheet(
             product = product,
-            currentLine = currentLine,
+            cartLines = productLines,
+            initialUnitId = dialogUnitId,
             offerDiscountPct = offerDiscountPct,
             dbUnits = state.productUnits[product.id] ?: emptyList(),
             enforceStock = state.showStockBadge,
             canDiscount = state.showDiscountInputs,
             canEditPrice = state.canEditPrice,
             customerBasePrice = state.customerPrices[product.sku],
-            onConfirm = { qty, unit, unitPrice, unitConversionQty, discountPct ->
+            onConfirm = { qty, unit, unitPrice, discountPct ->
                 viewModel.onEvent(
-                    VoucherEvent.ConfirmItemDialog(product, qty, unit, unitPrice, unitConversionQty, discountPct),
+                    VoucherEvent.ConfirmItemDialog(product, qty, unit, unitPrice, discountPct),
                 )
                 dialogProduct = null
+                dialogUnitId = null
             },
-            onDelete = if (currentLine != null) {
-                { viewModel.onEvent(VoucherEvent.RemoveLine(currentLine.productId)); dialogProduct = null }
-            } else null,
-            onDismiss = { dialogProduct = null },
+            onDelete = { unitId ->
+                viewModel.onEvent(VoucherEvent.RemoveLine(product.id, unitId))
+                dialogProduct = null
+                dialogUnitId = null
+            },
+            onDismiss = { dialogProduct = null; dialogUnitId = null },
         )
     }
 
@@ -784,7 +794,7 @@ private fun PickerSummaryBar(itemCount: Int, total: Double) {
 @Composable
 private fun CartView(
     state: VoucherState,
-    onTapLine: (String) -> Unit,
+    onTapLine: (productId: String, unitId: String) -> Unit,
     onNotesChange: (String) -> Unit,
     onReasonSelect: (ReturnReason) -> Unit,
     onPaymentMethod: (PaymentMethod) -> Unit,
@@ -811,19 +821,28 @@ private fun CartView(
         // ── Cart lines (per-line offer discount shown on each line) ────────────
         // SALE online: render the server-fed result (per-line server discount + net).
         // Otherwise: render the on-device cart lines (RETURN/ORDER unchanged).
-        if (state.useServerOffers && state.serverLines.isNotEmpty()) {
+        //
+        // The offer result is keyed by SKU, so an item the rep entered as two variant lines
+        // (3 red + 2 blue) comes back as ONE row — rendering it would silently swallow a line
+        // they typed. Such a cart falls back to the on-device lines, which already carry the
+        // same offer discount through [VoucherState.displayCart].
+        val serverLinesFaithful = state.cart.distinctBy { it.sku }.size == state.cart.size
+        if (state.useServerOffers && state.serverLines.isNotEmpty() && serverLinesFaithful) {
             items(state.serverLines, key = { "srv-${it.itemNumber}" }) { srv ->
                 val product = productBySku[srv.itemNumber]
+                val cartLine = state.cart.firstOrNull { it.sku == srv.itemNumber }
                 ServerCartLineCard(
                     line = srv,
                     nameAr = product?.nameAr ?: srv.itemNumber,
-                    unit = state.cart.firstOrNull { it.sku == srv.itemNumber }?.unit ?: "",
-                    onTap = { product?.let { onTapLine(it.id) } },
+                    unit = cartLine?.unit ?: "",
+                    onTap = { product?.let { onTapLine(it.id, cartLine?.unitId.orEmpty()) } },
                 )
             }
         } else {
-            items(state.cart, key = { it.productId }) { line ->
-                CartItemCard(line = line, onTap = { onTapLine(line.productId) })
+            // Composite key: two lines of one item under a single productId key is a
+            // LazyColumn crash ("Key was already used").
+            items(state.displayCart, key = { it.key }) { line ->
+                CartItemCard(line = line, onTap = { onTapLine(line.productId, line.unitId) })
             }
         }
         // ── SALE: FREE lines — a free item is a NORMAL cart line at its real price with a
@@ -1343,6 +1362,29 @@ private fun CartSummaryCard(
         border = BorderStroke(0.5.dp, Fv.Border),
     ) {
         Column {
+            // Tax-exempt banner, at the very top of the totals card — the rep sees WHY
+            // there is no tax line before taking the money, not after the receipt
+            // prints. Same rule the server applies (flag AND validity window), so the
+            // total shown here is the total that gets posted.
+            if (state.isTaxExemptSale) {
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                        .background(Color(0xFFFFF6E5))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(Res.string.voucher_tax_exempt_banner),
+                        color = Color(0xFFC97B1A),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    state.customer?.taxExemptionNumber?.takeIf { it.isNotBlank() }?.let { n ->
+                        Spacer(Modifier.width(8.dp))
+                        Text(n, color = Fv.TextMid, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
             AnimatedVisibility(visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
                 Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 4.dp)) {
                     SummaryDetailRow(stringResource(Res.string.voucher_detail_subtotal), state.subtotal.formatJod(AppLanguage.AR), Fv.TextMid)
@@ -1434,7 +1476,10 @@ private fun VoucherDiscountSection(
 @Composable
 private fun AddItemBottomSheet(
     product: Product,
-    currentLine: CartLine?,
+    /** Every cart line of this item — one per unit. The sheet edits the selected unit's. */
+    cartLines: List<CartLine>,
+    /** The unit whose line was tapped; null when opened fresh from the picker. */
+    initialUnitId: String?,
     offerDiscountPct: Double? = null,
     dbUnits: List<ProductUnit>,
     enforceStock: Boolean,
@@ -1442,17 +1487,19 @@ private fun AddItemBottomSheet(
     canEditPrice: Boolean,
     /** The customer's price-list base-unit price for this product (JOD), or null. */
     customerBasePrice: Double? = null,
-    onConfirm: (qty: Double, unit: String, unitPrice: Double, unitConversionQty: Double, discountPct: Double) -> Unit,
-    onDelete: (() -> Unit)? = null,
+    onConfirm: (qty: Double, unit: ProductUnit, unitPrice: Double, discountPct: Double) -> Unit,
+    onDelete: (unitId: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     // Use the item's OWN units (synced from the dashboard/ERP). No hardcoded list —
-    // if an item somehow has none, fall back to just its base unit.
+    // if an item somehow has none, fall back to just its base unit. That fallback keeps a
+    // BLANK id on purpose: it isn't a real item_units row, and posting a made-up id would
+    // be rejected by the server, so the line stays on the item's base pool.
     val effectiveUnits: List<ProductUnit> = remember(product.id, dbUnits, customerBasePrice) {
         val raw = if (dbUnits.isNotEmpty()) dbUnits
         else listOf(
             ProductUnit(
-                id = product.unit.ifBlank { product.id },
+                id = "",
                 productId = product.id,
                 name = product.unit,
                 price = product.salePrice,
@@ -1475,20 +1522,28 @@ private fun AddItemBottomSheet(
             }
         }
     }
-    val initialUnit: ProductUnit = remember(product.id, currentLine) {
-        val cartUnitName = currentLine?.unit?.takeIf { it.isNotBlank() }
-        effectiveUnits.firstOrNull { it.name == cartUnitName }
+    val initialUnit: ProductUnit = remember(product.id, initialUnitId, effectiveUnits) {
+        // Resolve the tapped line's unit BY ID. Name matching is only the fallback for a line
+        // that predates per-unit ids — two colours of one item can share a display name, so a
+        // name match would open the wrong line.
+        val tappedName = cartLines.firstOrNull { it.unitId == initialUnitId }?.unit
+            ?: cartLines.firstOrNull()?.unit
+        effectiveUnits.firstOrNull { initialUnitId != null && it.id == initialUnitId }
+            ?: effectiveUnits.firstOrNull { it.name == tappedName?.takeIf { n -> n.isNotBlank() } }
             ?: effectiveUnits.firstOrNull()
-            ?: ProductUnit(id = product.unit, productId = product.id, name = product.unit, price = product.salePrice, conversionQty = 1.0)
+            ?: ProductUnit(id = "", productId = product.id, name = product.unit, price = product.salePrice, conversionQty = 1.0)
     }
+    var selectedUnit by remember(product.id, initialUnitId) { mutableStateOf(initialUnit) }
+    // The line under edit is the SELECTED unit's — switching unit in the dropdown moves to
+    // that unit's line, or to a fresh "add" when the rep hasn't entered that unit yet.
+    val currentLine = cartLines.firstOrNull { it.unitId == selectedUnit.id }
 
-    var qty by remember(product.id) { mutableStateOf(currentLine?.qty ?: 1.0) }
+    var qty by remember(product.id, selectedUnit.id) { mutableStateOf(currentLine?.qty ?: 1.0) }
     // Editable text mirror of [qty] so the rep can TYPE a quantity, not just tap +/-.
     // The +/- handlers keep it in sync; typing digits updates qty (0 when cleared).
-    var qtyText by remember(product.id) { mutableStateOf(qty.toInt().toString()) }
-    var selectedUnit by remember(product.id) { mutableStateOf(initialUnit) }
-    var lineDiscountType by remember(product.id) { mutableStateOf(DiscountType.PERCENT) }
-    var discountText by remember(product.id) {
+    var qtyText by remember(product.id, selectedUnit.id) { mutableStateOf(qty.toInt().toString()) }
+    var lineDiscountType by remember(product.id, selectedUnit.id) { mutableStateOf(DiscountType.PERCENT) }
+    var discountText by remember(product.id, selectedUnit.id) {
         // Prefer the offer discount applied to this line (SALE), else the manual line discount.
         val initial = offerDiscountPct ?: currentLine?.discountPct ?: 0.0
         mutableStateOf(if (initial > 0) (initial * 100).toInt().toString() else "")
@@ -1499,12 +1554,12 @@ private fun AddItemBottomSheet(
     // would count the offer TWICE (tap a discounted line, confirm, and the discount doubles).
     // Confirming while the field still holds this exact value therefore keeps the line's own
     // manual discount instead. Editing it makes it a real manual discount, as typed.
-    val offerSeedText = remember(product.id) {
+    val offerSeedText = remember(product.id, selectedUnit.id) {
         offerDiscountPct?.takeIf { it > 0 }?.let { (it * 100).toInt().toString() }
     }
     var unitDropdownExpanded by remember { mutableStateOf(false) }
     // Editable price (only when the salesman has canEditPrice). Resets per unit.
-    var priceText by remember(selectedUnit) {
+    var priceText by remember(product.id, selectedUnit.id) {
         mutableStateOf((currentLine?.unitPrice?.takeIf { it > 0 } ?: selectedUnit.price).toString())
     }
     val effectivePrice = if (canEditPrice) (priceText.toDoubleOrNull() ?: selectedUnit.price) else selectedUnit.price
@@ -1525,8 +1580,10 @@ private fun AddItemBottomSheet(
     val lineTotal = gross * (1.0 - discountPct)
 
     // Stock check (SALE only): the requested quantity is converted to base units via the
-    // selected unit's pack size, then validated against what's available in the van.
-    val availableBase = product.vanStock.toDouble()
+    // selected unit's pack size, then validated against the pool it will actually draw from
+    // — a variant (أحمر) has its own stock, a packaging unit (كرتونة ×12) shares the item's.
+    val availableBase =
+        if (selectedUnit.isStockUnit) selectedUnit.vanStock.toDouble() else product.vanStock.toDouble()
     val requestedBase = qty * selectedUnit.conversionQty
     val maxQtyForUnit = if (selectedUnit.conversionQty > 0.0)
         floor(availableBase / selectedUnit.conversionQty).toInt() else 0
@@ -1695,7 +1752,7 @@ private fun AddItemBottomSheet(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Text(
-                                        stringResource(Res.string.voucher_stock_available_count, product.vanStock),
+                                        stringResource(Res.string.voucher_stock_available_count, availableBase.toInt()),
                                         fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = accent,
                                     )
                                     Text(
@@ -1786,9 +1843,10 @@ private fun AddItemBottomSheet(
 
                     // Actions
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        if (onDelete != null) {
+                        // Delete removes THIS unit's line only — the item's other units stay.
+                        if (currentLine != null) {
                             Box(
-                                modifier = Modifier.height(52.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFFFF0F0)).border(0.5.dp, Color(0xFFF7C1C1), RoundedCornerShape(16.dp)).clickable { onDelete() }.padding(horizontal = 16.dp),
+                                modifier = Modifier.height(52.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFFFFF0F0)).border(0.5.dp, Color(0xFFF7C1C1), RoundedCornerShape(16.dp)).clickable { onDelete(selectedUnit.id) }.padding(horizontal = 16.dp),
                                 contentAlignment = Alignment.Center,
                             ) { Text(stringResource(Res.string.delete), color = Color(0xFFE24B4A), fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }
                         }
@@ -1797,7 +1855,7 @@ private fun AddItemBottomSheet(
                             contentAlignment = Alignment.Center,
                         ) { Text(stringResource(Res.string.cancel), color = Color(0xFF5A7399), fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }
                         Box(
-                            modifier = Modifier.weight(if (onDelete != null) 1.8f else 2f).height(52.dp).clip(RoundedCornerShape(16.dp))
+                            modifier = Modifier.weight(if (currentLine != null) 1.8f else 2f).height(52.dp).clip(RoundedCornerShape(16.dp))
                                 .then(if (canConfirm) Modifier.background(greenGradient) else Modifier.background(Fv.SurfaceTop))
                                 .clickable(enabled = canConfirm) {
                                     // Untouched offer-seeded field → keep the line's own manual
@@ -1810,10 +1868,11 @@ private fun AddItemBottomSheet(
                                         ) currentLine?.discountPct ?: 0.0
                                         else discountPct
                                     Logger.withTag("UnitPrice").d(
-                                        "confirm qty=$qty unit=${selectedUnit.name} conv=${selectedUnit.conversionQty} " +
-                                            "effectivePrice=$effectivePrice discountPct=$confirmedDiscountPct lineTotal=$lineTotal",
+                                        "confirm qty=$qty unit=${selectedUnit.name}/${selectedUnit.id} " +
+                                            "conv=${selectedUnit.conversionQty} effectivePrice=$effectivePrice " +
+                                            "discountPct=$confirmedDiscountPct lineTotal=$lineTotal",
                                     )
-                                    onConfirm(qty, selectedUnit.name, effectivePrice, selectedUnit.conversionQty, confirmedDiscountPct)
+                                    onConfirm(qty, selectedUnit, effectivePrice, confirmedDiscountPct)
                                 },
                             contentAlignment = Alignment.Center,
                         ) {

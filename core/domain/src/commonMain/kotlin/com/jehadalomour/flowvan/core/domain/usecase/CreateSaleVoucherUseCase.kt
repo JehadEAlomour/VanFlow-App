@@ -5,6 +5,7 @@ import com.jehadalomour.flowvan.core.data.location.LocationProvider
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
+import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.InvoiceAppliedOffer
 import com.jehadalomour.flowvan.core.model.InvoiceDiscountInput
@@ -48,6 +49,7 @@ class NoCreditLimitException(val customerName: String?) :
 class CreateSaleVoucherUseCase(
     private val invoices: InvoiceRepository,
     private val products: ProductRepository,
+    private val productUnits: ProductUnitRepository,
     private val customers: CustomerRepository,
     private val json: Json,
     private val syncScheduler: SyncScheduler,
@@ -84,23 +86,41 @@ class CreateSaleVoucherUseCase(
         for (line in cart) {
             val product = products.findById(line.productId)
                 ?: error("product ${line.productId} not found")
-            if (line.qty.toInt() > product.vanStock) {
-                throw StockShortageException(line.productId, product.vanStock, line.qty.toInt())
+            // Check the SAME pool, in the SAME scale, that the decrement below will move.
+            // This used to compare line.qty (a count of units) against vanStock (base pieces),
+            // so 5 cartons of 12 were checked against 5 and then deducted as 60.
+            val available = line.stockUnit(productUnits)?.vanStock ?: product.vanStock
+            val requested = line.stockQty.toInt()
+            if (requested > available) {
+                throw StockShortageException(line.productId, available, requested)
             }
         }
 
         val invoiceDiscount = if (discountAmount > 0.0)
             InvoiceDiscountInput.Fixed(discountAmount) else InvoiceDiscountInput.None
+
+        // Is this an exempt sale? Same rule the server applies — the flag AND the
+        // validity window — so the totals saved here match the voucher it posts.
+        // Resolved once and frozen onto the invoice: a receipt reprinted after the
+        // certificate lapses must still show the exemption it was issued under.
+        val saleCustomer = customers.findById(customerId)
+        val taxExempt = saleCustomer?.let { c ->
+            val now = Clock.System.now().toEpochMilliseconds()
+            c.isTaxExempt &&
+                (c.taxExemptionValidFrom == null || now >= c.taxExemptionValidFrom!!) &&
+                (c.taxExemptionValidTo == null || now <= c.taxExemptionValidTo!!)
+        } ?: false
+
         // Use the full tax calculator — lineTaxType is already stamped on each CartLine
         // by the ViewModel based on the active AppSettings.
-        val rawSummary = InvoiceTaxCalculator.calculateInvoice(cart, invoiceDiscount)
+        val rawSummary = InvoiceTaxCalculator.calculateInvoice(cart, invoiceDiscount, taxExempt)
 
         // Offers were applied when a distinct offer-adjusted cart was supplied. The
         // DISPLAY cart drives the primary/stored totals; the RAW cart drives the upload.
         val offersApplied = offerAdjustedCart != null && offerAdjustedCart != cart
         val displayCart = if (offersApplied) offerAdjustedCart!! else cart
         val displaySummary =
-            if (offersApplied) InvoiceTaxCalculator.calculateInvoice(displayCart, invoiceDiscount)
+            if (offersApplied) InvoiceTaxCalculator.calculateInvoice(displayCart, invoiceDiscount, taxExempt)
             else rawSummary
 
         // AR credit-limit guard (runs BEFORE any stock/balance mutation):
@@ -109,7 +129,7 @@ class CreateSaleVoucherUseCase(
         // The local balance already reflects prior (even unsynced) credit sales, so this
         // is offline-safe. See docs/SPEC-accounts-receivable.md.
         if (paymentMethod == PaymentMethod.CREDIT) {
-            val customer = customers.findById(customerId)
+            val customer = saleCustomer
             if (customer != null) {
                 if (customer.creditLimit <= 0.0) {
                     throw NoCreditLimitException(customer.nameAr)
@@ -142,6 +162,7 @@ class CreateSaleVoucherUseCase(
                 taxType     = it.lineTaxType.name,
                 taxAmount   = it.lineTax,
                 unit        = it.unit,
+                unitId      = it.unitId,
                 unitConversionQty = it.unitConversionQty,
                 taxRate     = it.taxRate,
             )
@@ -157,7 +178,9 @@ class CreateSaleVoucherUseCase(
             createdAt     = now,
             // Primary/display fields carry the OFFER-APPLIED result (matches the cart).
             linesJson     = json.encodeToString(displayCart.toInvoiceLines()),
-            subtotal      = displaySummary.subtotalBeforeDiscounts,
+            isTaxExempt   = taxExempt,
+            taxExemptionNumber = if (taxExempt) saleCustomer?.taxExemptionNumber else null,
+            subtotal      = displaySummary.displaySubtotal,
             discountAmount = displaySummary.totalLineDiscounts + displaySummary.invoiceDiscountAmount,
             taxAmount     = displaySummary.totalTax,
             total         = displaySummary.grandTotal,
@@ -185,7 +208,7 @@ class CreateSaleVoucherUseCase(
         invoices.save(entity)
         // Local van stock only — the server derives stock from the posted voucher transaction.
         for (line in cart) {
-            products.adjustStock(line.productId, -line.stockQty.toInt())
+            applyVanStockDelta(products, productUnits, line, -line.stockQty.toInt())
         }
         if (paymentMethod == PaymentMethod.CREDIT) {
             // The customer owes the offer-applied total, not the pre-offer amount.

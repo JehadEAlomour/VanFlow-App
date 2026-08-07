@@ -1,5 +1,6 @@
 package com.jehadalomour.flowvan.core.database.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -56,4 +57,13 @@ data class InvoiceEntity(
      * a report, so it's captured here. Null/blank → no offers (footer shows the generic discount).
      */
     val appliedOffersJson: String? = null,
+    /**
+     * Tax-exemption SNAPSHOT (v18) — how THIS document was issued, not what the
+     * customer's record says today. Frozen at save time and mirrored from the
+     * server's own snapshot on sync, so a receipt reprinted months later still
+     * shows the exemption it was issued under even if the certificate has lapsed.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val isTaxExempt: Boolean = false,
+    val taxExemptionNumber: String? = null,
 )

@@ -127,7 +127,18 @@ fun InvoiceEntity.toVoucherRequest(userCode: String, customerNumber: String?, js
                 unitName = line.unit.ifBlank { null },
                 unitCode = line.unit.ifBlank { null },
                 unitBaseQty = line.unitConversionQty.roundToInt().takeIf { it > 0 },
-
+                // The unit's real id — this is what tells red from blue, so the server
+                // moves the right POOL instead of guessing from the Arabic name.
+                //
+                // Only a genuine server id may travel here. The BASE unit has no
+                // `item_units` row — /products synthesises it from the item itself and
+                // returns itemUnitId = "" — so its local id falls back to the item's
+                // barcode, and posting THAT is rejected outright:
+                //   400 transactions.0.itemUnitId must be a UUID
+                // which fails the whole voucher and leaves it stuck on its offline number.
+                // A line with no itemUnitId is the base pool, which is exactly right, and
+                // the unit still travels in unitCode/unitName.
+                itemUnitId = line.unitId.takeIf { it.isServerUnitId() },
             )
         },
         payments = payments,
@@ -210,3 +221,19 @@ fun SyncVoucherResult.toAdoptedInvoice(): AdoptedInvoice? {
         total = netTotal.numericStringToDouble(),
     )
 }
+
+/**
+ * True when this is a server `item_units.id` rather than a locally synthesised one.
+ *
+ * `ProductUnit.id` is the server's uuid for a real unit row, but the catalog falls back
+ * to the barcode (and then to "productId:code:conversionQty") for units the server
+ * describes without one — above all the BASE unit, which has no `item_units` row at all.
+ * The API validates `itemUnitId` as a UUID, so those fallbacks must never be sent.
+ */
+private fun String.isServerUnitId(): Boolean =
+    length == 36 &&
+        this[8] == '-' && this[13] == '-' && this[18] == '-' && this[23] == '-' &&
+        withIndex().all { (i, c) ->
+            if (i == 8 || i == 13 || i == 18 || i == 23) c == '-'
+            else c.isDigit() || c in 'a'..'f' || c in 'A'..'F'
+        }

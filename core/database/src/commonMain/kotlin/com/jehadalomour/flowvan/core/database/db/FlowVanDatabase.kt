@@ -51,7 +51,7 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         PriceListItemEntity::class,
         TobaccoTaxProfileEntity::class,
     ],
-    version = 16,
+    version = 18,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -88,6 +88,14 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         // v16: invoices.appliedOffersJson (nullable) — offers applied at sale time, frozen for
         // the printed receipt (per-offer name + discount value) so the footer can itemize them.
         AutoMigration(from = 15, to = 16),
+        // v17: product_units.vanStock/code/isBase/isStockUnit — per-unit stock, so one item can
+        // be sold as several units each drawing from its OWN pool (see docs/SPEC-per-unit-stock).
+        // Every column has a literal default, and isStockUnit defaults to 0, so an install that
+        // upgrades and never re-syncs keeps exactly today's one-pool-per-item behaviour.
+        AutoMigration(from = 16, to = 17),
+        // v18: customers tax-exemption columns (isTaxExempt + type/number/reason
+        // + validity window), so an offline cart knows the sale will be exempt.
+        AutoMigration(from = 17, to = 18),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)

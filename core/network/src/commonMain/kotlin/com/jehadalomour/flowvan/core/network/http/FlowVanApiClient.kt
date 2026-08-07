@@ -15,6 +15,10 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.content.TextContent
 import io.ktor.http.isSuccess
 import kotlinx.serialization.json.Json
+import io.ktor.http.Headers
+import io.ktor.client.request.post
+import io.ktor.client.request.forms.formData
+import io.ktor.client.request.forms.MultiPartFormDataContent
 
 /** Raised by the network layer; carries a translated [CashFlowError]. */
 class NetworkException(val error: CashFlowError) : Exception(error.messageEn)
@@ -65,6 +69,58 @@ class FlowVanApiClient(
         val text = response.bodyAsText()
         log.d { "← ${response.status.value} ${method.value} $path\n$text" }
 
+        if (response.status.value == 401) session.signalUnauthorized()
+        if (!response.status.isSuccess()) throw mapError(response.status.value, text)
+        return text
+    }
+
+    /**
+     * POST a single file as multipart/form-data under the field name `file`.
+     *
+     * Shares [execute]'s auth, 401 handling and error mapping — the only thing
+     * that differs is the body — so an expired token behaves identically whether
+     * the rep was saving a form or uploading the shop's registration photo.
+     */
+    suspend fun executeMultipart(
+        path: String,
+        fileName: String,
+        mimeType: String,
+        bytes: ByteArray,
+    ): String {
+        if (!config.isEnabled) throw NetworkException(CashFlowError.Network.NotConfigured)
+        val url = config.urlFor(path)
+        log.d { "→ POST $url (multipart ${bytes.size} bytes, $mimeType)" }
+
+        val response = try {
+            httpClient.post(url) {
+                session.currentToken?.let { header(HttpHeaders.Authorization, "Bearer $it") }
+                setBody(
+                    MultiPartFormDataContent(
+                        formData {
+                            append(
+                                "file",
+                                bytes,
+                                Headers.build {
+                                    append(HttpHeaders.ContentType, mimeType)
+                                    append(
+                                        HttpHeaders.ContentDisposition,
+                                        "filename=\"$fileName\"",
+                                    )
+                                },
+                            )
+                        },
+                    ),
+                )
+            }
+        } catch (e: NetworkException) {
+            throw e
+        } catch (e: Exception) {
+            log.e { "✗ POST $url — ${e.message}" }
+            throw NetworkException(CashFlowError.Network.Unreachable)
+        }
+
+        val text = response.bodyAsText()
+        log.d { "← ${response.status.value} POST $path\n$text" }
         if (response.status.value == 401) session.signalUnauthorized()
         if (!response.status.isSuccess()) throw mapError(response.status.value, text)
         return text

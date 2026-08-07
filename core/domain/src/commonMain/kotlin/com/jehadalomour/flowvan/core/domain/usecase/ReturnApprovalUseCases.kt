@@ -3,6 +3,7 @@ package com.jehadalomour.flowvan.core.domain.usecase
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
+import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.InvoiceDiscountInput
@@ -60,6 +61,7 @@ private fun buildReturnEntity(
             taxType = it.lineTaxType.name,
             taxAmount = it.lineTax,
             unit = it.unit,
+            unitId = it.unitId,
             unitConversionQty = it.unitConversionQty,
             taxRate = it.taxRate,
         )
@@ -73,7 +75,7 @@ private fun buildReturnEntity(
         salesmanId = salesmanId,
         createdAt = now,
         linesJson = json.encodeToString(invoiceLines),
-        subtotal = summary.subtotalBeforeDiscounts,
+        subtotal = summary.displaySubtotal,
         discountAmount = summary.totalLineDiscounts,
         taxAmount = summary.totalTax,
         total = summary.grandTotal,
@@ -185,6 +187,7 @@ class CancelApprovalUseCase(
 class CommitApprovedReturnUseCase(
     private val invoices: InvoiceRepository,
     private val products: ProductRepository,
+    private val productUnits: ProductUnitRepository,
     private val customers: CustomerRepository,
     private val json: Json,
 ) {
@@ -218,7 +221,7 @@ class CommitApprovedReturnUseCase(
         invoices.save(entity)
         // Returns credit van stock back; the server derived the same from the posted voucher.
         for (line in cart) {
-            products.adjustStock(line.productId, line.stockQty.toInt())
+            applyVanStockDelta(products, productUnits, line, line.stockQty.toInt())
         }
         // Only a CREDIT return (credit note) reduces the customer's balance; a CASH return
         // refunds cash and leaves the balance unchanged.

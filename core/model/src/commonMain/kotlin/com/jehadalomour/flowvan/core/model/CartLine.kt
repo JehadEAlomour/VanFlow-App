@@ -8,6 +8,13 @@ data class CartLine(
     val qty: Double,
     val discountPct: Double = 0.0,
     val unit: String = "",
+    /**
+     * The chosen unit's identity (`item_units.id`), "" = the item's base pool.
+     *
+     * The cart is keyed on (productId, unitId), not productId — that is what makes
+     * 3 red + 2 blue of one item two lines instead of one overwritten line.
+     */
+    val unitId: String = "",
     val unitConversionQty: Double = 1.0,
     val taxRate: Double = 0.16,
     val lineTaxType: LineTaxType = LineTaxType.TAXABLE,

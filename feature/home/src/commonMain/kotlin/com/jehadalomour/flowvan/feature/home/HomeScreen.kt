@@ -79,6 +79,7 @@ fun HomeScreen(
     onOpenEndOfDay: () -> Unit,
     onOpenReports: () -> Unit,
     onOpenOffers: () -> Unit,
+    onOpenReturnByItem: () -> Unit,
     onOpenCustomer: (String) -> Unit,
     onLogout: () -> Unit,
     viewModel: HomeViewModel = koinViewModel(),
@@ -157,6 +158,7 @@ fun HomeScreen(
                     onOpenEndOfDay = onOpenEndOfDay,
                     onOpenReports = onOpenReports,
                     onOpenOffers = onOpenOffers,
+                    onOpenReturnByItem = onOpenReturnByItem,
                     modifier = Modifier.padding(horizontal = 14.dp),
                 )
             }
@@ -507,11 +509,13 @@ private fun ActionGrid(
     onOpenEndOfDay: () -> Unit,
     onOpenReports: () -> Unit,
     onOpenOffers: () -> Unit,
+    onOpenReturnByItem: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ActionTile(painterResource(Res.drawable.ic_cart), stringResource(Res.string.offers_title), stringResource(Res.string.home_action_offers_sub), Fv.Purple, Modifier.weight(1f), onOpenOffers)
+            ActionTile(painterResource(Res.drawable.ic_cart), "إرجاع بالصنف", "بدون تحديد فاتورة", Fv.Amber, Modifier.weight(1f), onOpenReturnByItem)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ActionTile(painterResource(Res.drawable.ic_truck), stringResource(Res.string.route_title), stringResource(Res.string.home_action_route_sub), Fv.Blue, Modifier.weight(1f), onOpenRoute)

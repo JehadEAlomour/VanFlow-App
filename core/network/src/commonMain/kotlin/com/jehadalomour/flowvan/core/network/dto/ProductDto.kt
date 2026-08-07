@@ -43,6 +43,12 @@ data class ProductUnitDto(
     val priceFils: Long = 0,
     val barcode: String = "",
     val isBase: Boolean = false,
+    /** `item_units.id` — the authoritative unit identity a voucher line posts against.
+     *  Blank on an old backend, which is why the app still synthesizes a fallback id. */
+    val itemUnitId: String = "",
+    /** The unit owns its stock pool (a colour/flavour variant) rather than converting
+     *  into the item's base pool (a carton). */
+    val isStockUnit: Boolean = false,
 )
 
 @Serializable

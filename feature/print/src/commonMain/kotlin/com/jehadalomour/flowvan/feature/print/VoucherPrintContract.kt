@@ -31,6 +31,9 @@ data class VoucherPrintState(
     val taxAmount: Double = 0.0,
     val total: Double = 0.0,
     val notes: String? = null,
+    /** Frozen at sale time — drives the TAX-EXEMPT stamp on the receipt. */
+    val isTaxExempt: Boolean = false,
+    val taxExemptionNumber: String? = null,
     val branch: String = "",
     // Company header — server-first (GET /company-info) when online, else DB cache.
     val companyNameAr: String = "",

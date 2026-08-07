@@ -22,6 +22,8 @@ data class SourceSaleLine(
     val discountPct: Double,
     val unitName: String?,
     val unitBaseQty: Int?,
+    /** `item_units.id` the sale line posted against; blank on an older backend. */
+    val itemUnitId: String = "",
 )
 
 /**
@@ -70,6 +72,7 @@ class GetCustomerSalesUseCase(
                     discountPct = (t.discountPercentage.toDoubleOrNull() ?: 0.0) / 100.0,
                     unitName = t.unitName,
                     unitBaseQty = t.unitBaseQty,
+                    itemUnitId = t.itemUnitId,
                 )
             },
             // A RETURN inherits the original sale's payment type (credit → credit, cash → cash).

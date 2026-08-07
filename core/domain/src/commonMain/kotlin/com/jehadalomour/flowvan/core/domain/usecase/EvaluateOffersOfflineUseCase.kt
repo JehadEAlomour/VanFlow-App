@@ -91,8 +91,13 @@ class EvaluateOffersOfflineUseCase(
         )
 
         val taxInclusive = appSettings.get().taxType == TaxType.INCLUDED_TAX
+        // Offers are per ITEM, not per unit: one item split across variant lines (3 red +
+        // 2 blue) must still hit a "buy 5" threshold, so the cart is aggregated by sku
+        // before evaluating. Insertion order is preserved so per-line results line up.
+        val bySku = LinkedHashMap<String, Double>()
+        for (line in cart) bySku[line.sku] = (bySku[line.sku] ?: 0.0) + line.qty
         val result = LocalOfferEvaluator
-            .evaluate(cart.map { it.sku to it.qty }, activeOffers, items, ctx, taxInclusive)
+            .evaluate(bySku.toList(), activeOffers, items, ctx, taxInclusive)
             .toOfferEvaluation()
             .copy(source = OfferSource.LOCAL)
         log.d { "offline eval result: appliedOffers=${result.appliedOffers.map { it.name }} freeChoices=${result.pendingChoices.size} lineDiscount=${result.totals.totalDiscountJod}" }

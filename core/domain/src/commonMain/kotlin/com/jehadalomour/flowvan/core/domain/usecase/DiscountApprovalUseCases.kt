@@ -3,6 +3,7 @@ package com.jehadalomour.flowvan.core.domain.usecase
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
+import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.InvoiceDiscountInput
@@ -56,6 +57,7 @@ private fun buildSaleEntity(
             taxType = it.lineTaxType.name,
             taxAmount = it.lineTax,
             unit = it.unit,
+            unitId = it.unitId,
             unitConversionQty = it.unitConversionQty,
             taxRate = it.taxRate,
         )
@@ -69,7 +71,7 @@ private fun buildSaleEntity(
         salesmanId = salesmanId,
         createdAt = now,
         linesJson = json.encodeToString(invoiceLines),
-        subtotal = summary.subtotalBeforeDiscounts,
+        subtotal = summary.displaySubtotal,
         discountAmount = summary.totalLineDiscounts + summary.invoiceDiscountAmount,
         taxAmount = summary.totalTax,
         total = summary.grandTotal,
@@ -133,6 +135,7 @@ class RequestDiscountApprovalUseCase(
 class CommitApprovedSaleUseCase(
     private val invoices: InvoiceRepository,
     private val products: ProductRepository,
+    private val productUnits: ProductUnitRepository,
     private val customers: CustomerRepository,
     private val json: Json,
 ) {
@@ -161,7 +164,7 @@ class CommitApprovedSaleUseCase(
         )
         invoices.save(entity)
         for (line in cart) {
-            products.adjustStock(line.productId, -line.stockQty.toInt())
+            applyVanStockDelta(products, productUnits, line, -line.stockQty.toInt())
         }
         if (paymentMethod == PaymentMethod.CREDIT) {
             customers.adjustBalance(customerId, entity.total)

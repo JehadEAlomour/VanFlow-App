@@ -9,6 +9,10 @@ fun ProductUnitEntity.toDomain() = ProductUnit(
     name = name,
     price = price,
     conversionQty = conversionQty,
+    vanStock = vanStock,
+    code = code,
+    isBase = isBase,
+    isStockUnit = isStockUnit,
 )
 
 fun ProductUnit.toEntity() = ProductUnitEntity(
@@ -17,4 +21,8 @@ fun ProductUnit.toEntity() = ProductUnitEntity(
     name = name,
     price = price,
     conversionQty = conversionQty,
+    vanStock = vanStock,
+    code = code,
+    isBase = isBase,
+    isStockUnit = isStockUnit,
 )

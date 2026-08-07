@@ -50,9 +50,9 @@ class ReturnVoucherViewModel(
                 _state.update { it.copy(searchQuery = event.q) }; applySearch()
             }
             is ReturnVoucherEvent.AddToCart -> addOrIncrement(event.product)
-            is ReturnVoucherEvent.ChangeQty -> changeQty(event.productId, event.qty)
+            is ReturnVoucherEvent.ChangeQty -> changeQty(event.productId, event.unitId, event.qty)
             is ReturnVoucherEvent.RemoveLine -> _state.update { s ->
-                s.copy(cart = s.cart.filterNot { it.productId == event.productId })
+                s.copy(cart = s.cart.filterNot { it.isLine(event.productId, event.unitId) })
             }
             is ReturnVoucherEvent.ReasonSelected -> _state.update { it.copy(reason = event.reason) }
             is ReturnVoucherEvent.NotesChanged -> _state.update { it.copy(notes = event.notes) }
@@ -85,22 +85,25 @@ class ReturnVoucherViewModel(
         _state.update { it.copy(visibleProducts = filtered) }
     }
 
+    // This screen has no unit picker, so every line it makes is the item's base pool
+    // (unitId ""). It still matches on (productId, unitId) so it can never collide with
+    // a variant line built elsewhere from the same item.
     private fun addOrIncrement(product: Product) {
         _state.update { s ->
-            val existing = s.cart.firstOrNull { it.productId == product.id }
+            val existing = s.cart.firstOrNull { it.isLine(product.id, "") }
             val newCart = if (existing == null) {
                 s.cart + CartLine(product.id, product.sku, product.nameAr, product.salePrice, qty = 1.0)
             } else {
-                s.cart.map { if (it.productId == product.id) it.copy(qty = it.qty + 1) else it }
+                s.cart.map { if (it.isLine(product.id, "")) it.copy(qty = it.qty + 1) else it }
             }
             s.copy(cart = newCart)
         }
     }
 
-    private fun changeQty(productId: String, qty: Double) {
+    private fun changeQty(productId: String, unitId: String, qty: Double) {
         _state.update { s ->
-            val newCart = if (qty <= 0.0) s.cart.filterNot { it.productId == productId }
-            else s.cart.map { if (it.productId == productId) it.copy(qty = qty) else it }
+            val newCart = if (qty <= 0.0) s.cart.filterNot { it.isLine(productId, unitId) }
+            else s.cart.map { if (it.isLine(productId, unitId)) it.copy(qty = qty) else it }
             s.copy(cart = newCart)
         }
     }

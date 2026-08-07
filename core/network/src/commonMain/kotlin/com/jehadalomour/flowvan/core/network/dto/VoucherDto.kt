@@ -93,6 +93,12 @@ data class VoucherTxn(
     val unitCode: String? = null,
     val unitName: String? = null,
     val unitBaseQty: Int? = null,
+    /**
+     * `item_units.id` — the authoritative unit, and therefore the stock POOL this line
+     * moves. unitCode/unitName stay alongside it: they carry the Arabic display name an
+     * old server resolves by, and this id wins wherever both are understood.
+     */
+    val itemUnitId: String? = null,
 )
 
 @Serializable
@@ -147,6 +153,8 @@ data class VoucherDetailTxn(
     val unitName: String? = null,
     val unitCode: String? = null,
     val unitBaseQty: Int? = null,
+    /** `item_units.id` the line posted against — lets a RETURN pre-fill the right variant. */
+    val itemUnitId: String = "",
 )
 
 @Serializable

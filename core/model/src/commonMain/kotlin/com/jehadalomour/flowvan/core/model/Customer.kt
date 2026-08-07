@@ -38,4 +38,17 @@ data class Customer(
     val repId: String? = null,
     /** Assigned price list id (price_lists.id). Null = base catalog prices. */
     val priceListId: String? = null,
+    /**
+     * When true every voucher for this customer is issued TAX-EXEMPT — the rep
+     * does not choose it per document and cannot forget it. The server decides
+     * and freezes it onto the voucher; the app shows it and zeroes the tax so
+     * the cart total matches what will be posted.
+     */
+    val isTaxExempt: Boolean = false,
+    val taxExemptionType: String? = null,
+    val taxExemptionNumber: String? = null,
+    val taxExemptionReason: String? = null,
+    /** Epoch millis. Outside this window the customer is NOT exempt. */
+    val taxExemptionValidFrom: Long? = null,
+    val taxExemptionValidTo: Long? = null,
 )

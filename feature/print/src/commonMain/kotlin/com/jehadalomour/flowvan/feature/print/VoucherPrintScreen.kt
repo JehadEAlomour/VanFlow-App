@@ -28,6 +28,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -158,6 +160,17 @@ fun VoucherPrintScreen(
     val scope = rememberCoroutineScope()
     val pdfHelper = rememberPdfShareHelper()
 
+    // Print-only line compacting. Asked ONCE per opening of this screen, before the receipt
+    // is printed or shared, and only when there is actually something to merge — so a normal
+    // single-unit voucher never sees a dialog. null = not answered yet.
+    // This screen is the single entry point for both "just saved" and "reprint from reports",
+    // so asking here covers both without duplicating the decision.
+    var compact by remember(state.invoiceId) { mutableStateOf<Boolean?>(null) }
+    val mergeable = remember(state.lines) { compactableCount(state.lines) }
+    val shownLines = remember(state.lines, compact) {
+        if (compact == true) compactLines(state.lines) else state.lines
+    }
+
     // Capture the on-screen receipt and send it to the ViewModel as PNG bytes.
     // Bitmap capture is the one piece that must live in the UI; all logic stays in the VM.
     suspend fun captureAndPrint() {
@@ -257,6 +270,14 @@ fun VoucherPrintScreen(
             color = if (state.printerState is PrinterState.Connected) Green else SubText,
         )
 
+        if (!state.isLoading && mergeable > 0 && compact == null) {
+            CompactLinesDialog(
+                mergeableCount = mergeable,
+                onMerge = { compact = true },
+                onKeepAll = { compact = false },
+            )
+        }
+
         if (state.showConnectDialog) {
             PrinterConnectDialog(
                 printerState = state.printerState,
@@ -291,7 +312,7 @@ fun VoucherPrintScreen(
             ) {
                 Column {
                     ReceiptTear()
-                    ReceiptBody(state)
+                    ReceiptBody(state, shownLines)
                     ReceiptTear(flipped = true)
                 }
             }
@@ -347,7 +368,12 @@ private fun ReceiptTear(flipped: Boolean = false) {
 // ── Receipt body ──────────────────────────────────────────────────────────────
 
 @Composable
-private fun ReceiptBody(state: VoucherPrintState) {
+private fun ReceiptBody(
+    state: VoucherPrintState,
+    /** The lines to PRINT — either state.lines verbatim, or the compacted view when the
+     *  rep chose to merge same-item/same-factor rows. Never the saved data. */
+    shownLines: List<InvoiceLine> = state.lines,
+) {
     val t = state.template
     val palette = if (t.monochrome) MonoPalette else ColorPalette
     // The printed voucher is Arabic-first and must always lay out right-to-left, no matter the
@@ -460,7 +486,7 @@ private fun ReceiptBody(state: VoucherPrintState) {
             ItemColHeader()
 
             // Items (purchased, then gift lines — each a normal item at 100% discount)
-            state.lines.forEach { line ->
+            shownLines.forEach { line ->
                 ReceiptItemRow(line, t.amountDecimals)
             }
             state.freeLines.forEach { line ->
@@ -484,7 +510,7 @@ private fun ReceiptBody(state: VoucherPrintState) {
                 val offersTotal = state.appliedOffers.sumOf { it.discountAmount }
                 TotRow(stringResource(Res.string.print_offers_total), "- ${money(offersTotal, t)}", valueColor = c.negative)
             } else {
-                val lineDiscount = state.lines.sumOf { it.qty * it.unitPrice * it.discountPct } + freeGross
+                val lineDiscount = shownLines.sumOf { it.qty * it.unitPrice * it.discountPct } + freeGross
                 if (lineDiscount > 0.0005) {
                     TotRow(stringResource(Res.string.print_line_discount), "- ${money(lineDiscount, t)}", valueColor = c.negative)
                 }
@@ -493,11 +519,11 @@ private fun ReceiptBody(state: VoucherPrintState) {
                 }
             }
             if (state.taxAmount > 0.0) {
-                TotRow(taxTotalLabel(state.lines), "+ ${money(state.taxAmount, t)}", valueColor = c.warn)
+                TotRow(taxTotalLabel(shownLines), "+ ${money(state.taxAmount, t)}", valueColor = c.warn)
             }
             TotRow(
                 stringResource(Res.string.print_item_count),
-                (state.lines.sumOf { it.qty } + state.freeLines.sumOf { it.qty }).let {
+                (shownLines.sumOf { it.qty } + state.freeLines.sumOf { it.qty }).let {
                     if (it == it.toLong().toDouble()) it.toLong().toString() else it.toString()
                 }
             )
@@ -685,7 +711,13 @@ private fun ReceiptItemRow(line: InvoiceLine, amountDecimals: Int) {
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
                     fontSize = 11.sp,
-                    fontWeight = if (idx == 4) FontWeight.ExtraBold else FontWeight.SemiBold,
+                    // Column 1 is the unit: bold, because with colour units it is what tells
+                    // the customer WHICH variant this line is — the sku below repeats.
+                    fontWeight = when (idx) {
+                        4 -> FontWeight.ExtraBold
+                        1 -> FontWeight.Bold
+                        else -> FontWeight.SemiBold
+                    },
                     color = c.ink,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
