@@ -24,6 +24,8 @@ dependencies {
     "commonMainImplementation"(projects.core.common)
     "commonMainImplementation"(projects.core.data)
     "commonMainImplementation"(projects.core.database)
+    // The print-line-discount permission is read from the persisted session.
+    "commonMainImplementation"(projects.core.datastore)
     "commonMainImplementation"(projects.core.domain)
     "commonMainImplementation"(projects.core.designSystem)
 

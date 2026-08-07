@@ -483,14 +483,14 @@ private fun ReceiptBody(
             SepSolid()
 
             // Column headers
-            ItemColHeader()
+            ItemColHeader(showLineDiscount = state.canPrintLineDiscount)
 
             // Items (purchased, then gift lines — each a normal item at 100% discount)
             shownLines.forEach { line ->
-                ReceiptItemRow(line, t.amountDecimals)
+                ReceiptItemRow(line, t.amountDecimals, state.canPrintLineDiscount)
             }
             state.freeLines.forEach { line ->
-                ReceiptItemRow(line, t.amountDecimals)
+                ReceiptItemRow(line, t.amountDecimals, state.canPrintLineDiscount, isGift = true)
             }
 
             SepDash()
@@ -639,20 +639,22 @@ private fun ReceiptBody(
 // ── Item row ──────────────────────────────────────────────────────────────────
 
 @Composable
-private fun ItemColHeader() {
+private fun ItemColHeader(showLineDiscount: Boolean = false) {
     val c = LocalRc.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 3.dp),
     ) {
-        listOf(
-            stringResource(Res.string.print_col_qty),
-            stringResource(Res.string.print_col_unit),
-            stringResource(Res.string.print_col_tax),
-            stringResource(Res.string.print_col_price),
-            stringResource(Res.string.print_col_total),
-        ).forEach { label ->
+        buildList {
+            add(stringResource(Res.string.print_col_qty))
+            add(stringResource(Res.string.print_col_unit))
+            add(stringResource(Res.string.print_col_tax))
+            add(stringResource(Res.string.print_col_price))
+            // Sits BEFORE the total, so the eye reads price -> discount -> total.
+            if (showLineDiscount) add("خصم")
+            add(stringResource(Res.string.print_col_total))
+        }.forEach { label ->
             Text(
                 text = label,
                 modifier = Modifier.weight(1f),
@@ -672,7 +674,14 @@ private fun ItemColHeader() {
 }
 
 @Composable
-private fun ReceiptItemRow(line: InvoiceLine, amountDecimals: Int) {
+private fun ReceiptItemRow(
+    line: InvoiceLine,
+    amountDecimals: Int,
+    /** Granted per salesman (canPrintLineDiscount) — see the column comment below. */
+    showLineDiscount: Boolean = false,
+    /** A line the customer is not paying for; labelled so nobody reads it as sold. */
+    isGift: Boolean = false,
+) {
     val c = LocalRc.current
     Column(
         modifier = Modifier
@@ -681,7 +690,9 @@ private fun ReceiptItemRow(line: InvoiceLine, amountDecimals: Int) {
     ) {
         // Product name — Arabic, always reads right-to-left (right-aligned) on the printout.
         Text(
-            text = line.nameAr,
+            // A gift line is priced and then fully discounted, so without the label
+            // it prints as a normal item the customer appears to have bought.
+            text = if (isGift) "${line.nameAr} (gift . هدية)" else line.nameAr,
             fontWeight = FontWeight.ExtraBold,
             fontSize = 15.sp,
             color = c.ink,
@@ -698,23 +709,37 @@ private fun ReceiptItemRow(line: InvoiceLine, amountDecimals: Int) {
         // and adds the line's tax) made the column foot to nothing and showed the customer
         // the same discount twice — once silently inside every line, once in the footer.
         // The net per line is still shown on-screen in the voucher detail.
+        // The optional discount column is INFORMATION beside the gross, not a
+        // substitute for it: the total column and the footer are unchanged whether it
+        // is shown or not, so the receipt foots either way.
         Row(modifier = Modifier.fillMaxWidth()) {
             val qty = formatQty(line.qty)
             val unit = line.unit.ifBlank { "—" }
             val taxPct = line.taxPctLabel()
             val price = formatAmount(line.unitPrice, amountDecimals)
-            val total = formatAmount(line.qty * line.unitPrice, amountDecimals)
+            val gross = line.qty * line.unitPrice
+            val discount = formatAmount(gross * line.discountPct, amountDecimals)
+            val total = formatAmount(gross, amountDecimals)
 
-            listOf(qty, unit, taxPct, price, total).forEachIndexed { idx, cell ->
+            buildList {
+                add(qty); add(unit); add(taxPct); add(price)
+                if (showLineDiscount) add(discount)
+                add(total)
+            }.let { cells ->
+              val lastIdx = cells.lastIndex
+              cells.forEachIndexed { idx, cell ->
                 Text(
                     text = cell,
                     modifier = Modifier.weight(1f),
                     textAlign = TextAlign.Center,
                     fontSize = 11.sp,
-                    // Column 1 is the unit: bold, because with colour units it is what tells
-                    // the customer WHICH variant this line is — the sku below repeats.
+                    // Bold the LAST cell (the total), not index 4 — the optional
+                    // discount column shifts the total from 4 to 5, and a hardcoded
+                    // index would bold the discount instead.
+                    // Column 1 is the unit: bold, because with colour units it is what
+                    // tells the customer WHICH variant this line is — the sku repeats.
                     fontWeight = when (idx) {
-                        4 -> FontWeight.ExtraBold
+                        lastIdx -> FontWeight.ExtraBold
                         1 -> FontWeight.Bold
                         else -> FontWeight.SemiBold
                     },
@@ -723,6 +748,7 @@ private fun ReceiptItemRow(line: InvoiceLine, amountDecimals: Int) {
                     overflow = TextOverflow.Ellipsis,
                     style = LtrNum,
                 )
+              }
             }
         }
         // SKU

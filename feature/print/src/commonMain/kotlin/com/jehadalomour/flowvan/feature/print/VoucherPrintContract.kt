@@ -22,6 +22,12 @@ data class VoucherPrintState(
     /** Gift/free items (ITEM_QTY_REWARD picks) resolved for display; unitPrice/lineTotal = 0. */
     val freeLines: List<InvoiceLine> = emptyList(),
     /**
+     * Print the discount on each row. A per-salesman permission, not a printer
+     * setting — a slip left on a counter shows the next customer what rate the
+     * last one got, so it follows the person, not the device.
+     */
+    val canPrintLineDiscount: Boolean = false,
+    /**
      * Offers applied at sale time (name + discount value in JOD), frozen on the invoice. Drives
      * the itemized per-offer rows + total in the printed footer. Empty → generic discount row.
      */

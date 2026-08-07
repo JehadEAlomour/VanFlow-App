@@ -52,6 +52,7 @@ class BackendLoginUseCase(
             session.currentUserCode = resp.user.userNumber
             session.currentPermKeys = resp.user.permKeys.joinToString(",")
             session.canAddCustomer = resp.user.permissions["canAddCustomer"] == true
+            session.canPrintLineDiscount = resp.user.permissions["canPrintLineDiscount"] == true
             Result.success(user)
         } catch (e: NetworkException) {
             Result.failure(AuthException(e.error))

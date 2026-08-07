@@ -31,6 +31,9 @@ object SettingsKeys {
     /** Whether the signed-in user may create customers (permissions.canAddCustomer). */
     const val CAN_ADD_CUSTOMER = "can_add_customer"
 
+    /** Print the discount on each receipt row (permissions.canPrintLineDiscount). */
+    const val CAN_PRINT_LINE_DISCOUNT = "can_print_line_discount"
+
     // ── Backend (VanFlow API) ───────────────────────────────────────
     /** Base URL of the VanFlow backend, e.g. ".../api/v1" (see ApiConfig). */
     const val API_BASE_URL = "api_base_url"

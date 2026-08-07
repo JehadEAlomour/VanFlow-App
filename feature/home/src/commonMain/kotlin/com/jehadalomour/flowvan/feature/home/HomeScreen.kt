@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -57,8 +56,6 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.core.model.Customer
 import com.jehadalomour.flowvan.core.model.CustomerTier
-import com.jehadalomour.flowvan.feature.home.HomeEvent
-import com.jehadalomour.flowvan.feature.home.HomeViewModel
 import com.jehadalomour.flowvan.core.common.format.formatJod
 import com.jehadalomour.flowvan.core.common.format.formatLevantine
 import com.jehadalomour.flowvan.core.common.i18n.AppLanguage
@@ -93,8 +90,6 @@ fun HomeScreen(
     var isRefreshing by remember { mutableStateOf(false) }
     LaunchedEffect(state.isLoading) { if (!state.isLoading) isRefreshing = false }
 
-    // Every time the home screen is shown (each ON_RESUME), pull fresh permissions,
-    // company info + tax mode (and catalog) from the server.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.onEvent(HomeEvent.Refresh)
     }
@@ -365,15 +360,15 @@ private fun StatsGrid(
                 icon = painterResource(Res.drawable.ic_cart),
                 modifier = Modifier.weight(1f),
             )
-            StatCard(
-                label = stringResource(Res.string.home_stat_collections),
-                value = collections.formatJod(AppLanguage.AR),
-                subLabel = stringResource(Res.string.currency_jod),
-                accent = Fv.Green,
-                icon = painterResource(Res.drawable.ic_payment),
-                modifier = Modifier.weight(1f),
-            )
         }
+        StatCard(
+            label = stringResource(Res.string.home_stat_collections),
+            value = collections.formatJod(AppLanguage.AR),
+            subLabel = stringResource(Res.string.currency_jod),
+            accent = Fv.Green,
+            icon = painterResource(Res.drawable.ic_payment),
+            modifier = Modifier.weight(1f),
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             StatCard(
                 label = stringResource(Res.string.home_stat_returns),
@@ -515,20 +510,20 @@ private fun ActionGrid(
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ActionTile(painterResource(Res.drawable.ic_cart), stringResource(Res.string.offers_title), stringResource(Res.string.home_action_offers_sub), Fv.Purple, Modifier.weight(1f), onOpenOffers)
-            ActionTile(painterResource(Res.drawable.ic_cart), "إرجاع بالصنف", "بدون تحديد فاتورة", Fv.Amber, Modifier.weight(1f), onOpenReturnByItem)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+//            ActionTile(painterResource(Res.drawable.ic_cart), "إرجاع بالصنف", "بدون تحديد فاتورة", Fv.Amber, Modifier.weight(1f), onOpenReturnByItem)
             ActionTile(painterResource(Res.drawable.ic_truck), stringResource(Res.string.route_title), stringResource(Res.string.home_action_route_sub), Fv.Blue, Modifier.weight(1f), onOpenRoute)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ActionTile(painterResource(Res.drawable.ic_customers), stringResource(Res.string.home_action_customers), stringResource(Res.string.home_action_customers_sub), Fv.Teal, Modifier.weight(1f), onOpenCustomers)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ActionTile(painterResource(Res.drawable.ic_inventory), stringResource(Res.string.van_stock_title), stringResource(Res.string.home_action_van_stock_sub), Fv.Amber, Modifier.weight(1f), onOpenVanStock)
-            ActionTile(painterResource(Res.drawable.ic_moon), stringResource(Res.string.home_quick_end_of_day), stringResource(Res.string.home_action_end_of_day_sub), Fv.Red, Modifier.weight(1f), onOpenEndOfDay)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ActionTile(painterResource(Res.drawable.ic_moon), stringResource(Res.string.home_quick_end_of_day), stringResource(Res.string.home_action_end_of_day_sub), Fv.Red, Modifier.weight(1f), onOpenEndOfDay)
             ActionTile(painterResource(Res.drawable.ic_bar_chart), stringResource(Res.string.reports_title), stringResource(Res.string.home_action_reports_sub), Fv.Green, Modifier.weight(1f), onOpenReports)
-            ActionTile(painterResource(Res.drawable.ic_ai_sparkle), stringResource(Res.string.ai_title), stringResource(Res.string.home_action_ai_sub), Fv.Purple, Modifier.weight(1f), onOpenAi)
         }
+//        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+//            ActionTile(painterResource(Res.drawable.ic_ai_sparkle), stringResource(Res.string.ai_title), stringResource(Res.string.home_action_ai_sub), Fv.Purple, Modifier.weight(1f), onOpenAi)
+//        }
     }
 }
 

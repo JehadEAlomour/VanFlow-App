@@ -63,6 +63,15 @@ class SessionStore(private val settings: Settings) {
         get() = settings.getBoolean(SettingsKeys.CAN_ADD_CUSTOMER, false)
         set(value) = settings.putBoolean(SettingsKeys.CAN_ADD_CUSTOMER, value)
 
+    /**
+     * Whether this salesman's printed receipt shows the discount on each row
+     * (permissions.canPrintLineDiscount). Persisted like canAddCustomer so a
+     * receipt printed offline still honours the permission.
+     */
+    var canPrintLineDiscount: Boolean
+        get() = settings.getBoolean(SettingsKeys.CAN_PRINT_LINE_DISCOUNT, false)
+        set(value) = settings.putBoolean(SettingsKeys.CAN_PRINT_LINE_DISCOUNT, value)
+
     /** Max direct-discount % encoded as "vouchers.discount.max:<n>", or null = uncapped. */
     fun discountMaxPct(): Double? =
         currentPermKeys.orEmpty().split(',')

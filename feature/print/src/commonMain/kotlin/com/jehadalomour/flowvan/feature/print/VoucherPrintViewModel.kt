@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import com.jehadalomour.flowvan.core.datastore.SessionStore
 
 class VoucherPrintViewModel(
     private val invoiceId: String,
@@ -35,12 +36,16 @@ class VoucherPrintViewModel(
     private val products: ProductRepository,
     private val json: Json,
     private val printer: ReceiptPrinter,
+    private val session: SessionStore,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
         VoucherPrintState(
             connectType = printer.lastTarget?.type ?: PrinterType.BLUETOOTH,
             connectAddress = printer.lastTarget?.address.orEmpty(),
+            // Read from the persisted session, not fetched: a receipt is often
+            // printed with no signal, and the permission must hold offline.
+            canPrintLineDiscount = session.canPrintLineDiscount,
         ),
     )
     val state: StateFlow<VoucherPrintState> = _state.asStateFlow()
