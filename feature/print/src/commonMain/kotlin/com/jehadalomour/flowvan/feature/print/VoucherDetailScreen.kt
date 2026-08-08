@@ -225,8 +225,18 @@ private fun CustomerCard(customer: Customer) {
     }
 }
 
+/**
+ * A line the customer is not paying for.
+ *
+ * The offers engine grants a free item as a normal PRICED line at 100%
+ * discount, so "fully discounted" is the marker — there is no separate flag on
+ * InvoiceLine. Compared with a tolerance because discountPct is a double.
+ */
+private fun InvoiceLine.isOfferFree(): Boolean = discountPct >= 0.999
+
 @Composable
 private fun LineRow(line: InvoiceLine) {
+    val isFree = line.isOfferFree()
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
@@ -239,16 +249,25 @@ private fun LineRow(line: InvoiceLine) {
                     // lines of one item share a name AND a sku, so the unit has to sit in the
                     // title or the two rows are indistinguishable at a glance.
                     Text(
-                        line.unit.takeIf { it.isNotBlank() }
+                        (line.unit.takeIf { it.isNotBlank() }
                             ?.let { "${line.nameAr} ($it)" }
-                            ?: line.nameAr,
+                            ?: line.nameAr)
+                            // Said on the row itself: a rep asked "why is this on the
+                            // invoice?" should not have to work it out from a 100% rate.
+                            .let { if (isFree) "$it — عرض مجاني" else it },
                         color = Fv.TextHigh,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(line.sku, color = Fv.TextMid, fontSize = 10.sp)
                 }
-                Text(line.lineTotal.formatJod(AppLanguage.AR), color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                // Zero, not the notional price: the customer pays nothing for a gift.
+                Text(
+                    (if (isFree) 0.0 else line.lineTotal).formatJod(AppLanguage.AR),
+                    color = if (isFree) Fv.Green else Fv.TextHigh,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                )
             }
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -256,13 +275,18 @@ private fun LineRow(line: InvoiceLine) {
                 // build from commonMain) and follows the default locale, which the app forces
                 // to Arabic — so it would print Arabic-Indic numerals (٠١٢) here.
                 SmallStat(stringResource(Res.string.van_stock_qty), formatQty(line.qty))
-                SmallStat(stringResource(Res.string.voucher_detail_unit_price), line.unitPrice.formatJod(AppLanguage.AR))
+                SmallStat(
+                    stringResource(Res.string.voucher_detail_unit_price),
+                    (if (isFree) 0.0 else line.unitPrice).formatJod(AppLanguage.AR),
+                )
                 // Show the discount as an AMOUNT, not a rate. `discountPct` is a
                 // fraction (0.1 = 10%), so "%.0f%%" printed "0%" for anything under
                 // 50% — and a rate is harder to reconcile against the printed total
                 // than the money actually taken off, which is what the rep is asked
                 // about. Same expression the print layout uses for its discount column.
-                if (line.discountPct > 0) SmallStat(
+                // A gift's "discount" is its whole price; showing it beside a zero
+                // price reads as a contradiction, so it is dropped for free lines.
+                if (line.discountPct > 0 && !isFree) SmallStat(
                     stringResource(Res.string.voucher_detail_discount_short),
                     (line.qty * line.unitPrice * line.discountPct).formatJod(AppLanguage.AR),
                 )

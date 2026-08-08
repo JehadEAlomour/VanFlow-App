@@ -141,8 +141,36 @@ private fun ItemSalesRowCard(rank: Int, item: ItemSalesRow, grandTotal: Double) 
                 }
                 Spacer(Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(item.nameAr, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    // Unit in the TITLE, not a subtitle: with the report now keyed on
+                    // (item, unit) the same name appears on several rows, and the sku
+                    // repeats too — the unit is the only thing telling them apart.
+                    Text(
+                        item.unitName.takeIf { it.isNotBlank() }
+                            ?.let { "${item.nameAr} ($it)" }
+                            ?: item.nameAr,
+                        color = Fv.TextHigh,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                     Text(item.sku, color = Fv.TextMid, fontSize = 10.sp)
+                    // Stated on the row, not folded into the quantity: without it the
+                    // qty column reads as units SOLD, and an item mostly given away
+                    // looks like a strong seller earning almost nothing per unit.
+                    if (item.hasFree) {
+                        Text(
+                            // A row that is ENTIRELY free is the common case now that
+                            // units are separate rows — the gift unit stands alone, so
+                            // "3 من 3" would be noise where "عرض مجاني" says it plainly.
+                            if (item.paidQty < 0.0005) {
+                                "عرض مجاني"
+                            } else {
+                                "عرض مجاني: ${item.freeQty.roundToInt()} من ${item.totalQty.roundToInt()}"
+                            },
+                            color = Fv.Green,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
                 }
                 Text(
                     "${item.totalQty.roundToInt()}",

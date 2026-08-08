@@ -716,10 +716,14 @@ private fun ReceiptItemRow(
             val qty = formatQty(line.qty)
             val unit = line.unit.ifBlank { "—" }
             val taxPct = line.taxPctLabel()
-            val price = formatAmount(line.unitPrice, amountDecimals)
+            // A gift is 100% discounted, so the customer pays nothing for it —
+            // print 0, not the notional price they might think they are charged.
+            // Its value is still inside the subtotal and the offer discount below,
+            // which is what makes the subtotal → discount → total chain foot.
+            val price = formatAmount(if (isGift) 0.0 else line.unitPrice, amountDecimals)
             val gross = line.qty * line.unitPrice
-            val discount = formatAmount(gross * line.discountPct, amountDecimals)
-            val total = formatAmount(gross, amountDecimals)
+            val discount = formatAmount(if (isGift) gross else gross * line.discountPct, amountDecimals)
+            val total = formatAmount(if (isGift) 0.0 else gross, amountDecimals)
 
             buildList {
                 add(qty); add(unit); add(taxPct); add(price)
