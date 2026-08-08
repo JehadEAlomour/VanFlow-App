@@ -77,6 +77,7 @@ fun HomeScreen(
     onOpenReports: () -> Unit,
     onOpenOffers: () -> Unit,
     onOpenReturnByItem: () -> Unit,
+    onOpenStockRequest: () -> Unit,
     onOpenCustomer: (String) -> Unit,
     onLogout: () -> Unit,
     viewModel: HomeViewModel = koinViewModel(),
@@ -154,6 +155,7 @@ fun HomeScreen(
                     onOpenReports = onOpenReports,
                     onOpenOffers = onOpenOffers,
                     onOpenReturnByItem = onOpenReturnByItem,
+                    onOpenStockRequest = onOpenStockRequest,
                     modifier = Modifier.padding(horizontal = 14.dp),
                 )
             }
@@ -505,6 +507,7 @@ private fun ActionGrid(
     onOpenReports: () -> Unit,
     onOpenOffers: () -> Unit,
     onOpenReturnByItem: () -> Unit,
+    onOpenStockRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -516,6 +519,10 @@ private fun ActionGrid(
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ActionTile(painterResource(Res.drawable.ic_customers), stringResource(Res.string.home_action_customers), stringResource(Res.string.home_action_customers_sub), Fv.Teal, Modifier.weight(1f), onOpenCustomers)
             ActionTile(painterResource(Res.drawable.ic_inventory), stringResource(Res.string.van_stock_title), stringResource(Res.string.home_action_van_stock_sub), Fv.Amber, Modifier.weight(1f), onOpenVanStock)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ActionTile(painterResource(Res.drawable.ic_truck), stringResource(Res.string.stock_request_title), stringResource(Res.string.home_action_stock_request_sub), Fv.Purple, Modifier.weight(1f), onOpenStockRequest)
+            Spacer(Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ActionTile(painterResource(Res.drawable.ic_moon), stringResource(Res.string.home_quick_end_of_day), stringResource(Res.string.home_action_end_of_day_sub), Fv.Red, Modifier.weight(1f), onOpenEndOfDay)

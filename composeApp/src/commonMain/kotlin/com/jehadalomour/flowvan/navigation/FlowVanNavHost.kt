@@ -35,6 +35,7 @@ import com.jehadalomour.flowvan.feature.reports.VoucherReportScreen
 import com.jehadalomour.flowvan.feature.voucher.CollectionScreen
 import com.jehadalomour.flowvan.feature.customer.CreateCustomerScreen
 import com.jehadalomour.flowvan.feature.voucher.ReturnByItemScreen
+import com.jehadalomour.flowvan.feature.voucher.StockRequestScreen
 import com.jehadalomour.flowvan.feature.customer.CustomerDashboardScreen
 import com.jehadalomour.flowvan.feature.customer.CustomerListScreen
 import com.jehadalomour.flowvan.feature.home.EndOfDayScreen
@@ -59,6 +60,7 @@ object Routes {
     const val CUSTOMERS = "customers"
     const val CREATE_CUSTOMER = "create_customer"
     const val RETURN_BY_ITEM = "return_by_item"
+    const val STOCK_REQUEST = "stock_request"
     const val VAN_STOCK = "van_stock"
     const val AI = "ai?customerId={customerId}"
     const val END_OF_DAY = "end_of_day"
@@ -149,6 +151,7 @@ fun FlowVanNavHost(
                 onOpenReports = { navController.navigate(Routes.REPORTS_HUB) },
                 onOpenOffers = { navController.navigate(Routes.OFFERS) },
                 onOpenReturnByItem = { navController.navigate(Routes.RETURN_BY_ITEM) },
+                onOpenStockRequest = { navController.navigate(Routes.STOCK_REQUEST) },
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
                 onLogout = {
                     scope.launch {
@@ -180,6 +183,9 @@ fun FlowVanNavHost(
                 // already shown on the screen before they press Done.
                 onDone = { navController.popBackStack() },
             )
+        }
+        composable(Routes.STOCK_REQUEST) {
+            StockRequestScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.CREATE_CUSTOMER) {
             CreateCustomerScreen(

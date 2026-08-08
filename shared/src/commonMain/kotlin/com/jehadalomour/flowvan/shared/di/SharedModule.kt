@@ -74,6 +74,7 @@ import com.jehadalomour.flowvan.core.network.createWebSocketClient
 import com.jehadalomour.flowvan.core.network.realtime.SyncSocketClient
 import com.jehadalomour.flowvan.core.domain.sync.RealtimeSyncCoordinator
 import com.jehadalomour.flowvan.core.network.api.ReturnByItemApi
+import com.jehadalomour.flowvan.core.network.api.StockRequestApi
 
 fun sharedModule(): Module = module {
     single { Settings() }
@@ -141,6 +142,7 @@ fun sharedModule(): Module = module {
     single { ApprovalApi(get()) }
     single { CustomerApi(get()) }
     single { ReturnByItemApi(get()) }
+    single { StockRequestApi(get()) }
     single { ProductApi(get()) }
     single { InvoiceApi(get()) }
     single { CollectionApi(get()) }
