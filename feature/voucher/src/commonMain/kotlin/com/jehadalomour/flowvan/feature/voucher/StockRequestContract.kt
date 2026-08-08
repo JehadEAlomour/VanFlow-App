@@ -1,5 +1,6 @@
 package com.jehadalomour.flowvan.feature.voucher
 
+import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.ProductUnit
 import com.jehadalomour.flowvan.core.network.dto.StockRequestDto
@@ -7,81 +8,81 @@ import com.jehadalomour.flowvan.core.network.dto.StockRequestDto
 /**
  * Asking the warehouse to load stock onto this van.
  *
- * The rep picks items and a quantity in whichever unit they think in — cartons,
- * usually — and the office decides how much to actually give. Approval does not
- * move stock: it moves when the rep confirms the goods are physically on the
- * van, which is why [StockRequestEvent.Receive] exists and why an approved
- * request stays on this screen until then.
+ * Deliberately the SAME shape as the voucher flow: a picker you add items from,
+ * a cart you review, one send. A rep does this between selling, and a second
+ * item-entry idiom to learn is a second thing to get wrong under time pressure.
+ *
+ * What is NOT here is everything about money — no price, no discount, no tax, no
+ * customer, no payment. A stock request totals a QUANTITY. Reusing [CartLine]
+ * means those fields exist and simply stay at their defaults; the alternative
+ * was a parallel line type that could not use any of the shared cart UI.
+ *
+ * The unit still matters as much as it does on a sale: a variant unit owns its
+ * own stock pool, so the pool a line draws on is (productId, unitId) — the same
+ * identity the cart is keyed on.
  */
-data class StockRequestLine(
-    val product: Product,
-    /** The unit asked for. Null means the item's base pieces. */
-    val unit: ProductUnit? = null,
-    val quantity: String = "",
-) {
-    val qtyOrZero: Double get() = quantity.toDoubleOrNull() ?: 0.0
-
-    /** Pieces per chosen unit. 1 when asking in base pieces. */
-    val factor: Int
-        get() = unit?.conversionQty?.toInt()?.takeIf { it > 0 } ?: 1
-
-    /** What the request will actually move, in stock-pool units. */
-    val baseQty: Double get() = qtyOrZero * factor
-
-    /** Stock already on the van for the pool this line draws on. */
-    val onVan: Int
-        get() = if (unit?.isStockUnit == true) unit.vanStock else product.vanStock
-}
+enum class StockRequestView { PICKER, CART }
 
 data class StockRequestState(
     val products: List<Product> = emptyList(),
-    val units: List<ProductUnit> = emptyList(),
-    val lines: List<StockRequestLine> = emptyList(),
-    val note: String = "",
+    val visibleProducts: List<Product> = emptyList(),
+    /** Units per product id, as synced. Empty list = the item has only its base unit. */
+    val productUnits: Map<String, List<ProductUnit>> = emptyMap(),
 
-    /** Item picker sheet. */
-    val isPickerOpen: Boolean = false,
+    val cart: List<CartLine> = emptyList(),
+    val view: StockRequestView = StockRequestView.PICKER,
     val searchQuery: String = "",
-    /** Unit picker, keyed by the line it belongs to. Null when closed. */
-    val unitPickerFor: Int? = null,
+    val note: String = "",
 
     val isSubmitting: Boolean = false,
 
     /**
-     * This rep's recent requests. The screen is the rep's whole view of what
-     * they have asked for, so it stays after submitting rather than navigating
-     * away — the answer arrives here.
+     * This rep's recent requests. Kept on the same screen rather than a separate
+     * one because the rep's real question after sending is "am I getting it?",
+     * and the answer — including the button that receives the goods — lands here.
      */
     val mine: List<StockRequestDto> = emptyList(),
     val isLoadingMine: Boolean = false,
-    /** Ids with a receive/cancel call in flight, so one row's spinner is its own. */
+    /** Ids with a receive/cancel call in flight, so each row spins alone. */
     val busyIds: Set<String> = emptySet(),
 
     val errorAr: String? = null,
     val noticeAr: String? = null,
 ) {
-    val canSubmit: Boolean
-        get() = lines.any { it.qtyOrZero > 0 } && !isSubmitting
+    val canSubmit: Boolean get() = cart.isNotEmpty() && !isSubmitting
 
-    /** Units for one line's product, base first — the order the rep expects. */
-    fun unitsFor(product: Product): List<ProductUnit> =
-        units.filter { it.productId == product.id }.sortedBy { it.conversionQty }
+    /** Total pieces requested — the only "total" a stock request has. */
+    val totalBaseQty: Double get() = cart.sumOf { it.stockQty }
+
+    /** Distinct items, for the cart badge. A 2-unit item still counts as 2 lines. */
+    val lineCount: Int get() = cart.size
+
+    /** Units for one product, smallest first — the order a rep reads them in. */
+    fun unitsFor(productId: String): List<ProductUnit> =
+        (productUnits[productId] ?: emptyList()).sortedBy { it.conversionQty }
+
+    /** Cart quantity per product, for the picker's badge. Summed across units. */
+    val cartQtyByProduct: Map<String, Double>
+        get() = cart.groupBy { it.productId }.mapValues { (_, ls) -> ls.sumOf { it.qty } }
 }
 
 sealed interface StockRequestEvent {
-    data object OpenPicker : StockRequestEvent
-    data object ClosePicker : StockRequestEvent
+    /** Swap between the item picker and the cart. */
+    data object ToggleView : StockRequestEvent
     data class SearchChanged(val v: String) : StockRequestEvent
-    data class AddProduct(val product: Product) : StockRequestEvent
-    data class QuantityChanged(val index: Int, val v: String) : StockRequestEvent
-    data class RemoveLine(val index: Int) : StockRequestEvent
+
+    /**
+     * Add or edit one line. [unit] carries the conversion factor and the pool,
+     * so the line can be rebuilt without re-reading the catalogue.
+     */
+    data class ConfirmItem(val product: Product, val qty: Double, val unit: ProductUnit) :
+        StockRequestEvent
+    data class RemoveLine(val productId: String, val unitId: String) : StockRequestEvent
+    data object ClearCart : StockRequestEvent
+
     data class NoteChanged(val v: String) : StockRequestEvent
 
-    data class OpenUnitPicker(val index: Int) : StockRequestEvent
-    data object CloseUnitPicker : StockRequestEvent
-    data class UnitChanged(val index: Int, val unit: ProductUnit?) : StockRequestEvent
-
-    /** Send the request to the office. */
+    /** Send the cart to the office. */
     data object Submit : StockRequestEvent
 
     /** Withdraw a request the office has not answered yet. */

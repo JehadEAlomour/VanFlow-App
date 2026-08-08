@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
+import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.ProductUnit
 import com.jehadalomour.flowvan.core.network.api.StockRequestApi
@@ -17,8 +18,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Requesting stock for the van. See StockRequestContract for why an approved
- * request stays on this screen until the rep confirms receipt.
+ * Requesting stock for the van, on the voucher cart pattern.
+ *
+ * See StockRequestContract for why this reuses [CartLine] and why an approved
+ * request stays on the screen until the rep confirms receipt.
  */
 class StockRequestViewModel(
     private val api: StockRequestApi,
@@ -30,17 +33,16 @@ class StockRequestViewModel(
     val state: StateFlow<StockRequestState> = _state.asStateFlow()
 
     init {
-        // Observed rather than fetched once: a sync can land while the rep is
-        // still building the request, and the van stock shown per line is the
-        // number they are deciding against.
+        // Observed rather than fetched once: a sync can land mid-request, and the
+        // van stock shown per row is the number the rep is deciding against.
         viewModelScope.launch {
             products.observeAll().collect { list ->
-                _state.update { it.copy(products = list) }
+                _state.update { it.copy(products = list, visibleProducts = filter(list, it.searchQuery)) }
             }
         }
         viewModelScope.launch {
             units.observeAll().collect { list ->
-                _state.update { it.copy(units = list) }
+                _state.update { it.copy(productUnits = list.groupBy { u -> u.productId }) }
             }
         }
         refreshMine()
@@ -48,45 +50,29 @@ class StockRequestViewModel(
 
     fun onEvent(event: StockRequestEvent) {
         when (event) {
-            StockRequestEvent.OpenPicker -> _state.update { it.copy(isPickerOpen = true) }
-            StockRequestEvent.ClosePicker ->
-                _state.update { it.copy(isPickerOpen = false, searchQuery = "") }
-            is StockRequestEvent.SearchChanged ->
-                _state.update { it.copy(searchQuery = event.v) }
-
-            is StockRequestEvent.AddProduct -> addProduct(event.product)
-
-            is StockRequestEvent.QuantityChanged -> _state.update { s ->
-                s.copy(
-                    lines = s.lines.mapIndexed { i, l ->
-                        if (i == event.index) {
-                            l.copy(quantity = event.v.filter { c -> c.isDigit() || c == '.' })
-                        } else {
-                            l
-                        }
+            StockRequestEvent.ToggleView -> _state.update {
+                it.copy(
+                    view = if (it.view == StockRequestView.PICKER) {
+                        StockRequestView.CART
+                    } else {
+                        StockRequestView.PICKER
                     },
                 )
             }
+
+            is StockRequestEvent.SearchChanged -> _state.update {
+                it.copy(searchQuery = event.v, visibleProducts = filter(it.products, event.v))
+            }
+
+            is StockRequestEvent.ConfirmItem -> confirmItem(event.product, event.qty, event.unit)
 
             is StockRequestEvent.RemoveLine -> _state.update { s ->
-                s.copy(lines = s.lines.filterIndexed { i, _ -> i != event.index })
+                s.copy(cart = s.cart.filterNot { it.isLine(event.productId, event.unitId) })
             }
+
+            StockRequestEvent.ClearCart -> _state.update { it.copy(cart = emptyList()) }
 
             is StockRequestEvent.NoteChanged -> _state.update { it.copy(note = event.v) }
-
-            is StockRequestEvent.OpenUnitPicker ->
-                _state.update { it.copy(unitPickerFor = event.index) }
-            StockRequestEvent.CloseUnitPicker ->
-                _state.update { it.copy(unitPickerFor = null) }
-
-            is StockRequestEvent.UnitChanged -> _state.update { s ->
-                s.copy(
-                    lines = s.lines.mapIndexed { i, l ->
-                        if (i == event.index) l.copy(unit = event.unit) else l
-                    },
-                    unitPickerFor = null,
-                )
-            }
 
             StockRequestEvent.Submit -> submit()
             is StockRequestEvent.Cancel -> act(event.id) { api.cancel(it) }
@@ -97,48 +83,67 @@ class StockRequestViewModel(
         }
     }
 
-    private fun addProduct(product: Product) {
-        _state.update { s ->
-            // Already on the list: focus the rep on the row they have rather
-            // than adding a second one for the same item, which the server would
-            // merge anyway and which reads as a mistake in between.
-            if (s.lines.any { it.product.id == product.id }) {
-                return@update s.copy(isPickerOpen = false, searchQuery = "")
+    private fun filter(all: List<Product>, q: String): List<Product> =
+        if (q.isBlank()) {
+            all
+        } else {
+            all.filter {
+                it.nameAr.contains(q, true) ||
+                    it.nameEn.contains(q, true) ||
+                    it.sku.contains(q, true)
             }
-            // Default to the item's base unit when it has one. A rep asking for
-            // "10" means 10 of whatever they normally count in.
-            val base = s.unitsFor(product).firstOrNull { it.isBase }
+        }
+
+    /**
+     * Add the line, or replace the one already there for this (product, unit).
+     *
+     * Keyed on the pair, not the product: 3 cartons plus 10 loose pieces of one
+     * item are two lines drawing on two different pools, and collapsing them by
+     * product would silently drop whichever the rep entered first.
+     */
+    private fun confirmItem(product: Product, qty: Double, unit: ProductUnit) {
+        if (qty <= 0) {
+            // A zero on an existing line means "take it off", which is what the
+            // rep expects from typing 0 rather than hunting for a delete.
+            _state.update { s -> s.copy(cart = s.cart.filterNot { it.isLine(product.id, unit.id) }) }
+            return
+        }
+        _state.update { s ->
+            val line = CartLine(
+                productId = product.id,
+                sku = product.sku,
+                nameAr = product.nameAr,
+                // No money on a stock request. Left at zero rather than carrying
+                // the sale price, so nothing downstream can read a value here and
+                // present a request as if it were worth something.
+                unitPrice = 0.0,
+                qty = qty,
+                unit = unit.name,
+                unitId = unit.id,
+                unitConversionQty = unit.conversionQty.takeIf { it > 0.0 } ?: 1.0,
+                imageUrl = product.imageUrl,
+            )
+            val existing = s.cart.indexOfFirst { it.isLine(product.id, unit.id) }
             s.copy(
-                lines = s.lines + StockRequestLine(product = product, unit = base),
-                isPickerOpen = false,
-                searchQuery = "",
+                cart = if (existing >= 0) {
+                    s.cart.toMutableList().also { it[existing] = line }
+                } else {
+                    s.cart + line
+                },
             )
         }
     }
 
     private fun submit() {
-        val lines = _state.value.lines.filter { it.qtyOrZero > 0 }
-        if (lines.isEmpty()) return
+        val s = _state.value
+        if (s.cart.isEmpty()) return
         _state.update { it.copy(isSubmitting = true, errorAr = null, noticeAr = null) }
         viewModelScope.launch {
             runCatching {
                 api.create(
                     CreateStockRequestBody(
-                        items = lines.map { l ->
-                            StockRequestLineRequest(
-                                itemNumber = l.product.sku,
-                                // Only a variant unit owns a pool; packaging over
-                                // the base pool must stay "" or the goods are
-                                // received into a pool that does not exist.
-                                stockUnitCode =
-                                    if (l.unit?.isStockUnit == true) l.unit.code else "",
-                                qtyOfUnit = l.qtyOrZero,
-                                unitBaseQty = l.factor,
-                                itemUnitId = l.unit?.id,
-                                unitName = l.unit?.name,
-                            )
-                        },
-                        note = _state.value.note.trim().takeIf { it.isNotBlank() },
+                        items = s.cart.map { line -> lineRequest(line) },
+                        note = s.note.trim().takeIf { it.isNotBlank() },
                     ),
                 )
             }.fold(
@@ -146,10 +151,12 @@ class StockRequestViewModel(
                     _state.update {
                         it.copy(
                             isSubmitting = false,
-                            // Clear the draft, keep the screen: the answer lands
-                            // in the list below and the rep is waiting for it.
-                            lines = emptyList(),
+                            // Clear the cart, keep the screen and drop back to the
+                            // picker: the answer arrives in the list below, and the
+                            // rep is usually about to add a second request anyway.
+                            cart = emptyList(),
                             note = "",
+                            view = StockRequestView.PICKER,
                             mine = listOf(created) + it.mine,
                             noticeAr = "أُرسل الطلب ${created.requestNumber} إلى الإدارة.",
                         )
@@ -162,17 +169,38 @@ class StockRequestViewModel(
         }
     }
 
+    /**
+     * One cart line as the server wants it.
+     *
+     * `stockUnitCode` is the pool and must be "" for anything that is not a
+     * variant: a packaging unit (كرتونة ×12) converts INTO the item's base pool,
+     * and naming it as its own pool would receive the goods somewhere the sale
+     * path never looks. The flag lives on ProductUnit, not on CartLine, so it is
+     * resolved back through the units map here rather than carried on the line.
+     */
+    private fun lineRequest(line: CartLine): StockRequestLineRequest {
+        val unit = _state.value.productUnits[line.productId]?.firstOrNull { it.id == line.unitId }
+        return StockRequestLineRequest(
+            itemNumber = line.sku,
+            stockUnitCode = if (unit?.isStockUnit == true) unit.code else "",
+            qtyOfUnit = line.qty,
+            unitBaseQty = line.unitConversionQty.toInt().coerceAtLeast(1),
+            // Blank is the synthesized fallback unit, not a real item_units row —
+            // posting a made-up id would be rejected, so it travels as null.
+            itemUnitId = line.unitId.takeIf { it.isNotBlank() },
+            unitName = line.unit.takeIf { it.isNotBlank() },
+        )
+    }
+
     private fun refreshMine() {
         _state.update { it.copy(isLoadingMine = true) }
         viewModelScope.launch {
             runCatching { api.mine() }.fold(
-                onSuccess = { list ->
-                    _state.update { it.copy(isLoadingMine = false, mine = list) }
-                },
+                onSuccess = { list -> _state.update { it.copy(isLoadingMine = false, mine = list) } },
                 onFailure = {
-                    // Silent: a rep with no signal should still be able to BUILD
-                    // a request. Only the send needs the network, and that error
-                    // is reported where it happens.
+                    // Silent: a rep with no signal must still be able to BUILD a
+                    // request. Only the send needs the network, and that failure is
+                    // reported where it happens.
                     _state.update { it.copy(isLoadingMine = false) }
                 },
             )
@@ -180,11 +208,7 @@ class StockRequestViewModel(
     }
 
     /** One request-scoped call, with its own busy flag so each row spins alone. */
-    private fun act(
-        id: String,
-        notice: String? = null,
-        call: suspend (String) -> Any,
-    ) {
+    private fun act(id: String, notice: String? = null, call: suspend (String) -> Any) {
         if (id in _state.value.busyIds) return
         _state.update { it.copy(busyIds = it.busyIds + id, errorAr = null) }
         viewModelScope.launch {
@@ -192,14 +216,11 @@ class StockRequestViewModel(
                 onSuccess = {
                     _state.update { s -> s.copy(busyIds = s.busyIds - id, noticeAr = notice) }
                     // Re-read rather than patching the row: receiving posts a
-                    // transfer, and the server is the only thing that knows the
-                    // voucher number it produced.
+                    // transfer, and only the server knows the voucher number.
                     refreshMine()
                 },
                 onFailure = {
-                    _state.update { s ->
-                        s.copy(busyIds = s.busyIds - id, errorAr = ERR_ACTION)
-                    }
+                    _state.update { s -> s.copy(busyIds = s.busyIds - id, errorAr = ERR_ACTION) }
                 },
             )
         }

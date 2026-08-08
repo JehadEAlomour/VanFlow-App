@@ -74,6 +74,8 @@ fun ProductPickerColumn(
     onSearch: (String) -> Unit,
     onAdd: (Product) -> Unit,
     showStockBadge: Boolean,
+    /** Off for flows with no money in them — a stock request prices nothing. */
+    showPrice: Boolean = true,
     modifier: Modifier = Modifier,
     cartQtyMap: Map<String, Double> = emptyMap(),
     onStep: ((Product, Int) -> Unit)? = null,
@@ -96,6 +98,7 @@ fun ProductPickerColumn(
                 ProductRow(
                     product = product,
                     showStockBadge = showStockBadge,
+                    showPrice = showPrice,
                     currentQty = cartQtyMap[product.id] ?: 0.0,
                     onTap = { onAdd(product) },
                     onStep = onStep?.let { cb -> { delta -> cb(product, delta) } },
@@ -119,6 +122,7 @@ fun ProductPickerColumn(
 private fun ProductRow(
     product: Product,
     showStockBadge: Boolean,
+    showPrice: Boolean,
     currentQty: Double,
     onTap: () -> Unit,
     onStep: ((Int) -> Unit)?,
@@ -151,7 +155,11 @@ private fun ProductRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    "${product.sku} · ${product.salePrice.formatJod(AppLanguage.AR)}",
+                    if (showPrice) {
+                        "${product.sku} · ${product.salePrice.formatJod(AppLanguage.AR)}"
+                    } else {
+                        product.sku
+                    },
                     color = Fv.TextMid,
                     fontSize = 11.sp,
                 )
@@ -303,7 +311,14 @@ fun CartLineRow(
 }
 
 @Composable
-fun CartItemCard(line: CartLine, onTap: () -> Unit) {
+fun CartItemCard(
+    line: CartLine,
+    onTap: () -> Unit,
+    /** Off for flows with no money in them — a stock request prices nothing. */
+    showPrice: Boolean = true,
+    /** Replaces the money block when [showPrice] is false, e.g. "= ٢٤ حبة". */
+    baseQtyLabel: String? = null,
+) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onTap),
         shape = RoundedCornerShape(18.dp),
@@ -364,6 +379,11 @@ fun CartItemCard(line: CartLine, onTap: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
+                    if (!showPrice) {
+                        baseQtyLabel?.let {
+                            Text(it, color = Fv.TextMid, fontSize = 12.sp)
+                        }
+                    } else {
                     Text(
                         "${line.unitPrice.formatJod(AppLanguage.AR)} × ${line.qty.toInt()}",
                         color = Fv.TextMid,
@@ -387,6 +407,7 @@ fun CartItemCard(line: CartLine, onTap: () -> Unit) {
                                 fontWeight = FontWeight.Medium,
                             )
                         }
+                    }
                     }
                 }
                 Box(
