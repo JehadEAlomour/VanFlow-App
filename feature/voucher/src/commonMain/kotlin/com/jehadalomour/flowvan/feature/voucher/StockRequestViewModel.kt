@@ -7,6 +7,7 @@ import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.ProductUnit
+import com.jehadalomour.flowvan.core.model.isServerUnitId
 import com.jehadalomour.flowvan.core.network.api.StockRequestApi
 import com.jehadalomour.flowvan.core.network.dto.CreateStockRequestBody
 import com.jehadalomour.flowvan.core.network.dto.StockRequestLineRequest
@@ -185,9 +186,10 @@ class StockRequestViewModel(
             stockUnitCode = if (unit?.isStockUnit == true) unit.code else "",
             qtyOfUnit = line.qty,
             unitBaseQty = line.unitConversionQty.toInt().coerceAtLeast(1),
-            // Blank is the synthesized fallback unit, not a real item_units row —
-            // posting a made-up id would be rejected, so it travels as null.
-            itemUnitId = line.unitId.takeIf { it.isNotBlank() },
+            // Only a real server item_units.id may be sent. The base unit has no
+            // such row, so the catalogue gives it the item's barcode — usually the
+            // sku — and a blank check happily posted "ACT-GEL-500" as a uuid.
+            itemUnitId = line.unitId.takeIf { it.isServerUnitId() },
             unitName = line.unit.takeIf { it.isNotBlank() },
         )
     }
