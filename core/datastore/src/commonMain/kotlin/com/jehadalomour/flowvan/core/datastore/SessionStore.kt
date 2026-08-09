@@ -78,6 +78,44 @@ class SessionStore(private val settings: Settings) {
             .firstOrNull { it.trim().startsWith("vouchers.discount.max:") }
             ?.substringAfter(':')?.toDoubleOrNull()
 
+    /**
+     * Long-lived, location-only credential issued at sign-in.
+     *
+     * Deliberately outside the session: the handset must keep reporting its
+     * position after the salesman signs out, so [clear] must not touch this.
+     * Only the office releasing the device revokes it — the server refuses it
+     * from then on, and [trackingRepId] is what the uploader posts against.
+     */
+    var trackingToken: String?
+        get() = settings.getStringOrNull(SettingsKeys.TRACKING_TOKEN)
+        set(value) {
+            if (value == null) settings.remove(SettingsKeys.TRACKING_TOKEN)
+            else settings.putString(SettingsKeys.TRACKING_TOKEN, value)
+        }
+
+    /** Rep the tracking token belongs to — survives sign-out alongside it. */
+    var trackingRepId: String?
+        get() = settings.getStringOrNull(SettingsKeys.TRACKING_REP_ID)
+        set(value) {
+            if (value == null) settings.remove(SettingsKeys.TRACKING_REP_ID)
+            else settings.putString(SettingsKeys.TRACKING_REP_ID, value)
+        }
+
+    /** Handset id reported at the last sign-in, echoed back on sign-out. */
+    var boundDeviceId: String?
+        get() = settings.getStringOrNull(SettingsKeys.BOUND_DEVICE_ID)
+        set(value) {
+            if (value == null) settings.remove(SettingsKeys.BOUND_DEVICE_ID)
+            else settings.putString(SettingsKeys.BOUND_DEVICE_ID, value)
+        }
+
+    /**
+     * Ends the interactive session only.
+     *
+     * The tracking credential and the device binding are left alone — that is
+     * what makes "signed out but still tracking" work. Wiping them here would
+     * silently kill the trail the office depends on.
+     */
     fun clear() {
         settings.remove(SettingsKeys.CURRENT_USER_ID)
         settings.remove(SettingsKeys.CURRENT_TOKEN)
@@ -85,5 +123,11 @@ class SessionStore(private val settings: Settings) {
         settings.remove(SettingsKeys.CURRENT_USER_CODE)
         settings.remove(SettingsKeys.CURRENT_PERM_KEYS)
         settings.remove(SettingsKeys.CAN_ADD_CUSTOMER)
+    }
+
+    /** Forgets the tracking credential too — only for a released/reset device. */
+    fun clearTracking() {
+        settings.remove(SettingsKeys.TRACKING_TOKEN)
+        settings.remove(SettingsKeys.TRACKING_REP_ID)
     }
 }

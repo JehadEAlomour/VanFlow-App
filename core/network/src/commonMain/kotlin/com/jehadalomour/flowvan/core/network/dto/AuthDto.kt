@@ -6,11 +6,28 @@ import kotlinx.serialization.Serializable
 data class LoginRequest(
     val userNumber: String,
     val password: String,
+    /**
+     * Handset identity. Sending it turns on device binding server-side — one
+     * live handset per salesman and one salesman per handset — and earns the
+     * `trackingToken` that keeps this phone reporting after sign-out.
+     */
+    val deviceId: String? = null,
+    val platform: String? = null,
+    val deviceModel: String? = null,
 )
+
+@Serializable
+data class LogoutRequest(val deviceId: String? = null)
 
 @Serializable
 data class LoginResponseDto(
     val accessToken: String,
+    /**
+     * Long-lived, location-only credential, returned only when a deviceId was
+     * sent. Stored outside the session so signing out does not take the trail
+     * down with it.
+     */
+    val trackingToken: String? = null,
     val user: ApiUserDto,
 )
 

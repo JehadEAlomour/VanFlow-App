@@ -5,6 +5,7 @@ import com.jehadalomour.flowvan.core.network.api.AuthApi
 import com.jehadalomour.flowvan.core.network.mapper.toUser
 import com.jehadalomour.flowvan.core.network.http.NetworkException
 import com.jehadalomour.flowvan.core.data.repository.UserRepository
+import com.jehadalomour.flowvan.core.data.device.DeviceIdentityProvider
 import com.jehadalomour.flowvan.core.datastore.SessionStore
 import com.jehadalomour.flowvan.core.common.error.CashFlowError
 import com.jehadalomour.flowvan.core.model.User
@@ -19,6 +20,7 @@ class BackendLoginUseCase(
     private val authApi: AuthApi,
     private val users: UserRepository,
     private val session: SessionStore,
+    private val deviceIdentity: DeviceIdentityProvider,
 ) {
     @OptIn(ExperimentalTime::class)
     suspend operator fun invoke(userNumber: String, password: String): Result<User> {
@@ -29,7 +31,17 @@ class BackendLoginUseCase(
             return Result.failure(AuthException(CashFlowError.Auth.InvalidPassword))
         }
         return try {
-            val resp = authApi.login(userNumber, password)
+            // Identify the handset so the server can enforce one-phone-per-rep
+            // and hand back the tracking credential. A refusal surfaces as
+            // CashFlowError.Auth.DeviceBoundToOtherUser / UserActiveOnOtherDevice.
+            val device = deviceIdentity.identity()
+            val resp = authApi.login(
+                userNumber = userNumber,
+                password = password,
+                deviceId = device.deviceId,
+                platform = device.platform,
+                deviceModel = device.model,
+            )
             val user = resp.user.toUser(resp.accessToken)
             val now = Clock.System.now().toEpochMilliseconds()
             users.cache(
@@ -53,6 +65,13 @@ class BackendLoginUseCase(
             session.currentPermKeys = resp.user.permKeys.joinToString(",")
             session.canAddCustomer = resp.user.permissions["canAddCustomer"] == true
             session.canPrintLineDiscount = resp.user.permissions["canPrintLineDiscount"] == true
+            session.boundDeviceId = device.deviceId
+            // Kept outside the session on purpose: this is what keeps the phone
+            // reporting once the rep signs out.
+            resp.trackingToken?.let {
+                session.trackingToken = it
+                session.trackingRepId = resp.user.repId
+            }
             Result.success(user)
         } catch (e: NetworkException) {
             Result.failure(AuthException(e.error))

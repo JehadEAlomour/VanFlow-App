@@ -46,15 +46,21 @@ class SyncRepository(
     @OptIn(ExperimentalTime::class)
     suspend fun syncPending(): SyncResult {
         if (!apiConfig.isEnabled) return SyncResult(0, 0, 0, skipped = true)
-        val repId = session.currentRepId
+
+        // The GPS queue drains on the tracking rep id, which outlives sign-out —
+        // that is what keeps a signed-out handset reporting. Transactions do not:
+        // they need a live session, so they fall out below.
+        val repId = session.currentRepId ?: session.trackingRepId
         if (repId.isNullOrBlank()) {
             log.w("no repId in session — cannot push transactions yet")
             return SyncResult(0, 0, 0, skipped = true)
         }
         val userCode = session.currentUserCode
         if (userCode.isNullOrBlank()) {
-            log.w("no userCode in session — cannot push vouchers yet")
-            return SyncResult(0, 0, 0, skipped = true)
+            // Signed out: no voucher/collection push is possible, but the trail
+            // must still get out. Drain GPS only, then stop.
+            log.w("no userCode in session — GPS only (signed out)")
+            return SyncResult(0, 0, drainGpsQueue(repId), skipped = false)
         }
         val now = Clock.System.now().toEpochMilliseconds()
         var invoicesSynced = 0
@@ -124,9 +130,23 @@ class SyncRepository(
             }
         }
 
-        // ── GPS trail (bulk) ───────────────────────────────────────────
-        // Drain the whole queue in ≤500-point batches (backend bulk cap), keeping the
-        // true on-device capture time so offline catch-ups land on the right trail slot.
+        pointsSynced += drainGpsQueue(repId)
+
+        return SyncResult(invoicesSynced, paymentsSynced, pointsSynced)
+    }
+
+    /**
+     * Drain the GPS queue in ≤500-point batches (the backend's bulk cap),
+     * keeping the true on-device capture time so offline catch-ups land on the
+     * right trail slot.
+     *
+     * Split out of [syncPending] because it is the one push that must still run
+     * when nobody is signed in — on the tracking token, against the tracking rep
+     * id. Everything else in a sync needs a session; this does not.
+     */
+    @OptIn(ExperimentalTime::class)
+    private suspend fun drainGpsQueue(repId: String): Int {
+        var pointsSynced = 0
         var batches = 0
         while (batches < 10) {
             val points = locationPointDao.findUnsynced(500)
@@ -157,14 +177,14 @@ class SyncRepository(
             }
             batches++
         }
-
-        return SyncResult(invoicesSynced, paymentsSynced, pointsSynced)
+        return pointsSynced
     }
 
     /** Builds the equivalent `curl` for a tracking POST so a failing request can be replayed. */
     private fun trackingCurl(path: String, bodyJson: String): String {
         val url = apiConfig.urlFor(path)
-        val auth = session.currentToken?.let { "Bearer $it" } ?: "(no token)"
+        val auth = (session.currentToken ?: session.trackingToken)
+            ?.let { "Bearer $it" } ?: "(no token)"
         return "curl -X POST '$url' " +
             "-H 'Authorization: $auth' " +
             "-H 'Content-Type: application/json' " +

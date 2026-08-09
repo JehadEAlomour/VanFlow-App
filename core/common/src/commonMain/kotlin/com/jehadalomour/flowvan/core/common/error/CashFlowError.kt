@@ -32,6 +32,28 @@ sealed class CashFlowError(open val messageAr: String, open val messageEn: Strin
             messageAr = "تم رفض إذن الموقع — سيتم المتابعة بدون موقع",
             messageEn = "Location permission denied — proceeding without location",
         )
+
+        /**
+         * This handset already belongs to someone else. Carries the owner's
+         * name because a rep told only "refused" has nowhere to go, whereas a
+         * name sends them to the right desk. Only the office can release it.
+         */
+        data class DeviceBoundToOtherUser(val ownerName: String?) : Auth(
+            messageAr = "هذا الجهاز مسجّل باسم ${ownerName ?: "مستخدم آخر"}. " +
+                "اطلب من الإدارة تحرير الجهاز قبل تسجيل الدخول منه.",
+            messageEn = "This device is registered to ${ownerName ?: "another user"}. " +
+                "Ask the office to release it before signing in here.",
+        )
+
+        /** This account is already tied to another handset. */
+        data class UserActiveOnOtherDevice(val deviceModel: String?) : Auth(
+            messageAr = "حسابك مسجّل على جهاز آخر" +
+                (deviceModel?.let { " ($it)" } ?: "") +
+                ". اطلب من الإدارة تحرير الجهاز الآخر أولاً.",
+            messageEn = "Your account is already registered on another device" +
+                (deviceModel?.let { " ($it)" } ?: "") +
+                ". Ask the office to release that device first.",
+        )
     }
 
     sealed class Network(messageAr: String, messageEn: String) : CashFlowError(messageAr, messageEn) {

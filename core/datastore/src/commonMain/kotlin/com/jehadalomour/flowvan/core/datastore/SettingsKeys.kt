@@ -34,6 +34,16 @@ object SettingsKeys {
     /** Print the discount on each receipt row (permissions.canPrintLineDiscount). */
     const val CAN_PRINT_LINE_DISCOUNT = "can_print_line_discount"
 
+    // ── Device binding (survives sign-out on purpose) ───────────────
+    /** Long-lived, location-only credential. NOT cleared by SessionStore.clear(). */
+    const val TRACKING_TOKEN = "tracking_token"
+
+    /** Handset id this install reported at its last sign-in. */
+    const val BOUND_DEVICE_ID = "bound_device_id"
+
+    /** Rep the tracking token belongs to — outlives the session with it. */
+    const val TRACKING_REP_ID = "tracking_rep_id"
+
     // ── Backend (VanFlow API) ───────────────────────────────────────
     /** Base URL of the VanFlow backend, e.g. ".../api/v1" (see ApiConfig). */
     const val API_BASE_URL = "api_base_url"

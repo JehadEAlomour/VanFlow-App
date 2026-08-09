@@ -1,6 +1,7 @@
 package com.jehadalomour.flowvan.shared.di
 
 import com.jehadalomour.flowvan.core.data.connectivity.ConnectivityObserver
+import com.jehadalomour.flowvan.core.data.device.DeviceIdentityProvider
 import com.jehadalomour.flowvan.core.database.db.DatabaseFactory
 import com.jehadalomour.flowvan.core.data.location.IosLocationProvider
 import com.jehadalomour.flowvan.core.data.location.IosLocationTracker
@@ -15,6 +16,7 @@ import org.koin.dsl.module
 actual fun platformModule(): Module = module {
     single { DatabaseFactory() }
     single { ConnectivityObserver() }
+    single { DeviceIdentityProvider() }
     single { LocationStatusProvider() }
     single<LocationProvider> { IosLocationProvider() }
     single<LocationTracker> { IosLocationTracker() }

@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import com.jehadalomour.flowvan.core.common.error.CashFlowError
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -143,7 +144,11 @@ fun LoginScreen(
                     )
                 }
 
-                if (state.error != null) {
+                // A device-binding refusal is not a "try again" error — the rep
+                // cannot fix it from this screen, only the office can. It gets a
+                // dialog rather than a chip they might miss and keep retyping
+                // their password against.
+                if (state.error != null && !state.error!!.isDeviceBlock()) {
                     Spacer(Modifier.height(16.dp))
                     ErrorChip(messageAr = state.error!!.messageAr, messageEn = state.error!!.messageEn)
                 }
@@ -196,6 +201,13 @@ fun LoginScreen(
                 showSettingsDialog = false
                 onOpenSettings()
             },
+        )
+    }
+
+    state.error?.takeIf { it.isDeviceBlock() }?.let { blocked ->
+        DeviceBlockedDialog(
+            error = blocked,
+            onDismiss = { viewModel.onEvent(LoginEvent.DismissError) },
         )
     }
 }
@@ -313,3 +325,36 @@ private fun lightFieldColors() = TextFieldDefaults.colors(
     unfocusedIndicatorColor = FieldBorder,
     cursorColor = Accent,
 )
+
+
+/** The two refusals only the office can clear. */
+private fun CashFlowError.isDeviceBlock(): Boolean =
+    this is CashFlowError.Auth.DeviceBoundToOtherUser ||
+        this is CashFlowError.Auth.UserActiveOnOtherDevice
+
+/**
+ * Blocking explanation for a handset/account mismatch.
+ *
+ * Deliberately has one button and no retry: retrying is exactly the wrong
+ * instinct here, and the only route forward is the office releasing the device.
+ * The title names which of the two situations it is so the rep can say it down
+ * the phone without reading a paragraph.
+ */
+@Composable
+private fun DeviceBlockedDialog(error: CashFlowError, onDismiss: () -> Unit) {
+    val isDeviceTaken = error is CashFlowError.Auth.DeviceBoundToOtherUser
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = if (isDeviceTaken) "الجهاز مسجّل لمستخدم آخر" else "حسابك مسجّل على جهاز آخر",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+            )
+        },
+        text = { Text(text = error.messageAr, fontSize = 14.sp) },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("حسناً") }
+        },
+    )
+}

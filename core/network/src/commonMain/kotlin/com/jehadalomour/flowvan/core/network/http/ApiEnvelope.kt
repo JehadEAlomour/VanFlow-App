@@ -33,6 +33,13 @@ data class ApiErrorEnvelope(
     val statusCode: Int = 0,
     val message: String = "",
     val error: String = "",
+    /**
+     * Machine-readable reason, when the server sends one. Branch on this rather
+     * than on [message]: a sign-in refused because the handset belongs to
+     * someone else needs a different screen from a wrong password, and the
+     * sentence alone cannot be told apart once it is translated.
+     */
+    val code: String? = null,
     val path: String? = null,
     val timestamp: String? = null,
 )

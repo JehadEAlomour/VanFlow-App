@@ -55,7 +55,7 @@ class FlowVanApiClient(
         val response = try {
             httpClient.request(url) {
                 this.method = method
-                session.currentToken?.let { header(HttpHeaders.Authorization, "Bearer $it") }
+                authToken()?.let { header(HttpHeaders.Authorization, "Bearer $it") }
                 query.forEach { (k, v) -> if (v != null) parameter(k, v) }
                 if (bodyJson != null) setBody(TextContent(bodyJson, ContentType.Application.Json))
             }
@@ -69,9 +69,36 @@ class FlowVanApiClient(
         val text = response.bodyAsText()
         log.d { "← ${response.status.value} ${method.value} $path\n$text" }
 
-        if (response.status.value == 401) session.signalUnauthorized()
+        if (response.status.value == 401) handleUnauthorized(text)
         if (!response.status.isSuccess()) throw mapError(response.status.value, text)
         return text
+    }
+
+    /**
+     * Bearer for this call: the interactive session when there is one, else the
+     * long-lived tracking credential.
+     *
+     * The fallback is what lets a signed-out handset keep draining its GPS
+     * queue. It is safe to offer everywhere because the server confines a
+     * tracking token to telemetry routes — anything else answers 403, so the
+     * fallback cannot widen what a signed-out app can reach.
+     */
+    fun authToken(): String? = session.currentToken ?: session.trackingToken
+
+    /**
+     * A 401 normally means "session expired, go to login". One case is
+     * different: the office released this handset, which retiring the tracking
+     * token too — otherwise the phone would retry a dead credential forever.
+     */
+    private fun handleUnauthorized(body: String) {
+        val code = runCatching {
+            json.decodeFromString(ApiErrorEnvelope.serializer(), body).code
+        }.getOrNull()
+        if (code == "device_released") {
+            log.w { "device released by the office — dropping tracking token" }
+            session.clearTracking()
+        }
+        session.signalUnauthorized()
     }
 
     /**
@@ -93,7 +120,7 @@ class FlowVanApiClient(
 
         val response = try {
             httpClient.post(url) {
-                session.currentToken?.let { header(HttpHeaders.Authorization, "Bearer $it") }
+                authToken()?.let { header(HttpHeaders.Authorization, "Bearer $it") }
                 setBody(
                     MultiPartFormDataContent(
                         formData {
@@ -121,15 +148,37 @@ class FlowVanApiClient(
 
         val text = response.bodyAsText()
         log.d { "← ${response.status.value} POST $path\n$text" }
-        if (response.status.value == 401) session.signalUnauthorized()
+        if (response.status.value == 401) handleUnauthorized(text)
         if (!response.status.isSuccess()) throw mapError(response.status.value, text)
         return text
     }
 
     private fun mapError(statusCode: Int, body: String): NetworkException {
-        val detail = runCatching {
-            json.decodeFromString(ApiErrorEnvelope.serializer(), body).message
-        }.getOrNull().orEmpty()
+        val envelope = runCatching {
+            json.decodeFromString(ApiErrorEnvelope.serializer(), body)
+        }.getOrNull()
+        val detail = envelope?.message.orEmpty()
+
+        // Device-binding refusals come back as 409s that the rep must be able to
+        // act on, so they are pulled out before the generic Conflict mapping.
+        // The owner's name is parsed out of the sentence the server composed —
+        // it is the same string either way, and this keeps one source of truth
+        // for the wording on the server.
+        when (envelope?.code) {
+            "device_bound_to_other_user" -> return NetworkException(
+                CashFlowError.Auth.DeviceBoundToOtherUser(
+                    detail.substringAfter("registered to ", "").substringBefore(". ")
+                        .takeIf { it.isNotBlank() },
+                ),
+            )
+            "user_active_on_other_device" -> return NetworkException(
+                CashFlowError.Auth.UserActiveOnOtherDevice(
+                    detail.substringAfter("device (", "").substringBefore(")")
+                        .takeIf { it.isNotBlank() },
+                ),
+            )
+        }
+
         val error = when (statusCode) {
             401 -> CashFlowError.Network.Unauthorized
             403 ->

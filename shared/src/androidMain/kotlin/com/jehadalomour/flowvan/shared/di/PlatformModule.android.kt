@@ -2,6 +2,7 @@ package com.jehadalomour.flowvan.shared.di
 
 import android.content.Intent
 import com.jehadalomour.flowvan.core.data.connectivity.ConnectivityObserver
+import com.jehadalomour.flowvan.core.data.device.DeviceIdentityProvider
 import com.jehadalomour.flowvan.core.database.db.DatabaseFactory
 import com.jehadalomour.flowvan.core.data.location.AndroidLocationProvider
 import com.jehadalomour.flowvan.core.data.location.AndroidLocationTracker
@@ -17,6 +18,7 @@ private const val TRACKING_SERVICE = "com.jehadalomour.flowvan.service.TrackingF
 actual fun platformModule(): Module = module {
     single { DatabaseFactory(androidContext()) }
     single { ConnectivityObserver(androidContext()) }
+    single { DeviceIdentityProvider(androidContext()) }
     single { LocationStatusProvider(androidContext()) }
     single<LocationProvider> { AndroidLocationProvider(androidContext()) }
     single<LocationTracker> {
