@@ -20,6 +20,13 @@ data class CreateCustomerState(
     val documentErrorAr: String? = null,
 
     /**
+     * What we expect to happen on save, read from the session before the rep
+     * types anything. Only to warn them in advance — the outcome below is what
+     * actually happened, and comes from the server.
+     */
+    val willNeedApproval: Boolean = true,
+
+    /**
      * True when the save produced an APPROVAL REQUEST instead of a customer,
      * because this salesman lacks canCreateCustomerDirect. The screen says so
      * rather than pretending the customer is ready to sell to.

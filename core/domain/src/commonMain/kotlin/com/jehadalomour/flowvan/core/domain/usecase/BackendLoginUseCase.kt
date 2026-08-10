@@ -64,6 +64,8 @@ class BackendLoginUseCase(
             session.currentUserCode = resp.user.userNumber
             session.currentPermKeys = resp.user.permKeys.joinToString(",")
             session.canAddCustomer = resp.user.permissions["canAddCustomer"] == true
+            session.canCreateCustomerDirect =
+                resp.user.permissions["canCreateCustomerDirect"] == true
             session.canPrintLineDiscount = resp.user.permissions["canPrintLineDiscount"] == true
             session.boundDeviceId = device.deviceId
             // Kept outside the session on purpose: this is what keeps the phone

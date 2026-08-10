@@ -36,7 +36,11 @@ class CreateCustomerViewModel(
 
     private var approvalWatch: Job? = null
 
-    private val _state = MutableStateFlow(CreateCustomerState())
+    // Seeded from the session so the screen can warn BEFORE the rep fills a form
+    // and photographs a document, rather than only in the answer to the save.
+    private val _state = MutableStateFlow(
+        CreateCustomerState(willNeedApproval = !session.canCreateCustomerDirect),
+    )
     val state: StateFlow<CreateCustomerState> = _state.asStateFlow()
 
     fun onEvent(event: CreateCustomerEvent) {

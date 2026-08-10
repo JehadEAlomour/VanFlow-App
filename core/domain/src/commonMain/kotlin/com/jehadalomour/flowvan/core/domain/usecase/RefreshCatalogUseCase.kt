@@ -212,6 +212,7 @@ class RefreshCatalogUseCase(
             val me = authApi.me()
             session.currentPermKeys = me.permKeys.joinToString(",")
             session.canAddCustomer = me.permissions["canAddCustomer"] == true
+            session.canCreateCustomerDirect = me.permissions["canCreateCustomerDirect"] == true
             session.canPrintLineDiscount = me.permissions["canPrintLineDiscount"] == true
         } catch (e: Exception) {
             log.w("permissions sync failed: ${e.message}")

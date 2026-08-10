@@ -31,6 +31,13 @@ object SettingsKeys {
     /** Whether the signed-in user may create customers (permissions.canAddCustomer). */
     const val CAN_ADD_CUSTOMER = "can_add_customer"
 
+    /**
+     * Whether a customer this salesman adds is REAL immediately, or waits for the
+     * office (permissions.canCreateCustomerDirect). Only used to warn before the
+     * save — the server decides, and says so in its answer.
+     */
+    const val CAN_CREATE_CUSTOMER_DIRECT = "can_create_customer_direct"
+
     /** Print the discount on each receipt row (permissions.canPrintLineDiscount). */
     const val CAN_PRINT_LINE_DISCOUNT = "can_print_line_discount"
 

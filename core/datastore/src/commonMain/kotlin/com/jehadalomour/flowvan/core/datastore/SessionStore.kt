@@ -64,6 +64,20 @@ class SessionStore(private val settings: Settings) {
         set(value) = settings.putBoolean(SettingsKeys.CAN_ADD_CUSTOMER, value)
 
     /**
+     * Whether this salesman's new customers are created immediately, or wait for
+     * the office to approve them (permissions.canCreateCustomerDirect).
+     *
+     * Advisory only: it exists so the create screen can say what will happen
+     * BEFORE the rep fills a form and uploads a document photo. The server owns
+     * the decision and reports it in the response either way, so a stale copy
+     * here misleads for one screen — never creates a customer that should have
+     * been reviewed. Defaults to false, so the warning shows when we do not know.
+     */
+    var canCreateCustomerDirect: Boolean
+        get() = settings.getBoolean(SettingsKeys.CAN_CREATE_CUSTOMER_DIRECT, false)
+        set(value) = settings.putBoolean(SettingsKeys.CAN_CREATE_CUSTOMER_DIRECT, value)
+
+    /**
      * Whether this salesman's printed receipt shows the discount on each row
      * (permissions.canPrintLineDiscount). Persisted like canAddCustomer so a
      * receipt printed offline still honours the permission.

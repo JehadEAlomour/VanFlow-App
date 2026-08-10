@@ -97,6 +97,36 @@ fun CreateCustomerScreen(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            // Said BEFORE the form, not after the save. Filling this in means
+            // photographing a document — a rep who learns only from the answer
+            // that their shop is not open for business yet has already spent
+            // the visit on it, in front of the shopkeeper.
+            if (state.willNeedApproval && !state.awaitingApproval &&
+                state.approvalDecision == null
+            ) {
+                Surface(shape = RoundedCornerShape(10.dp), color = Fv.SurfaceTop) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text("ℹ️", fontSize = 16.sp)
+                        Column {
+                            Text(
+                                "هذا العميل يحتاج موافقة الإدارة",
+                                color = Fv.Amber,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                "سيُرسل للمراجعة عند الحفظ، ولا يمكن البيع له قبل الاعتماد.",
+                                color = Fv.TextMid,
+                                fontSize = 12.sp,
+                            )
+                        }
+                    }
+                }
+            }
+
             FieldLabel("اسم العميل")
             Field(
                 value = state.name,
