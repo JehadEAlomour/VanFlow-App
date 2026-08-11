@@ -100,22 +100,32 @@ private val LtrNum = TextStyle(textDirection = TextDirection.Ltr, localeList = L
 /** Capture width. Wider = more source pixels for the printer to scale down. */
 private val PaperWidth = 384.dp
 
-private const val FS_COMPANY = 19      // company name — the largest thing on the page
-private const val FS_COMPANY_SUB = 13  // latin name, tax number
-private const val FS_TITLE = 17        // "كشف الحساب" in its inverted bar
-private const val FS_INFO = 13         // customer / period / footer lines
-private const val FS_TOTAL_LABEL = 14
-private const val FS_TOTAL_VALUE = 15
-private const val FS_HEAD = 12         // table column headings
-private const val FS_ROW = 12          // table body
-private const val FS_ROW_SUB = 11      // document number under its type
-private const val FS_CLOSING_LABEL = 15
-private const val FS_CLOSING_VALUE = 22 // the number the page exists to state
-private const val FS_SIGN = 12
-private const val FS_FOOTER = 12
+private const val FS_COMPANY = 26      // matches the voucher receipt exactly
+private const val FS_COMPANY_SUB = 15  // latin name, tax number
+private const val FS_TITLE = 20        // "كشف الحساب" in its inverted bar
+private const val FS_INFO = 15         // customer / period / footer lines
+private const val FS_TOTAL_LABEL = 16
+private const val FS_TOTAL_VALUE = 18
+private const val FS_HEAD = 14         // table column headings
+private const val FS_ROW = 14          // table body
+private const val FS_ROW_SUB = 12      // document number under its type
+private const val FS_CLOSING_LABEL = 17
+private const val FS_CLOSING_VALUE = 26 // the number the page exists to state
+private const val FS_SIGN = 13
+private const val FS_FOOTER = 14
 
-/** Logo height. Big enough to be the shop's mark, not a bullet point. */
-private val LogoHeight = 68.dp
+/**
+ * Logo box, sized to the voucher receipt's 250dp AT ITS 320dp paper — scaled to
+ * this page's wider capture so the mark lands the same size in the hand. Both
+ * bitmaps are squeezed to the head's 576 dots, so only the ratio to paper width
+ * survives; copying 250dp verbatim onto wider paper would print it smaller.
+ */
+private val LogoSize = 300.dp
+
+/** Everything on the paper is bold. A thermal head lays down a thin, slightly
+ *  fibrous line, and regular weight at this size greys out under shop lighting —
+ *  the receipt is read once, quickly, by someone not looking for it. */
+private val PaperWeight = FontWeight.Bold
 
 /** Statement money: always 3 decimals, always Latin digits, sign carried separately. */
 private fun Double.jod(): String {
@@ -327,13 +337,13 @@ private fun StatementBody(state: StatementPrintState) {
                     Image(
                         bitmap = logo,
                         contentDescription = null,
-                        modifier = Modifier.height(LogoHeight),
+                        modifier = Modifier.size(LogoSize),
                     )
                 } else {
                     Image(
                         painter = painterResource(Res.drawable.voucher_logo),
                         contentDescription = null,
-                        modifier = Modifier.height(LogoHeight),
+                        modifier = Modifier.size(LogoSize),
                         colorFilter = ColorFilter.tint(Ink),
                     )
                 }
@@ -395,11 +405,14 @@ private fun StatementBody(state: StatementPrintState) {
 
             // ── Column headings ───────────────────────────────────────────────
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                HeadCell(stringResource(Res.string.statement_col_date), weight = 1.0f)
-                HeadCell(stringResource(Res.string.statement_col_doc), weight = 1.5f)
-                HeadCell(stringResource(Res.string.statement_col_debit), weight = 1.1f, end = true)
-                HeadCell(stringResource(Res.string.statement_col_credit), weight = 1.1f, end = true)
-                HeadCell(stringResource(Res.string.statement_col_balance), weight = 1.2f, end = true)
+                // Rebalanced for the larger type: the money columns must hold
+                // a four-figure amount without ellipsising, which is the one
+                // truncation on this page nobody would notice was wrong.
+                HeadCell(stringResource(Res.string.statement_col_date), weight = 0.85f)
+                HeadCell(stringResource(Res.string.statement_col_doc), weight = 1.35f)
+                HeadCell(stringResource(Res.string.statement_col_debit), weight = 1.2f, end = true)
+                HeadCell(stringResource(Res.string.statement_col_credit), weight = 1.2f, end = true)
+                HeadCell(stringResource(Res.string.statement_col_balance), weight = 1.4f, end = true)
             }
             Rule()
 
@@ -505,14 +518,14 @@ private fun StatementPaperRow(row: StatementRow) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        BodyCell(row.createdAt.dayMonth(), weight = 1.0f, numeric = true)
-        Column(modifier = Modifier.weight(1.5f)) {
-            Text(label, color = Ink, fontSize = FS_ROW.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(row.number, color = Ink, fontSize = FS_ROW_SUB.sp, style = LtrNum, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        BodyCell(row.createdAt.dayMonth(), weight = 0.85f, numeric = true)
+        Column(modifier = Modifier.weight(1.35f)) {
+            Text(label, color = Ink, fontSize = FS_ROW.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(row.number, color = Ink, fontSize = FS_ROW_SUB.sp, fontWeight = PaperWeight, style = LtrNum, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        BodyCell(if (row.debit > 0) row.debit.jod() else "-", weight = 1.1f, numeric = true, end = true)
-        BodyCell(if (row.credit > 0) row.credit.jod() else "-", weight = 1.1f, numeric = true, end = true)
-        BodyCell(row.balance.jod(), weight = 1.2f, numeric = true, end = true, bold = true)
+        BodyCell(if (row.debit > 0) row.debit.jod() else "-", weight = 1.2f, numeric = true, end = true)
+        BodyCell(if (row.credit > 0) row.credit.jod() else "-", weight = 1.2f, numeric = true, end = true)
+        BodyCell(row.balance.jod(), weight = 1.4f, numeric = true, end = true, bold = true)
     }
 }
 
@@ -525,7 +538,7 @@ private fun CenterLine(text: String, size: Int, bold: Boolean = false) {
         modifier = Modifier.fillMaxWidth(),
         color = Ink,
         fontSize = size.sp,
-        fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+        fontWeight = if (bold) FontWeight.ExtraBold else PaperWeight,
         textAlign = TextAlign.Center,
     )
 }
@@ -536,12 +549,12 @@ private fun InfoLine(label: String, value: String, numeric: Boolean = false) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, color = Ink, fontSize = FS_INFO.sp)
+        Text(label, color = Ink, fontSize = FS_INFO.sp, fontWeight = PaperWeight)
         Text(
             value,
             color = Ink,
             fontSize = FS_INFO.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.ExtraBold,
             style = if (numeric) LtrNum else TextStyle.Default,
         )
     }
@@ -553,12 +566,12 @@ private fun TotalLine(label: String, value: String, bold: Boolean = true) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, color = Ink, fontSize = FS_TOTAL_LABEL.sp)
+        Text(label, color = Ink, fontSize = FS_TOTAL_LABEL.sp, fontWeight = PaperWeight)
         Text(
             value,
             color = Ink,
             fontSize = FS_TOTAL_VALUE.sp,
-            fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+            fontWeight = if (bold) FontWeight.ExtraBold else PaperWeight,
             style = LtrNum,
         )
     }
@@ -575,7 +588,7 @@ private fun androidx.compose.foundation.layout.RowScope.HeadCell(
         modifier = Modifier.weight(weight),
         color = Ink,
         fontSize = FS_HEAD.sp,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.ExtraBold,
         textAlign = if (end) TextAlign.End else TextAlign.Start,
         maxLines = 1,
     )
@@ -594,7 +607,7 @@ private fun androidx.compose.foundation.layout.RowScope.BodyCell(
         modifier = Modifier.weight(weight),
         color = Ink,
         fontSize = FS_ROW.sp,
-        fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
+        fontWeight = if (bold) FontWeight.ExtraBold else PaperWeight,
         textAlign = if (end) TextAlign.End else TextAlign.Start,
         style = if (numeric) LtrNum else TextStyle.Default,
         maxLines = 1,
@@ -607,7 +620,7 @@ private fun SignatureSlot(label: String, modifier: Modifier = Modifier) {
         Spacer(Modifier.height(18.dp))
         Box(Modifier.fillMaxWidth().height(1.dp).background(Ink))
         Spacer(Modifier.height(3.dp))
-        Text(label, color = Ink, fontSize = FS_SIGN.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Text(label, color = Ink, fontSize = FS_SIGN.sp, fontWeight = PaperWeight, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
     }
 }
 
