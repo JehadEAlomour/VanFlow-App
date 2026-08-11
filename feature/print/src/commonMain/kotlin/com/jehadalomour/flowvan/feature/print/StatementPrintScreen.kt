@@ -88,6 +88,35 @@ private val Ink = Color.Black
 // Arabic-Indic (٠١٢…) under an Arabic locale and a balance stays readable.
 private val LtrNum = TextStyle(textDirection = TextDirection.Ltr, localeList = LocaleList("en-US"))
 
+// ── Type scale ───────────────────────────────────────────────────────────────
+// One place, because this is the thing that gets tuned against real paper.
+//
+// What matters on a thermal roll is the ratio of text size to CAPTURE WIDTH: the
+// printer scales the bitmap to the head's 576 dots regardless, so enlarging both
+// together changes nothing on paper. The width below went up 20% for a sharper
+// raster and the type went up ~30%, which is the part that actually lands bigger
+// in the customer's hand.
+
+/** Capture width. Wider = more source pixels for the printer to scale down. */
+private val PaperWidth = 384.dp
+
+private const val FS_COMPANY = 19      // company name — the largest thing on the page
+private const val FS_COMPANY_SUB = 13  // latin name, tax number
+private const val FS_TITLE = 17        // "كشف الحساب" in its inverted bar
+private const val FS_INFO = 13         // customer / period / footer lines
+private const val FS_TOTAL_LABEL = 14
+private const val FS_TOTAL_VALUE = 15
+private const val FS_HEAD = 12         // table column headings
+private const val FS_ROW = 12          // table body
+private const val FS_ROW_SUB = 11      // document number under its type
+private const val FS_CLOSING_LABEL = 15
+private const val FS_CLOSING_VALUE = 22 // the number the page exists to state
+private const val FS_SIGN = 12
+private const val FS_FOOTER = 12
+
+/** Logo height. Big enough to be the shop's mark, not a bullet point. */
+private val LogoHeight = 68.dp
+
 /** Statement money: always 3 decimals, always Latin digits, sign carried separately. */
 private fun Double.jod(): String {
     val v = abs(this)
@@ -120,10 +149,8 @@ private fun Long.fullDateTime(): String {
 /**
  * The printable/shareable customer account statement.
  *
- * Same three exits as the voucher receipt — thermal roll, the OS print dialog,
- * and share-as-PDF — because a statement is settled in three different ways: on
- * the spot at the counter, filed in the office, or sent to the shopkeeper's
- * WhatsApp when he is not there.
+ * Same two exits as every other receipt: the thermal roll for the person
+ * standing in front of the rep, and share-as-PDF for the one who is not there.
  */
 @Composable
 fun StatementPrintScreen(
@@ -259,7 +286,7 @@ fun StatementPrintScreen(
             Box(
                 modifier = Modifier
                     .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .widthIn(max = 320.dp)
+                    .widthIn(max = PaperWidth)
                     .shadow(8.dp, RoundedCornerShape(4.dp))
                     .background(PaperBg, RoundedCornerShape(4.dp))
                     .drawWithContent {
@@ -291,28 +318,33 @@ private fun StatementBody(state: StatementPrintState) {
             val logo = remember(state.companyLogo) { decodeBase64Image(state.companyLogo) }
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 if (logo != null) {
+                    // NOT tinted. The company's logo arrives as whatever they
+                    // uploaded — this client's is a JPEG, which has no
+                    // transparency, so tinting it would paint the whole
+                    // rectangle and print a solid black box where the mark
+                    // should be. Only the bundled vector below is tinted,
+                    // because it is a monochrome shape drawn for exactly that.
                     Image(
                         bitmap = logo,
                         contentDescription = null,
-                        modifier = Modifier.height(38.dp),
-                        colorFilter = ColorFilter.tint(Ink),
+                        modifier = Modifier.height(LogoHeight),
                     )
                 } else {
                     Image(
                         painter = painterResource(Res.drawable.voucher_logo),
                         contentDescription = null,
-                        modifier = Modifier.height(34.dp),
+                        modifier = Modifier.height(LogoHeight),
                         colorFilter = ColorFilter.tint(Ink),
                     )
                 }
             }
             Spacer(Modifier.height(6.dp))
-            CenterLine(state.companyNameAr, size = 14, bold = true)
-            if (state.companyNameEn.isNotBlank()) CenterLine(state.companyNameEn, size = 10)
+            CenterLine(state.companyNameAr, size = FS_COMPANY, bold = true)
+            if (state.companyNameEn.isNotBlank()) CenterLine(state.companyNameEn, size = FS_COMPANY_SUB)
             if (state.companyTaxNumber.isNotBlank()) {
                 CenterLine(
                     "${stringResource(Res.string.print_customer_tax_number)} ${state.companyTaxNumber}",
-                    size = 10,
+                    size = FS_COMPANY_SUB,
                 )
             }
 
@@ -327,7 +359,7 @@ private fun StatementBody(state: StatementPrintState) {
                 Text(
                     stringResource(Res.string.statement_title),
                     color = PaperBg,
-                    fontSize = 13.sp,
+                    fontSize = FS_TITLE.sp,
                     fontWeight = FontWeight.Bold,
                 )
             }
@@ -362,7 +394,7 @@ private fun StatementBody(state: StatementPrintState) {
             Rule()
 
             // ── Column headings ───────────────────────────────────────────────
-            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
                 HeadCell(stringResource(Res.string.statement_col_date), weight = 1.0f)
                 HeadCell(stringResource(Res.string.statement_col_doc), weight = 1.5f)
                 HeadCell(stringResource(Res.string.statement_col_debit), weight = 1.1f, end = true)
@@ -373,7 +405,7 @@ private fun StatementBody(state: StatementPrintState) {
 
             if (state.rows.isEmpty()) {
                 Spacer(Modifier.height(10.dp))
-                CenterLine(stringResource(Res.string.statement_empty), size = 11)
+                CenterLine(stringResource(Res.string.statement_empty), size = FS_INFO)
                 Spacer(Modifier.height(10.dp))
             } else {
                 state.rows.forEach { row ->
@@ -406,13 +438,13 @@ private fun StatementBody(state: StatementPrintState) {
                     Text(
                         stringResource(Res.string.statement_closing_balance),
                         color = PaperBg,
-                        fontSize = 12.sp,
+                        fontSize = FS_CLOSING_LABEL.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
                         state.closingBalance.jod(),
                         color = PaperBg,
-                        fontSize = 15.sp,
+                        fontSize = FS_CLOSING_VALUE.sp,
                         fontWeight = FontWeight.Bold,
                         style = LtrNum,
                     )
@@ -423,7 +455,7 @@ private fun StatementBody(state: StatementPrintState) {
             // exactly the case someone will otherwise read as a debt.
             if (state.closingBalance < 0) {
                 Spacer(Modifier.height(4.dp))
-                CenterLine(stringResource(Res.string.statement_in_credit), size = 10, bold = true)
+                CenterLine(stringResource(Res.string.statement_in_credit), size = FS_FOOTER, bold = true)
             }
 
             Spacer(Modifier.height(10.dp))
@@ -449,7 +481,7 @@ private fun StatementBody(state: StatementPrintState) {
             }
 
             Spacer(Modifier.height(12.dp))
-            CenterLine(stringResource(Res.string.print_footer_thanks), size = 10)
+            CenterLine(stringResource(Res.string.print_footer_thanks), size = FS_FOOTER)
             Spacer(Modifier.height(4.dp))
         }
     }
@@ -470,13 +502,13 @@ private fun StatementPaperRow(row: StatementRow) {
         else -> row.docType
     }
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BodyCell(row.createdAt.dayMonth(), weight = 1.0f, numeric = true)
         Column(modifier = Modifier.weight(1.5f)) {
-            Text(label, color = Ink, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(row.number, color = Ink, fontSize = 8.sp, style = LtrNum, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(label, color = Ink, fontSize = FS_ROW.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(row.number, color = Ink, fontSize = FS_ROW_SUB.sp, style = LtrNum, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         BodyCell(if (row.debit > 0) row.debit.jod() else "-", weight = 1.1f, numeric = true, end = true)
         BodyCell(if (row.credit > 0) row.credit.jod() else "-", weight = 1.1f, numeric = true, end = true)
@@ -501,14 +533,14 @@ private fun CenterLine(text: String, size: Int, bold: Boolean = false) {
 @Composable
 private fun InfoLine(label: String, value: String, numeric: Boolean = false) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, color = Ink, fontSize = 10.sp)
+        Text(label, color = Ink, fontSize = FS_INFO.sp)
         Text(
             value,
             color = Ink,
-            fontSize = 10.sp,
+            fontSize = FS_INFO.sp,
             fontWeight = FontWeight.SemiBold,
             style = if (numeric) LtrNum else TextStyle.Default,
         )
@@ -518,14 +550,14 @@ private fun InfoLine(label: String, value: String, numeric: Boolean = false) {
 @Composable
 private fun TotalLine(label: String, value: String, bold: Boolean = true) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, color = Ink, fontSize = 11.sp)
+        Text(label, color = Ink, fontSize = FS_TOTAL_LABEL.sp)
         Text(
             value,
             color = Ink,
-            fontSize = 12.sp,
+            fontSize = FS_TOTAL_VALUE.sp,
             fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
             style = LtrNum,
         )
@@ -542,7 +574,7 @@ private fun androidx.compose.foundation.layout.RowScope.HeadCell(
         text = text,
         modifier = Modifier.weight(weight),
         color = Ink,
-        fontSize = 9.sp,
+        fontSize = FS_HEAD.sp,
         fontWeight = FontWeight.Bold,
         textAlign = if (end) TextAlign.End else TextAlign.Start,
         maxLines = 1,
@@ -561,7 +593,7 @@ private fun androidx.compose.foundation.layout.RowScope.BodyCell(
         text = text,
         modifier = Modifier.weight(weight),
         color = Ink,
-        fontSize = 9.sp,
+        fontSize = FS_ROW.sp,
         fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
         textAlign = if (end) TextAlign.End else TextAlign.Start,
         style = if (numeric) LtrNum else TextStyle.Default,
@@ -575,7 +607,7 @@ private fun SignatureSlot(label: String, modifier: Modifier = Modifier) {
         Spacer(Modifier.height(18.dp))
         Box(Modifier.fillMaxWidth().height(1.dp).background(Ink))
         Spacer(Modifier.height(3.dp))
-        Text(label, color = Ink, fontSize = 9.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Text(label, color = Ink, fontSize = FS_SIGN.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
     }
 }
 
