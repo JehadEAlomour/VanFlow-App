@@ -215,14 +215,6 @@ fun StatementPrintScreen(
             )
             Spacer(Modifier.size(10.dp))
             ActionChip(
-                label = stringResource(Res.string.print_action_print),
-                filled = false,
-                onClick = {
-                    scope.launch { pdfHelper.printDocument(graphicsLayer.toImageBitmap(), docName) }
-                },
-            )
-            Spacer(Modifier.size(10.dp))
-            ActionChip(
                 label = stringResource(Res.string.print_action_share_pdf),
                 filled = false,
                 onClick = {

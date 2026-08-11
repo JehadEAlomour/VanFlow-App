@@ -231,17 +231,6 @@ fun VoucherPrintScreen(
             )
             Spacer(Modifier.size(10.dp))
             ActionButton(
-                label = stringResource(Res.string.print_action_print),
-                filled = false,
-                onClick = {
-                    scope.launch {
-                        val bmp = graphicsLayer.toImageBitmap()
-                        pdfHelper.printDocument(bmp, state.number)
-                    }
-                },
-            )
-            Spacer(Modifier.size(10.dp))
-            ActionButton(
                 label = stringResource(Res.string.print_action_share_pdf),
                 filled = false,
                 onClick = {

@@ -196,12 +196,6 @@ fun VoucherSummaryScreen(
                     viewModel.onEvent(VoucherSummaryEvent.RequestConnectThenPrint)
                 }
             },
-            onSystemPrint = {
-                scope.launch {
-                    val bmp = graphicsLayer.toImageBitmap()
-                    pdfHelper.printDocument(bmp, state.reportAt.toFileStamp())
-                }
-            },
             onSharePdf = {
                 scope.launch {
                     val bmp = graphicsLayer.toImageBitmap()
@@ -261,7 +255,6 @@ private fun VsPrintPreviewDialog(
     state: VoucherSummaryState,
     graphicsLayer: GraphicsLayer,
     onThermalPrint: () -> Unit,
-    onSystemPrint: () -> Unit,
     onSharePdf: () -> Unit,
     onClose: () -> Unit,
     onEvent: (VoucherSummaryEvent) -> Unit,
@@ -299,8 +292,6 @@ private fun VsPrintPreviewDialog(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 PrActionButton(label = stringResource(Res.string.printer_thermal_print), filled = true, onClick = onThermalPrint)
-                Spacer(Modifier.size(10.dp))
-                PrActionButton(label = stringResource(Res.string.print_action_print), filled = false, onClick = onSystemPrint)
                 Spacer(Modifier.size(10.dp))
                 PrActionButton(label = stringResource(Res.string.print_action_share_pdf), filled = false, onClick = onSharePdf)
             }
