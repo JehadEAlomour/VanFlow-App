@@ -108,7 +108,7 @@ private const val FS_TOTAL_LABEL = 16
 private const val FS_TOTAL_VALUE = 18
 private const val FS_HEAD = 14         // table column headings
 private const val FS_ROW = 14          // table body
-private const val FS_ROW_SUB = 12      // document number under its type
+private const val FS_ROW_SUB = 12      // document number, on its own line
 private const val FS_CLOSING_LABEL = 17
 private const val FS_CLOSING_VALUE = 26 // the number the page exists to state
 private const val FS_SIGN = 13
@@ -405,14 +405,14 @@ private fun StatementBody(state: StatementPrintState) {
 
             // ── Column headings ───────────────────────────────────────────────
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                // Rebalanced for the larger type: the money columns must hold
-                // a four-figure amount without ellipsising, which is the one
-                // truncation on this page nobody would notice was wrong.
-                HeadCell(stringResource(Res.string.statement_col_date), weight = 0.85f)
-                HeadCell(stringResource(Res.string.statement_col_doc), weight = 1.35f)
-                HeadCell(stringResource(Res.string.statement_col_debit), weight = 1.2f, end = true)
-                HeadCell(stringResource(Res.string.statement_col_credit), weight = 1.2f, end = true)
-                HeadCell(stringResource(Res.string.statement_col_balance), weight = 1.4f, end = true)
+                // Weights match line 1 of a row. The document number is no
+                // longer a column — it has its own line underneath — so the
+                // money columns get the width the larger type needs.
+                HeadCell(stringResource(Res.string.statement_col_date), weight = 0.9f)
+                HeadCell(stringResource(Res.string.statement_col_doc), weight = 1.1f)
+                HeadCell(stringResource(Res.string.statement_col_debit), weight = 1.25f, end = true)
+                HeadCell(stringResource(Res.string.statement_col_credit), weight = 1.25f, end = true)
+                HeadCell(stringResource(Res.string.statement_col_balance), weight = 1.5f, end = true)
             }
             Rule()
 
@@ -514,18 +514,33 @@ private fun StatementPaperRow(row: StatementRow) {
         }
         else -> row.docType
     }
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        BodyCell(row.createdAt.dayMonth(), weight = 0.85f, numeric = true)
-        Column(modifier = Modifier.weight(1.35f)) {
-            Text(label, color = Ink, fontSize = FS_ROW.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(row.number, color = Ink, fontSize = FS_ROW_SUB.sp, fontWeight = PaperWeight, style = LtrNum, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp)) {
+        // Line 1 — the money. Everything a reader scans down the page for.
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            BodyCell(row.createdAt.dayMonth(), weight = 0.9f, numeric = true)
+            BodyCell(label, weight = 1.1f)
+            BodyCell(if (row.debit > 0) row.debit.jod() else "-", weight = 1.25f, numeric = true, end = true)
+            BodyCell(if (row.credit > 0) row.credit.jod() else "-", weight = 1.25f, numeric = true, end = true)
+            BodyCell(row.balance.jod(), weight = 1.5f, numeric = true, end = true, bold = true)
         }
-        BodyCell(if (row.debit > 0) row.debit.jod() else "-", weight = 1.2f, numeric = true, end = true)
-        BodyCell(if (row.credit > 0) row.credit.jod() else "-", weight = 1.2f, numeric = true, end = true)
-        BodyCell(row.balance.jod(), weight = 1.4f, numeric = true, end = true, bold = true)
+        // Line 2 — the document number, on its own line beneath the amounts and
+        // running LEFT TO RIGHT. It used to sit stacked under the type in a
+        // narrow column, where a long number ellipsised and the RTL paragraph
+        // pushed it to the far edge; a reference someone has to quote back down
+        // the phone is the last thing that should be clipped or mirrored.
+        // TextAlign.Left is absolute, not start-relative, so it stays left under
+        // the RTL layout the rest of the paper uses.
+        Text(
+            text = row.number,
+            modifier = Modifier.fillMaxWidth(),
+            color = Ink,
+            fontSize = FS_ROW_SUB.sp,
+            fontWeight = PaperWeight,
+            style = LtrNum,
+            textAlign = TextAlign.Left,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
