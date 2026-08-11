@@ -410,9 +410,9 @@ private fun StatementBody(state: StatementPrintState) {
                 // money columns get the width the larger type needs.
                 HeadCell(stringResource(Res.string.statement_col_date), weight = 0.9f)
                 HeadCell(stringResource(Res.string.statement_col_doc), weight = 1.1f)
-                HeadCell(stringResource(Res.string.statement_col_debit), weight = 1.25f, end = true)
-                HeadCell(stringResource(Res.string.statement_col_credit), weight = 1.25f, end = true)
-                HeadCell(stringResource(Res.string.statement_col_balance), weight = 1.5f, end = true)
+                HeadCell(stringResource(Res.string.statement_col_debit), weight = 1.25f)
+                HeadCell(stringResource(Res.string.statement_col_credit), weight = 1.25f)
+                HeadCell(stringResource(Res.string.statement_col_balance), weight = 1.5f)
             }
             Rule()
 
@@ -519,9 +519,9 @@ private fun StatementPaperRow(row: StatementRow) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             BodyCell(row.createdAt.dayMonth(), weight = 0.9f, numeric = true)
             BodyCell(label, weight = 1.1f)
-            BodyCell(if (row.debit > 0) row.debit.jod() else "-", weight = 1.25f, numeric = true, end = true)
-            BodyCell(if (row.credit > 0) row.credit.jod() else "-", weight = 1.25f, numeric = true, end = true)
-            BodyCell(row.balance.jod(), weight = 1.5f, numeric = true, end = true, bold = true)
+            BodyCell(if (row.debit > 0) row.debit.jod() else "-", weight = 1.25f, numeric = true)
+            BodyCell(if (row.credit > 0) row.credit.jod() else "-", weight = 1.25f, numeric = true)
+            BodyCell(row.balance.jod(), weight = 1.5f, numeric = true, bold = true)
         }
         // Line 2 — the document number, on its own line beneath the amounts and
         // running LEFT TO RIGHT. It used to sit stacked under the type in a
@@ -596,7 +596,6 @@ private fun TotalLine(label: String, value: String, bold: Boolean = true) {
 private fun androidx.compose.foundation.layout.RowScope.HeadCell(
     text: String,
     weight: Float,
-    end: Boolean = false,
 ) {
     Text(
         text = text,
@@ -604,17 +603,32 @@ private fun androidx.compose.foundation.layout.RowScope.HeadCell(
         color = Ink,
         fontSize = FS_HEAD.sp,
         fontWeight = FontWeight.ExtraBold,
-        textAlign = if (end) TextAlign.End else TextAlign.Start,
+        // Right, absolutely — see BodyCell.
+        textAlign = TextAlign.Right,
         maxLines = 1,
     )
 }
 
+/**
+ * A table cell.
+ *
+ * `TextAlign.Right`, never `End`. End is resolved against the paragraph's TEXT
+ * direction, and the two halves of this table do not agree on one: a heading
+ * inherits the paper's RTL, while the number under it carries [LtrNum] to keep
+ * its digits Latin — which also flips it to LTR. So `End` meant the left edge
+ * for the heading and the right edge for the figure, and every column came out
+ * with its title on the opposite side from its contents. Absolute alignment
+ * removes the disagreement: heading and figure cannot drift apart because
+ * neither is asking which way the text runs.
+ *
+ * Right for every column, including the leading ones — right IS the start on
+ * RTL paper, and money reads correctly when the digits share an edge.
+ */
 @Composable
 private fun androidx.compose.foundation.layout.RowScope.BodyCell(
     text: String,
     weight: Float,
     numeric: Boolean = false,
-    end: Boolean = false,
     bold: Boolean = false,
 ) {
     Text(
@@ -623,7 +637,7 @@ private fun androidx.compose.foundation.layout.RowScope.BodyCell(
         color = Ink,
         fontSize = FS_ROW.sp,
         fontWeight = if (bold) FontWeight.ExtraBold else PaperWeight,
-        textAlign = if (end) TextAlign.End else TextAlign.Start,
+        textAlign = TextAlign.Right,
         style = if (numeric) LtrNum else TextStyle.Default,
         maxLines = 1,
     )
