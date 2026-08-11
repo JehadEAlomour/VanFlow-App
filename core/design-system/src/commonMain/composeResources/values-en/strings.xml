@@ -770,4 +770,24 @@
     <string name="cust_tax_exempt_number">Exemption no.</string>
     <string name="stock_request_title">Stock request</string>
     <string name="home_action_stock_request_sub">Load onto the van</string>
+
+    <!-- Printed account statement -->
+    <string name="statement_customer">Customer</string>
+    <string name="statement_customer_code">Customer no.</string>
+    <string name="statement_phone">Phone</string>
+    <string name="statement_period">Period</string>
+    <string name="statement_opening_balance">Opening balance</string>
+    <string name="statement_closing_balance">Balance due</string>
+    <string name="statement_in_credit">Balance is in the customer's favour</string>
+    <string name="statement_col_date">Date</string>
+    <string name="statement_col_doc">Document</string>
+    <string name="statement_col_debit">Debit</string>
+    <string name="statement_col_credit">Credit</string>
+    <string name="statement_col_balance">Balance</string>
+    <string name="statement_payment">Payment</string>
+    <string name="statement_salesman">Salesman</string>
+    <string name="statement_printed_at">Printed</string>
+    <string name="statement_sign_customer">Customer signature</string>
+    <string name="statement_sign_salesman">Salesman signature</string>
+    <string name="statement_print_action">Print statement</string>
 </resources>

@@ -52,6 +52,8 @@ fun AccountStatementScreen(
     onBack: () -> Unit,
     onOpenInvoice: (String) -> Unit = {},
     onOpenReceipt: (String) -> Unit = {},
+    /** Open the printable/shareable statement for the range currently on screen. */
+    onPrint: (fromMillis: Long, toMillis: Long) -> Unit = { _, _ -> },
     viewModel: AccountStatementViewModel = koinViewModel { parametersOf(customerId) },
 ) {
     val state by viewModel.state.collectAsState()
@@ -59,7 +61,7 @@ fun AccountStatementScreen(
     Surface(modifier = Modifier.fillMaxSize(), color = Fv.BgDeepest) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack) {
@@ -70,7 +72,7 @@ fun AccountStatementScreen(
                         modifier = Modifier.size(22.dp),
                     )
                 }
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         stringResource(Res.string.statement_title),
                         color = Fv.TextHigh,
@@ -80,6 +82,19 @@ fun AccountStatementScreen(
                     state.customer?.nameAr?.let {
                         Text(it, color = Fv.TextMid, fontSize = 11.sp)
                     }
+                }
+                // Carries the range on screen, so the paper matches what the rep
+                // was just looking at rather than a period recomputed elsewhere.
+                IconButton(
+                    onClick = { onPrint(state.fromMillis, state.toMillis) },
+                    enabled = !state.isLoading,
+                ) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_print),
+                        contentDescription = stringResource(Res.string.statement_print_action),
+                        tint = if (state.isLoading) Fv.TextMid else Fv.Blue,
+                        modifier = Modifier.size(22.dp),
+                    )
                 }
             }
 

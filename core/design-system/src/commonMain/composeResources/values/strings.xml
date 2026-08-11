@@ -770,4 +770,24 @@
     <string name="cust_tax_exempt_number">رقم الإعفاء</string>
     <string name="stock_request_title">طلب بضاعة</string>
     <string name="home_action_stock_request_sub">تحميل على المركبة</string>
+
+    <!-- Printed account statement -->
+    <string name="statement_customer">العميل</string>
+    <string name="statement_customer_code">رقم العميل</string>
+    <string name="statement_phone">الهاتف</string>
+    <string name="statement_period">الفترة</string>
+    <string name="statement_opening_balance">الرصيد السابق</string>
+    <string name="statement_closing_balance">الرصيد المستحق</string>
+    <string name="statement_in_credit">الرصيد لصالح العميل</string>
+    <string name="statement_col_date">التاريخ</string>
+    <string name="statement_col_doc">السند</string>
+    <string name="statement_col_debit">مدين</string>
+    <string name="statement_col_credit">دائن</string>
+    <string name="statement_col_balance">الرصيد</string>
+    <string name="statement_payment">دفعة</string>
+    <string name="statement_salesman">المندوب</string>
+    <string name="statement_printed_at">تاريخ الطباعة</string>
+    <string name="statement_sign_customer">توقيع العميل</string>
+    <string name="statement_sign_salesman">توقيع المندوب</string>
+    <string name="statement_print_action">طباعة كشف الحساب</string>
 </resources>

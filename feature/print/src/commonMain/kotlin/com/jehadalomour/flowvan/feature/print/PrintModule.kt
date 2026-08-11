@@ -17,4 +17,10 @@ fun printModule(): Module = module {
     viewModel {
         VoucherSummaryViewModel(get(), get(), get(), get(), get(), get())
     }
+    viewModel { (customerId: String, fromMillis: Long, toMillis: Long) ->
+        StatementPrintViewModel(
+            customerId, fromMillis, toMillis,
+            get(), get(), get(), get(), get(), get(), get(),
+        )
+    }
 }

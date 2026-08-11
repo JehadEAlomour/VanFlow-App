@@ -27,6 +27,7 @@ import com.jehadalomour.flowvan.feature.reports.ReportsHubScreen
 import com.jehadalomour.flowvan.feature.reports.VisitReportScreen
 import com.jehadalomour.flowvan.feature.reports.PaymentReportScreen
 import com.jehadalomour.flowvan.feature.print.ReceiptDetailScreen
+import com.jehadalomour.flowvan.feature.print.StatementPrintScreen
 import com.jehadalomour.flowvan.feature.reports.ReceivablesReportScreen
 import com.jehadalomour.flowvan.feature.reports.TargetsScreen
 import com.jehadalomour.flowvan.feature.reports.TransactionReportScreen
@@ -86,6 +87,9 @@ object Routes {
     const val RECEIVABLES_REPORT = "receivables"
     const val TARGETS_REPORT = "targets"
     const val VOUCHER_PRINT = "voucherprint/{invoiceId}"
+    // The date range travels in the route: the printed statement must be the
+    // same period the rep was looking at, not a default recomputed downstream.
+    const val STATEMENT_PRINT = "statementprint/{customerId}/{from}/{to}"
     const val VOUCHER_SUMMARY = "vouchersummary"
     const val SETTINGS = "settings"
     fun customer(id: String) = "customer/$id"
@@ -102,6 +106,8 @@ object Routes {
     fun voucher(invoiceId: String) = "voucher/$invoiceId"
     fun receipt(paymentId: String) = "receipt/$paymentId"
     fun voucherPrint(invoiceId: String) = "voucherprint/$invoiceId"
+    fun statementPrint(customerId: String, from: Long, to: Long) =
+        "statementprint/$customerId/$from/$to"
 }
 
 @Composable
@@ -343,6 +349,24 @@ fun FlowVanNavHost(
                 onBack = { navController.popBackStack() },
                 onOpenInvoice = { iid -> navController.navigate(Routes.voucher(iid)) },
                 onOpenReceipt = { pid -> navController.navigate(Routes.receipt(pid)) },
+                onPrint = { from, to ->
+                    navController.navigate(Routes.statementPrint(id, from, to))
+                },
+            )
+        }
+        composable(
+            Routes.STATEMENT_PRINT,
+            arguments = listOf(
+                navArgument("customerId") { type = NavType.StringType },
+                navArgument("from") { type = NavType.LongType },
+                navArgument("to") { type = NavType.LongType },
+            ),
+        ) { entry ->
+            StatementPrintScreen(
+                customerId = entry.arguments?.getString("customerId").orEmpty(),
+                fromMillis = entry.arguments?.getLong("from") ?: 0L,
+                toMillis = entry.arguments?.getLong("to") ?: 0L,
+                onBack = { navController.popBackStack() },
             )
         }
         composable(
