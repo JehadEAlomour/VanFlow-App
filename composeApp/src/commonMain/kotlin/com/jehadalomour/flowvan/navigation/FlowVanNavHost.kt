@@ -28,6 +28,7 @@ import com.jehadalomour.flowvan.feature.reports.VisitReportScreen
 import com.jehadalomour.flowvan.feature.reports.PaymentReportScreen
 import com.jehadalomour.flowvan.feature.print.ReceiptDetailScreen
 import com.jehadalomour.flowvan.feature.print.StatementPrintScreen
+import com.jehadalomour.flowvan.feature.print.SalesReportPrintScreen
 import com.jehadalomour.flowvan.feature.print.TxnReportPrintScreen
 import com.jehadalomour.flowvan.feature.reports.DetailedTxnReportScreen
 import com.jehadalomour.flowvan.feature.reports.ReceivablesReportScreen
@@ -93,6 +94,7 @@ object Routes {
     // same period the rep was looking at, not a default recomputed downstream.
     const val STATEMENT_PRINT = "statementprint/{customerId}/{from}/{to}"
     const val TXN_REPORT_PRINT = "txnreportprint/{customerId}/{from}/{to}"
+    const val SALES_REPORT_PRINT = "salesreportprint/{from}/{to}"
     const val DETAILED_TXN_REPORT = "detailedtxn/{customerId}"
     const val VOUCHER_SUMMARY = "vouchersummary"
     const val SETTINGS = "settings"
@@ -114,6 +116,7 @@ object Routes {
         "statementprint/$customerId/$from/$to"
     fun txnReportPrint(customerId: String, from: Long, to: Long) =
         "txnreportprint/$customerId/$from/$to"
+    fun salesReportPrint(from: Long, to: Long) = "salesreportprint/$from/$to"
     fun detailedTxn(customerId: String) = "detailedtxn/$customerId"
 }
 
@@ -470,6 +473,20 @@ fun FlowVanNavHost(
             AllSalesReportScreen(
                 onBack = { navController.popBackStack() },
                 onOpenVoucher = { id -> navController.navigate(Routes.voucher(id)) },
+                onPrint = { from, to -> navController.navigate(Routes.salesReportPrint(from, to)) },
+            )
+        }
+        composable(
+            Routes.SALES_REPORT_PRINT,
+            arguments = listOf(
+                navArgument("from") { type = NavType.LongType },
+                navArgument("to") { type = NavType.LongType },
+            ),
+        ) { entry ->
+            SalesReportPrintScreen(
+                fromMillis = entry.arguments?.getLong("from") ?: 0L,
+                toMillis = entry.arguments?.getLong("to") ?: 0L,
+                onBack = { navController.popBackStack() },
             )
         }
         composable(Routes.ALL_PAYMENTS_REPORT) {

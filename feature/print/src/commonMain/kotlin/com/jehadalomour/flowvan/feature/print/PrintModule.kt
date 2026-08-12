@@ -23,6 +23,12 @@ fun printModule(): Module = module {
             get(), get(), get(), get(), get(), get(),
         )
     }
+    viewModel { (fromMillis: Long, toMillis: Long) ->
+        SalesReportPrintViewModel(
+            fromMillis, toMillis,
+            get(), get(), get(), get(), get(), get(),
+        )
+    }
     viewModel { (customerId: String, fromMillis: Long, toMillis: Long) ->
         StatementPrintViewModel(
             customerId, fromMillis, toMillis,

@@ -26,10 +26,18 @@ enum class SalesTypeFilter { ALL, SALE, RETURN, REQUEST }
 data class AllSalesReportState(
     val from: Long = 0L,
     val to: Long = 0L,
-    val typeFilter: SalesTypeFilter = SalesTypeFilter.SALE,
-    val invoices: List<InvoiceEntity> = emptyList(),
+    val typeFilter: SalesTypeFilter = SalesTypeFilter.ALL,
+    /** The documents the chip is showing. */
+    val rows: List<InvoiceEntity> = emptyList(),
+    // ── Totals — always the WHOLE period, never the filtered view ──────────────
     val salesTotal: Double = 0.0,
     val returnsTotal: Double = 0.0,
+    val requestsTotal: Double = 0.0,
+    val cashTotal: Double = 0.0,
+    val creditTotal: Double = 0.0,
+    /** Sales less returns: what the round actually earned. */
+    val netTotal: Double = 0.0,
+    /** Documents in the period, unfiltered. */
     val count: Int = 0,
     /** customerId → display name (Arabic), for showing whose voucher each row is. */
     val customerNames: Map<String, String> = emptyMap(),
@@ -42,7 +50,7 @@ class AllSalesReportViewModel(
 
     private val _from = MutableStateFlow(0L)
     private val _to = MutableStateFlow(0L)
-    private val _typeFilter = MutableStateFlow(SalesTypeFilter.SALE)
+    private val _typeFilter = MutableStateFlow(SalesTypeFilter.ALL)
 
     private val _state = MutableStateFlow(AllSalesReportState())
     val state: StateFlow<AllSalesReportState> = _state.asStateFlow()
@@ -73,20 +81,51 @@ class AllSalesReportViewModel(
         _state.update { it.copy(from = from, to = to) }
     }
 
+    /**
+     * One query for the whole period, filtered in memory.
+     *
+     * The totals used to be summed from the type-filtered list, and the screen opens on
+     * a filter — so الصافي read "sales minus zero returns" on the default view, which is
+     * the one figure a rep checks at the end of a round. Totals now describe the period;
+     * a chip is a way of looking at it, not a claim about what was sold.
+     *
+     * Cancelled and rejected vouchers are excluded, as they are everywhere else that
+     * counts money — a rejected return that still adds to a total is a report nobody can
+     * reconcile against the office.
+     */
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun observe() {
-        combine(_from, _to, _typeFilter) { f, t, type -> Triple(f, t, type) }
-            .flatMapLatest { (f, t, type) ->
-                if (type == SalesTypeFilter.ALL) invoiceDao.observeAllByRange(f, t)
-                else invoiceDao.observeAllByTypeAndRange(type.name, f, t)
-            }
-            .onEach { list ->
-                val sales = list.filter { it.type == "SALE" }.sumOf { it.total }
-                val returns = list.filter { it.type == "RETURN" }.sumOf { it.total }
+        combine(_from, _to) { f, t -> f to t }
+            .flatMapLatest { (f, t) -> invoiceDao.observeAllByRange(f, t) }
+            .combine(_typeFilter) { all, filter -> all to filter }
+            .onEach { (all, filter) ->
+                val live = all.filter { it.status != CANCELLED }
+                val sales = live.filter { it.type == "SALE" }
+                val returns = live.filter { it.type == "RETURN" }
+                val requests = live.filter { it.type != "SALE" && it.type != "RETURN" }
+                val salesTotal = sales.sumOf { it.total }
+                val returnsTotal = returns.sumOf { it.total }
                 _state.update {
                     it.copy(
-                        from = _from.value, to = _to.value, typeFilter = _typeFilter.value,
-                        invoices = list, salesTotal = sales, returnsTotal = returns, count = list.size,
+                        from = _from.value,
+                        to = _to.value,
+                        typeFilter = filter,
+                        rows = when (filter) {
+                            SalesTypeFilter.ALL -> live
+                            SalesTypeFilter.SALE -> sales
+                            SalesTypeFilter.RETURN -> returns
+                            SalesTypeFilter.REQUEST -> requests
+                        },
+                        salesTotal = salesTotal,
+                        returnsTotal = returnsTotal,
+                        requestsTotal = requests.sumOf { r -> r.total },
+                        // Cash and credit describe SALES only. A return's payment type
+                        // says how the refund went out, not how a sale came in, and
+                        // mixing the two makes "نقدي" answer no question.
+                        cashTotal = sales.filter { s -> s.paymentMethod != CREDIT }.sumOf { s -> s.total },
+                        creditTotal = sales.filter { s -> s.paymentMethod == CREDIT }.sumOf { s -> s.total },
+                        netTotal = salesTotal - returnsTotal,
+                        count = live.size,
                     )
                 }
             }
@@ -96,4 +135,9 @@ class AllSalesReportViewModel(
     fun setFrom(ms: Long) { _from.value = ms; _state.update { it.copy(from = ms) } }
     fun setTo(ms: Long) { _to.value = ms; _state.update { it.copy(to = ms) } }
     fun setTypeFilter(f: SalesTypeFilter) { _typeFilter.value = f }
+
+    private companion object {
+        const val CANCELLED = "CANCELLED"
+        const val CREDIT = "CREDIT"
+    }
 }

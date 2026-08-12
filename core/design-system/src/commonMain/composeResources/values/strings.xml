@@ -869,4 +869,7 @@
     <string name="voucher_line_remove">حذف السطر</string>
     <string name="voucher_credit_no_limit">لا يوجد حد ائتماني لهذا العميل — البيع نقداً فقط.</string>
     <string name="voucher_credit_over_limit">تجاوز العميل الحد الائتماني — البيع نقداً فقط. المتاح: %1$s</string>
+
+    <!-- Sales report -->
+    <string name="all_sales_total_requests">إجمالي الطلبات</string>
 </resources>
