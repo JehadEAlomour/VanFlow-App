@@ -59,6 +59,10 @@ import com.jehadalomour.flowvan.core.common.format.formatJod
 import com.jehadalomour.flowvan.core.common.i18n.AppLanguage
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import org.jetbrains.compose.resources.StringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.layout.aspectRatio
 
 @Composable
 fun CustomerDashboardScreen(
@@ -72,6 +76,7 @@ fun CustomerDashboardScreen(
     onOpenVoucherReport: (String) -> Unit,
     onOpenPaymentReport: (String) -> Unit,
     onOpenAccountStatement: (String) -> Unit,
+    onOpenTxnReport: (String) -> Unit = {},
     onOpenDetailedTxnReport: (String) -> Unit = {},
     viewModel: CustomerDashboardViewModel = koinViewModel { parametersOf(customerId) },
 ) {
@@ -134,55 +139,57 @@ fun CustomerDashboardScreen(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(RoundedCornerShape(11.dp))
-                        .background(Fv.Purple.copy(alpha = 0.12f))
+                        .background(Fv.Blue.copy(alpha = 0.10f))
                         .clickable { onOpenAi(customerId) },
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         painterResource(Res.drawable.ic_ai_sparkle),
                         contentDescription = null,
-                        tint = Fv.Purple,
+                        tint = Fv.Blue,
                         modifier = Modifier.size(18.dp),
                     )
                 }
             }
         }
 
-        // ── Scrollable Content ────────────────────────────────────────────────
+        // ── Content: identity, balance, then everything you can do ────────────
         LazyColumn(
             modifier = Modifier.weight(1f).background(Fv.BgDeepest),
             contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { HeroCard(state) }
-            item { AccountSummaryCard(state) }
+            item { IdentityBlock(state) }
+            item { BalanceStrip(state) }
+
+            // Why the four transaction tiles are dead, said once and in place of
+            // them — a disabled tile with no explanation reads as a broken app.
+            val block = when (state.proximityBlock) {
+                ProximityBlock.NO_GPS -> Res.string.proximity_blocked_gps
+                ProximityBlock.TOO_FAR -> Res.string.proximity_blocked_far
+                ProximityBlock.NONE -> null
+            }
+            if (!state.actionsEnabled && block != null) {
+                item { ProximityNotice(stringResource(block)) }
+            }
+
             item {
-                ReportCardsGrid(
-                    state = state,
-                    onOpenVoucherReport = { onOpenVoucherReport(customerId) },
-                    onOpenPaymentReport = { onOpenPaymentReport(customerId) },
+                CustomerGrid(
+                    actionsEnabled = state.actionsEnabled,
+                    onSale = { startedTxn = true; onOpenSale(customerId) },
+                    onReturn = { startedTxn = true; onOpenReturn(customerId) },
+                    onRequest = { startedTxn = true; onOpenRequest(customerId) },
+                    onCollection = { startedTxn = true; onOpenCollection(customerId) },
+                    onStatement = { onOpenAccountStatement(customerId) },
+                    onTxnReport = { onOpenTxnReport(customerId) },
+                    onDetailedReport = { onOpenDetailedTxnReport(customerId) },
+                    onVoucherReport = { onOpenVoucherReport(customerId) },
+                    onPaymentReport = { onOpenPaymentReport(customerId) },
                 )
             }
-            item { StatementCard(onOpenAccountStatement = { onOpenAccountStatement(customerId) }) }
-            item {
-                DetailedTxnCard(onOpen = { onOpenDetailedTxnReport(customerId) })
-            }
-        }
 
-        // ── Bottom Action Bar ─────────────────────────────────────────────────
-        // Location-locked reps can't act unless they're at the customer (~1 km).
-        BottomActionBar(
-            enabled = state.actionsEnabled,
-            blockReason = when (state.proximityBlock) {
-                ProximityBlock.NO_GPS -> stringResource(Res.string.proximity_blocked_gps)
-                ProximityBlock.TOO_FAR -> stringResource(Res.string.proximity_blocked_far)
-                ProximityBlock.NONE -> null
-            },
-            onSale = { startedTxn = true; onOpenSale(customerId) },
-            onReturn = { startedTxn = true; onOpenReturn(customerId) },
-            onRequest = { startedTxn = true; onOpenRequest(customerId) },
-            onCollection = { startedTxn = true; onOpenCollection(customerId) },
-        )
+            item { CustomerFigures(state) }
+        }
     }
 
     // Leaving a customer with no transaction → reason note (if required) or confirm.
@@ -230,579 +237,266 @@ private fun LeaveCustomerDialog(
 
 // ── Hero Card ─────────────────────────────────────────────────────────────────
 
-@Composable
-private fun HeroCard(state: CustomerDashboardState) {
-    val c = state.customer ?: return
-    val heroGradient = Brush.linearGradient(listOf(Color(0xFF185FA5), Color(0xFF0C447C)))
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .background(heroGradient),
-    ) {
-        // Decorative circles
-        Box(
-            modifier = Modifier
-                .size(160.dp)
-                .offset(x = (-40).dp, y = (-40).dp)
-                .background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(80.dp)),
-        )
-        Box(
-            modifier = Modifier
-                .size(100.dp)
-                .align(Alignment.TopEnd)
-                .offset(x = 30.dp, y = (-20).dp)
-                .background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(50.dp)),
-        )
 
-        Column(modifier = Modifier.padding(20.dp)) {
-            // Tier badge + Segment tag
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                HeroTierBadge(c.tier)
-                SegmentStatusTag(c.segment)
-            }
-            Spacer(Modifier.height(16.dp))
-            // Name
-            Text(
-                c.nameAr,
-                color = Color.White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.ExtraBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "${c.code} · ${c.area}",
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 13.sp,
-            )
-            Spacer(Modifier.height(20.dp))
-            // Frosted stat boxes
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FrostedStatBox(
-                    label = stringResource(Res.string.balance_label),
-                    value = c.balance.formatJod(AppLanguage.AR),
-                    valueColor = if (c.balance < 0) Color(0xFFFF8080) else Color.White,
-                    modifier = Modifier.weight(1f),
-                )
-                FrostedStatBox(
-                    label = stringResource(Res.string.receivables_overdue_label),
-                    value = c.overdueAmount.formatJod(AppLanguage.AR),
-                    valueColor = if (c.overdueAmount > 0) Color(0xFFFFB570) else Color.White,
-                    modifier = Modifier.weight(1f),
-                )
-                FrostedStatBox(
-                    label = stringResource(Res.string.customer_credit_ceiling),
-                    value = c.creditLimit.formatJod(AppLanguage.AR),
-                    valueColor = Color.White,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-    }
-}
 
-@Composable
-private fun HeroTierBadge(tier: CustomerTier) {
-    val (label, colors) = when (tier) {
-        CustomerTier.A -> stringResource(Res.string.customer_tier_a) to listOf(Color(0xFF1D9E75), Color(0xFF0F6E56))
-        CustomerTier.B -> stringResource(Res.string.customer_tier_b) to listOf(Color(0xFFC97B1A), Color(0xFF9A5C10))
-        CustomerTier.C -> stringResource(Res.string.customer_tier_c) to listOf(Color(0xFF637181), Color(0xFF3E4D5C))
-    }
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(Brush.linearGradient(colors))
-            .padding(horizontal = 14.dp, vertical = 6.dp),
-    ) {
-        Text(label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
-    }
-}
-
-@Composable
-private fun SegmentStatusTag(segment: CustomerSegment) {
-    val (dotColor, label) = when (segment) {
-        CustomerSegment.CHAMPIONS -> Color(0xFFB5F5D5) to stringResource(Res.string.customer_segment_champions)
-        CustomerSegment.LOYAL -> Color(0xFFAACAFF) to stringResource(Res.string.customer_segment_loyal)
-        CustomerSegment.AT_RISK -> Color(0xFFFFAAAA) to stringResource(Res.string.customer_segment_at_risk)
-        CustomerSegment.PROMISING -> Color(0xFFFFD9A0) to stringResource(Res.string.customer_segment_promising)
-        CustomerSegment.DORMANT -> Color(0xFFBBCCDD) to stringResource(Res.string.customer_segment_dormant)
-        CustomerSegment.REGULAR -> Color(0xFFBBCCDD) to stringResource(Res.string.customer_segment_regular)
-    }
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color.White.copy(alpha = 0.15f))
-            .padding(horizontal = 12.dp, vertical = 5.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .size(7.dp)
-                .background(dotColor, RoundedCornerShape(4.dp)),
-        )
-        Text(label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun FrostedStatBox(label: String, value: String, valueColor: Color, modifier: Modifier) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color.White.copy(alpha = 0.12f))
-            .padding(horizontal = 10.dp, vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(label, color = Color.White.copy(alpha = 0.75f), fontSize = 10.sp, fontWeight = FontWeight.Medium)
-        Spacer(Modifier.height(6.dp))
-        Text(
-            value,
-            color = valueColor,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.ExtraBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
 
 // ── Account Summary Card ──────────────────────────────────────────────────────
 
-@Composable
-private fun AccountSummaryCard(state: CustomerDashboardState) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-        border = BorderStroke(0.5.dp, Fv.Border),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Column {
-            // Section header
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Fv.Blue.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painterResource(Res.drawable.ic_receipt),
-                        contentDescription = null,
-                        tint = Fv.Blue,
-                        modifier = Modifier.size(17.dp),
-                    )
-                }
-                Text(stringResource(Res.string.customer_account_summary), color = Fv.TextHigh, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold)
-            }
-            Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(Fv.Border))
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                SummaryIconRow(
-                    iconRes = Res.drawable.ic_receipt,
-                    label = stringResource(Res.string.voucher_report_count),
-                    value = "${state.sales.size + state.returns.size + state.requests.size}",
-                    accent = Fv.Blue,
-                )
-                SummaryIconRow(
-                    iconRes = Res.drawable.ic_cart,
-                    label = stringResource(Res.string.all_sales_total_sales),
-                    value = state.salesTotal.formatJod(AppLanguage.AR),
-                    accent = Fv.Green,
-                )
-                SummaryIconRow(
-                    iconRes = Res.drawable.ic_return_arrow,
-                    label = stringResource(Res.string.all_sales_total_returns),
-                    value = state.returnsTotal.formatJod(AppLanguage.AR),
-                    accent = Fv.Red,
-                )
-                SummaryIconRow(
-                    iconRes = Res.drawable.ic_payment,
-                    label = stringResource(Res.string.all_payments_total),
-                    value = state.collectionsTotal.formatJod(AppLanguage.AR),
-                    accent = Fv.Teal,
-                )
-                Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(Fv.Border))
-                // Highlighted balance row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Fv.SurfaceTop)
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clip(RoundedCornerShape(9.dp))
-                            .background(Fv.Blue.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            painterResource(Res.drawable.ic_bar_chart),
-                            contentDescription = null,
-                            tint = Fv.Blue,
-                            modifier = Modifier.size(15.dp),
-                        )
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        stringResource(Res.string.customer_current_balance),
-                        color = Fv.TextHigh,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f),
-                    )
-                    val balance = state.customer?.balance ?: 0.0
-                    Text(
-                        balance.formatJod(AppLanguage.AR),
-                        color = when {
-                            balance < 0 -> Fv.Red
-                            balance > 0 -> Fv.Green
-                            else -> Fv.TextMid
-                        },
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                    )
-                }
-            }
-        }
-    }
-}
 
-@Composable
-private fun SummaryIconRow(iconRes: DrawableResource, label: String, value: String, accent: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(30.dp)
-                .clip(RoundedCornerShape(9.dp))
-                .background(accent.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(painterResource(iconRes), contentDescription = null, tint = accent, modifier = Modifier.size(15.dp))
-        }
-        Spacer(Modifier.width(10.dp))
-        Text(label, color = Fv.TextMid, fontSize = 12.sp, modifier = Modifier.weight(1f))
-        Text(value, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-    }
-}
 
 // ── Report Cards Grid ─────────────────────────────────────────────────────────
 
-@Composable
-private fun ReportCardsGrid(
-    state: CustomerDashboardState,
-    onOpenVoucherReport: () -> Unit,
-    onOpenPaymentReport: () -> Unit,
-) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        ReportCard(
-            iconRes = Res.drawable.ic_receipt,
-            iconGradient = Brush.linearGradient(listOf(Color(0xFF2C6FE4), Color(0xFF185FA5))),
-            label = stringResource(Res.string.customer_report_vouchers),
-            value = state.salesTotal.formatJod(AppLanguage.AR),
-            accent = Fv.Blue,
-            modifier = Modifier.weight(1f),
-            onClick = onOpenVoucherReport,
-        )
-        ReportCard(
-            iconRes = Res.drawable.ic_payment,
-            iconGradient = Brush.linearGradient(listOf(Color(0xFF0FA968), Color(0xFF0A7A4B))),
-            label = stringResource(Res.string.customer_payments_report),
-            value = state.collectionsTotal.formatJod(AppLanguage.AR),
-            accent = Fv.Green,
-            modifier = Modifier.weight(1f),
-            onClick = onOpenPaymentReport,
-        )
-    }
-}
 
-@Composable
-private fun ReportCard(
-    iconRes: DrawableResource,
-    iconGradient: Brush,
-    label: String,
-    value: String,
-    accent: Color,
-    modifier: Modifier,
-    onClick: () -> Unit,
-) {
-    Card(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-        border = BorderStroke(0.5.dp, Fv.Border),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(11.dp))
-                    .background(iconGradient),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painterResource(iconRes),
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-            Spacer(Modifier.height(10.dp))
-            Text(label, color = Fv.TextMid, fontSize = 11.sp)
-            Spacer(Modifier.height(4.dp))
-            Text(
-                value,
-                color = Fv.TextHigh,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.ExtraBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(stringResource(Res.string.customer_view_report), color = accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-        }
-    }
-}
 
 // ── Statement Card ────────────────────────────────────────────────────────────
 
+
+// ── Bottom Action Bar ─────────────────────────────────────────────────────────
+
+
+
+/** التقرير المفصل للحركات — every voucher in a period with its item lines. */
+
+// ── Redesigned customer page ─────────────────────────────────────────────────
+// Actions before information, like the dashboard. The old page led with a hero
+// card and an account summary and put the four transaction buttons in a bottom
+// bar, with the reports as full-width cards below — so opening a statement meant
+// scrolling. Now: who they are, what they owe, then a 3×3 grid of everything
+// this screen can do, and the totals underneath.
+
 @Composable
-private fun StatementCard(onOpenAccountStatement: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenAccountStatement),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-        border = BorderStroke(0.5.dp, Fv.Border),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+private fun IdentityBlock(state: CustomerDashboardState) {
+    val c = state.customer
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            c?.nameAr ?: "…",
+            color = Fv.TextHigh,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.ExtraBold,
+            maxLines = 2,
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            listOfNotNull(c?.code?.takeIf { it.isNotBlank() }, c?.area?.takeIf { it.isNotBlank() })
+                .joinToString(" · "),
+            color = Fv.TextMid,
+            fontSize = 11.sp,
+            maxLines = 1,
+        )
+    }
+}
+
+/**
+ * The one large figure on the screen.
+ *
+ * A rep's next move is decided by this number — sell, collect, or walk — so it
+ * gets the only 24sp on the page. Amber rather than red once the balance passes
+ * the credit limit, because that is a different instruction: not "they owe", but
+ * "do not sell to them on account".
+ */
+@Composable
+private fun BalanceStrip(state: CustomerDashboardState) {
+    val c = state.customer
+    val balance = c?.balance ?: 0.0
+    val overLimit = c != null && c.creditLimit > 0 && balance > c.creditLimit
+    val accent = when {
+        overLimit -> Fv.Amber
+        balance > 0 -> Fv.Red
+        else -> Fv.Green
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = Fv.Surface,
+        border = BorderStroke(1.dp, if (overLimit) Fv.Amber else Fv.Border),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(11.dp))
-                    .background(Brush.linearGradient(listOf(Color(0xFF7757D4), Color(0xFF4E3598)))),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painterResource(Res.drawable.ic_bar_chart),
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(Res.string.statement_title), color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
-                Text(stringResource(Res.string.customer_statement_subtitle), color = Fv.TextMid, fontSize = 11.sp)
+                Text(
+                    stringResource(Res.string.customer_balance_label),
+                    color = Fv.TextMid,
+                    fontSize = 11.sp,
+                )
+                if (overLimit) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        stringResource(Res.string.customer_over_limit),
+                        color = Fv.Amber,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Fv.Purple.copy(alpha = 0.1f))
-                    .padding(horizontal = 12.dp, vertical = 5.dp),
-            ) {
-                Text(stringResource(Res.string.filter), color = Fv.Purple, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
+            Text(
+                balance.formatJod(AppLanguage.AR),
+                color = accent,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
         }
     }
 }
 
-// ── Bottom Action Bar ─────────────────────────────────────────────────────────
-
 @Composable
-private fun BottomActionBar(
-    enabled: Boolean,
-    blockReason: String?,
+private fun ProximityNotice(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = Fv.Amber.copy(alpha = 0.08f),
+        border = BorderStroke(1.dp, Fv.Amber),
+    ) {
+        Text(
+            message,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            color = Fv.Amber,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+/**
+ * Nine tiles, 3×3.
+ *
+ * The first four are the transaction actions and carry the proximity lock: a rep
+ * restricted to the customer's location cannot sell from the next street, so
+ * those tiles go flat and unclickable while the rest of the page stays usable.
+ * Reports are never gated — reading an account is not acting on it.
+ */
+@Composable
+private fun CustomerGrid(
+    actionsEnabled: Boolean,
     onSale: () -> Unit,
     onReturn: () -> Unit,
     onRequest: () -> Unit,
     onCollection: () -> Unit,
+    onStatement: () -> Unit,
+    onTxnReport: () -> Unit,
+    onDetailedReport: () -> Unit,
+    onVoucherReport: () -> Unit,
+    onPaymentReport: () -> Unit,
 ) {
-    Surface(color = Fv.Surface, shadowElevation = 8.dp) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-        ) {
-            // Location-lock banner: explains why the actions below are disabled.
-            if (!enabled && blockReason != null) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Fv.Red.copy(alpha = 0.12f))
-                        .padding(horizontal = 10.dp, vertical = 8.dp)
-                        .padding(bottom = 0.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painterResource(Res.drawable.ic_map),
-                        contentDescription = null,
-                        tint = Fv.Red,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        blockReason,
-                        color = Fv.Red,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
+    data class Tile(
+        val icon: DrawableResource,
+        val label: StringResource,
+        val tint: Color,
+        val onClick: () -> Unit,
+        val gated: Boolean = false,
+    )
+    val tiles = listOf(
+        Tile(Res.drawable.ic_cart, Res.string.action_sale, Fv.Green, onSale, gated = true),
+        Tile(Res.drawable.ic_return_arrow, Res.string.action_return, Fv.Red, onReturn, gated = true),
+        Tile(Res.drawable.ic_inventory, Res.string.action_request, Fv.Teal, onRequest, gated = true),
+        Tile(Res.drawable.ic_payment, Res.string.action_collection, Fv.Green, onCollection, gated = true),
+        Tile(Res.drawable.ic_bar_chart, Res.string.statement_title, Fv.Blue, onStatement),
+        Tile(Res.drawable.ic_receipt, Res.string.txn_report_title, Fv.Blue, onTxnReport),
+        Tile(Res.drawable.ic_receipt, Res.string.detailed_txn_title, Fv.Blue, onDetailedReport),
+        Tile(Res.drawable.ic_receipt, Res.string.customer_report_vouchers, Fv.TextHigh, onVoucherReport),
+        Tile(Res.drawable.ic_payment, Res.string.customer_payments_report, Fv.TextHigh, onPaymentReport),
+    )
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        tiles.chunked(3).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEach { t ->
+                    CustTile(
+                        iconRes = t.icon,
+                        labelRes = t.label,
+                        tint = t.tint,
+                        enabled = !t.gated || actionsEnabled,
+                        onClick = t.onClick,
+                        modifier = Modifier.weight(1f),
                     )
                 }
-                Spacer(Modifier.height(10.dp))
-            }
-            Text(
-                stringResource(Res.string.customer_quick_actions),
-                color = Fv.TextMid,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 10.dp),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ActionTile(
-                    iconRes = Res.drawable.ic_cart,
-                    iconGradient = Brush.linearGradient(listOf(Color(0xFF0FA968), Color(0xFF0A7A4B))),
-                    label = stringResource(Res.string.customer_action_sale),
-                    labelColor = Fv.Green,
-                    enabled = enabled,
-                    modifier = Modifier.weight(1f),
-                    onClick = onSale,
-                )
-                ActionTile(
-                    iconRes = Res.drawable.ic_return_arrow,
-                    iconGradient = Brush.linearGradient(listOf(Color(0xFFD63B3B), Color(0xFF992828))),
-                    label = stringResource(Res.string.customer_action_return),
-                    labelColor = Fv.Red,
-                    enabled = enabled,
-                    modifier = Modifier.weight(1f),
-                    onClick = onReturn,
-                )
-                ActionTile(
-                    iconRes = Res.drawable.ic_receipt,
-                    iconGradient = Brush.linearGradient(listOf(Color(0xFF0E9E91), Color(0xFF0A6E66))),
-                    label = stringResource(Res.string.customer_action_request),
-                    labelColor = Fv.Teal,
-                    enabled = enabled,
-                    modifier = Modifier.weight(1f),
-                    onClick = onRequest,
-                )
-                ActionTile(
-                    iconRes = Res.drawable.ic_payment,
-                    iconGradient = Brush.linearGradient(listOf(Color(0xFFB36C00), Color(0xFF7A4A00))),
-                    label = stringResource(Res.string.customer_action_collection),
-                    labelColor = Fv.Amber,
-                    enabled = enabled,
-                    modifier = Modifier.weight(1f),
-                    onClick = onCollection,
-                )
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
 }
 
 @Composable
-private fun ActionTile(
+private fun CustTile(
     iconRes: DrawableResource,
-    iconGradient: Brush,
-    label: String,
-    labelColor: Color,
+    labelRes: StringResource,
+    tint: Color,
     enabled: Boolean,
-    modifier: Modifier,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .clickable(enabled = enabled, onClick = onClick)
-            .then(if (enabled) Modifier else Modifier.alpha(0.4f)),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.aspectRatio(1f),
+        shape = RoundedCornerShape(8.dp),
+        color = Fv.Surface,
+        border = BorderStroke(1.dp, Fv.Border),
     ) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .clip(RoundedCornerShape(13.dp))
-                .background(iconGradient),
-            contentAlignment = Alignment.Center,
+        Column(
+            modifier = Modifier.fillMaxSize().padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
             Icon(
                 painterResource(iconRes),
                 contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(20.dp),
+                tint = if (enabled) tint else Fv.TextLow,
+                modifier = Modifier.size(26.dp),
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(labelRes),
+                color = if (enabled) Fv.TextHigh else Fv.TextLow,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                lineHeight = 14.sp,
             )
         }
-        Text(label, color = labelColor, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
     }
 }
 
-/** التقرير المفصل للحركات — every voucher in a period with its item lines. */
+/** The totals, as a readout below the grid — not cards, not a hero. */
 @Composable
-private fun DetailedTxnCard(onOpen: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-        border = BorderStroke(0.5.dp, Fv.Border),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
+private fun CustomerFigures(state: CustomerDashboardState) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            stringResource(Res.string.customer_totals_label),
+            color = Fv.TextMid,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = Fv.Surface,
+            border = BorderStroke(1.dp, Fv.Border),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(11.dp))
-                    .background(Brush.linearGradient(listOf(Color(0xFF1FA4A4), Color(0xFF127070)))),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painterResource(Res.drawable.ic_receipt),
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp),
-                )
+            Column {
+                Row {
+                    FigCell(stringResource(Res.string.all_sales_total_sales), state.salesTotal.formatJod(AppLanguage.AR), Fv.TextHigh, Modifier.weight(1f))
+                    Box(Modifier.width(1.dp).height(58.dp).background(Fv.Border))
+                    FigCell(stringResource(Res.string.all_sales_total_returns), state.returnsTotal.formatJod(AppLanguage.AR), Fv.Red, Modifier.weight(1f))
+                }
+                HorizontalDivider(color = Fv.Border)
+                Row {
+                    FigCell(stringResource(Res.string.txn_report_total_collections), state.collectionsTotal.formatJod(AppLanguage.AR), Fv.Green, Modifier.weight(1f))
+                    Box(Modifier.width(1.dp).height(58.dp).background(Fv.Border))
+                    FigCell(stringResource(Res.string.customer_vouchers_count), state.sales.size.toString(), Fv.TextHigh, Modifier.weight(1f))
+                }
             }
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(Res.string.detailed_txn_title),
-                    color = Fv.TextHigh,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                )
-                Text(
-                    stringResource(Res.string.detailed_txn_subtitle),
-                    color = Fv.TextMid,
-                    fontSize = 11.sp,
-                )
-            }
-            Icon(
-                painterResource(Res.drawable.ic_chevron_right),
-                contentDescription = null,
-                tint = Fv.TextMid,
-                modifier = Modifier.size(18.dp),
-            )
         }
+    }
+}
+
+@Composable
+private fun FigCell(label: String, value: String, accent: Color, modifier: Modifier = Modifier) {
+    Column(modifier = modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+        Text(label, color = Fv.TextMid, fontSize = 11.sp, maxLines = 1)
+        Spacer(Modifier.height(3.dp))
+        Text(value, color = accent, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
     }
 }

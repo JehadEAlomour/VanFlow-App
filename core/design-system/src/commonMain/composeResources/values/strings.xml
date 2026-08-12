@@ -843,4 +843,14 @@
     <string name="customers_balance">الرصيد</string>
     <string name="customers_no_balance">لا يوجد رصيد</string>
     <string name="customers_over_limit">تجاوز الحد</string>
+
+    <!-- Customer page (grid redesign) -->
+    <string name="customer_balance_label">الرصيد المستحق</string>
+    <string name="customer_over_limit">تجاوز الحد الائتماني</string>
+    <string name="customer_totals_label">إجمالي التعامل</string>
+    <string name="customer_vouchers_count">عدد السندات</string>
+    <string name="action_sale">بيع</string>
+    <string name="action_return">مرتجع</string>
+    <string name="action_request">طلب</string>
+    <string name="action_collection">تحصيل</string>
 </resources>

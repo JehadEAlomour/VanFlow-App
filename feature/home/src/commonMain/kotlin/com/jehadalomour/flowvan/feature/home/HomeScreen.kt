@@ -138,7 +138,18 @@ fun HomeScreen(
                     )
                 }
             }
-
+            // ── The readout, below the fold on purpose ────────────────────────
+            item {
+                FiguresBlock(
+                    sales = state.kpi?.salesTotal ?: 0.0,
+                    collections = state.kpi?.collectionsTotal ?: 0.0,
+                    visited = state.kpi?.customersVisited ?: 0,
+                    planned = state.kpi?.customersPlanned ?: 0,
+                    returns = state.kpi?.returnsTotal ?: 0.0,
+                    modifier = Modifier.padding(horizontal = 14.dp).padding(top = 18.dp),
+                )
+            }
+            item{ Spacer(modifier = Modifier.height(12.dp)) }
             // ── Actions, first and without scrolling ──────────────────────────
             item {
                 FunctionGrid(
@@ -158,17 +169,7 @@ fun HomeScreen(
                 )
             }
 
-            // ── The readout, below the fold on purpose ────────────────────────
-            item {
-                FiguresBlock(
-                    sales = state.kpi?.salesTotal ?: 0.0,
-                    collections = state.kpi?.collectionsTotal ?: 0.0,
-                    visited = state.kpi?.customersVisited ?: 0,
-                    planned = state.kpi?.customersPlanned ?: 0,
-                    returns = state.kpi?.returnsTotal ?: 0.0,
-                    modifier = Modifier.padding(horizontal = 14.dp).padding(top = 18.dp),
-                )
-            }
+
         }
         } // PullToRefreshBox
     }
@@ -503,13 +504,7 @@ private fun FiguresBlock(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            stringResource(Res.string.home_today_figures),
-            color = Fv.TextMid,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
+
         Surface(
             shape = RoundedCornerShape(8.dp),
             color = Fv.Surface,

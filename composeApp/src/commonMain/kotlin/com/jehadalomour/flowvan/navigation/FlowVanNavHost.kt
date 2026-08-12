@@ -230,6 +230,7 @@ fun FlowVanNavHost(
                 onOpenVoucherReport = { cid -> navController.navigate(Routes.voucherReport(cid)) },
                 onOpenPaymentReport = { cid -> navController.navigate(Routes.payReport(cid)) },
                 onOpenAccountStatement = { cid -> navController.navigate(Routes.statement(cid)) },
+                onOpenTxnReport = { cid -> navController.navigate(Routes.txnReport(cid)) },
                 onOpenDetailedTxnReport = { cid -> navController.navigate(Routes.detailedTxn(cid)) },
             )
         }

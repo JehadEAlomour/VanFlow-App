@@ -843,4 +843,14 @@
     <string name="customers_balance">Balance</string>
     <string name="customers_no_balance">No balance</string>
     <string name="customers_over_limit">Over limit</string>
+
+    <!-- Customer page (grid redesign) -->
+    <string name="customer_balance_label">Balance due</string>
+    <string name="customer_over_limit">Over credit limit</string>
+    <string name="customer_totals_label">Lifetime totals</string>
+    <string name="customer_vouchers_count">Vouchers</string>
+    <string name="action_sale">Sale</string>
+    <string name="action_return">Return</string>
+    <string name="action_request">Order</string>
+    <string name="action_collection">Collection</string>
 </resources>
