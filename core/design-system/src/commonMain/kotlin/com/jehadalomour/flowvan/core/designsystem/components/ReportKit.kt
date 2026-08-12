@@ -270,8 +270,8 @@ fun ReportEmpty(message: String, modifier: Modifier = Modifier) {
 @Composable
 fun ReportError(
     message: String,
-    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    onRetry: () -> Unit,
 ) {
     Box(modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
         Column(
@@ -309,8 +309,8 @@ fun ReportEmptyDefault(modifier: Modifier = Modifier) =
     ReportEmpty(stringResource(Res.string.report_empty), modifier)
 
 @Composable
-fun ReportErrorDefault(onRetry: () -> Unit, modifier: Modifier = Modifier) =
-    ReportError(stringResource(Res.string.report_error), onRetry, modifier)
+fun ReportErrorDefault(modifier: Modifier = Modifier, onRetry: () -> Unit) =
+    ReportError(stringResource(Res.string.report_error), modifier, onRetry)
 
 // ── Grid ──────────────────────────────────────────────────────────────────────
 

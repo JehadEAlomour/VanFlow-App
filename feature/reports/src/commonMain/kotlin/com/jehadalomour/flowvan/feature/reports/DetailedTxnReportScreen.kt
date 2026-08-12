@@ -58,42 +58,13 @@ fun DetailedTxnReportScreen(
 
     Surface(modifier = Modifier.fillMaxSize(), color = Fv.BgDeepest) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        painter = painterResource(Res.drawable.ic_back),
-                        contentDescription = null,
-                        tint = Fv.TextHigh,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        stringResource(Res.string.detailed_txn_title),
-                        color = Fv.TextHigh,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    if (state.customerNameAr.isNotBlank()) {
-                        Text(state.customerNameAr, color = Fv.TextMid, fontSize = 11.sp)
-                    }
-                }
-                val canPrint = !state.isLoading && state.errorAr == null
-                IconButton(
-                    onClick = { onPrint(state.fromMillis, state.toMillis) },
-                    enabled = canPrint,
-                ) {
-                    Icon(
-                        painter = painterResource(Res.drawable.ic_print),
-                        contentDescription = stringResource(Res.string.detailed_txn_print_action),
-                        tint = if (canPrint) Fv.Blue else Fv.TextMid,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-            }
+            ReportTopBar(
+                title = stringResource(Res.string.detailed_txn_title),
+                subtitle = state.customerNameAr.takeIf { it.isNotBlank() },
+                onBack = onBack,
+                onPrint = { onPrint(state.fromMillis, state.toMillis) },
+                printEnabled = !state.isLoading && state.errorAr == null,
+            )
 
             LazyColumn(
                 modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
@@ -111,57 +82,17 @@ fun DetailedTxnReportScreen(
                 }
 
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                SummaryPill(
-                                    label = stringResource(Res.string.all_sales_total_sales),
-                                    value = report.salesTotal.formatJod(AppLanguage.AR),
-                                    accent = Fv.Green,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                SummaryPill(
-                                    label = stringResource(Res.string.all_sales_total_returns),
-                                    value = report.returnsTotal.formatJod(AppLanguage.AR),
-                                    accent = Fv.Red,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                SummaryPill(
-                                    label = stringResource(Res.string.txn_report_total_collections),
-                                    value = report.collectionsTotal.formatJod(AppLanguage.AR),
-                                    accent = Fv.Blue,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                SummaryPill(
-                                    label = stringResource(Res.string.detailed_txn_lines),
-                                    value = report.lineCount.toString(),
-                                    accent = Fv.Teal,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                            Spacer(Modifier.height(10.dp))
-                            HorizontalDivider(color = Fv.SurfaceHigh)
-                            Spacer(Modifier.height(10.dp))
-                            SummaryRow(
-                                stringResource(Res.string.txn_report_net_total),
-                                report.netTotal.formatJod(AppLanguage.AR),
-                                Fv.TextHigh,
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            SummaryRow(
-                                stringResource(Res.string.txn_report_total_credit),
-                                report.creditTotal.formatJod(AppLanguage.AR),
-                                Fv.Amber,
-                            )
-                        }
-                    }
+                    ReportTotals(
+                        figures = listOf(
+                            ReportFigure(stringResource(Res.string.all_sales_total_sales), report.salesTotal.formatJod(AppLanguage.AR), Fv.Green),
+                            ReportFigure(stringResource(Res.string.all_sales_total_returns), report.returnsTotal.formatJod(AppLanguage.AR), Fv.Red),
+                            ReportFigure(stringResource(Res.string.txn_report_total_collections), report.collectionsTotal.formatJod(AppLanguage.AR), Fv.Blue),
+                            ReportFigure(stringResource(Res.string.detailed_txn_lines), report.lineCount.toString(), Fv.Teal),
+                            ReportFigure(stringResource(Res.string.txn_report_net_total), report.netTotal.formatJod(AppLanguage.AR), Fv.TextHigh, emphasis = true),
+                            ReportFigure(stringResource(Res.string.txn_report_total_credit), report.creditTotal.formatJod(AppLanguage.AR), Fv.Amber, emphasis = true),
+                        ),
+                    )
+                    Spacer(Modifier.height(12.dp))
                 }
 
                 if (report.docs.isNotEmpty() && state.errorAr == null && !state.isLoading) {
@@ -181,43 +112,20 @@ fun DetailedTxnReportScreen(
 
                 when {
                     state.isLoading -> item {
-                        Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = Fv.Blue)
-                        }
+                        Box(Modifier.fillMaxWidth().height(160.dp)) { ReportLoading() }
                     }
 
                     state.errorAr != null -> item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-                        ) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(20.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
-                                Text(
-                                    state.errorAr!!,
-                                    color = Fv.Amber,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                                Spacer(Modifier.height(12.dp))
-                                SmallButton(
-                                    stringResource(Res.string.txn_report_retry),
-                                    Modifier,
-                                ) { viewModel.onEvent(DetailedTxnReportEvent.Retry) }
+                        Box(Modifier.fillMaxWidth().height(220.dp)) {
+                            ReportError(state.errorAr!!) {
+                                viewModel.onEvent(DetailedTxnReportEvent.Retry)
                             }
                         }
                     }
 
                     report.docs.isEmpty() -> item {
-                        Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text(
-                                stringResource(Res.string.txn_report_empty),
-                                color = Fv.TextMid,
-                                fontSize = 13.sp,
-                            )
+                        Box(Modifier.fillMaxWidth().height(160.dp)) {
+                            ReportEmpty(stringResource(Res.string.txn_report_empty))
                         }
                     }
 
@@ -233,18 +141,6 @@ fun DetailedTxnReportScreen(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun SummaryRow(label: String, value: String, accent: Color) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(label, color = Fv.TextMid, fontSize = 12.sp)
-        Text(value, color = accent, fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
 }
 
