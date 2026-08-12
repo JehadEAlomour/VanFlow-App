@@ -4,6 +4,9 @@ import co.touchlab.kermit.Logger
 import com.jehadalomour.flowvan.core.data.connectivity.ConnectivityObserver
 import com.jehadalomour.flowvan.core.network.api.CollectionApi
 import com.jehadalomour.flowvan.core.network.api.VoucherApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 /** What one line of the transaction report is. */
 enum class TxnKind { SALE, RETURN, ORDER, COLLECTION }
@@ -144,4 +147,127 @@ class TransactionReportRepository(
 
         return TransactionReport(rows = rows, isLive = true)
     }
+
+    /**
+     * The same period, with every voucher expanded to its item lines.
+     *
+     * Costs one request per voucher — the API has no bulk "lines for many
+     * vouchers" endpoint — so they are issued in small concurrent batches rather
+     * than one after another. Six at a time: enough that a month of vouchers
+     * resolves in a couple of seconds on a van's connection, few enough that a
+     * shop with a long history does not open sixty sockets at once.
+     *
+     * A voucher whose lines fail to load is KEPT, with an empty line list. It
+     * still happened, and its total is already known from the list call; dropping
+     * it would quietly change the report's totals because one detail request
+     * timed out.
+     */
+    suspend fun loadDetailed(
+        customerNumber: String,
+        customerId: String,
+        from: String,
+        to: String,
+    ): DetailedTxnReport = coroutineScope {
+        val flat = load(customerNumber, customerId, from, to)
+        if (!flat.isLive) return@coroutineScope DetailedTxnReport(isLive = false)
+
+        val vouchers = flat.rows.filter { it.kind != TxnKind.COLLECTION }
+        val linesById = mutableMapOf<String, List<DetailedTxnLine>>()
+
+        vouchers.chunked(BATCH).forEach { batch ->
+            batch.map { txn ->
+                async {
+                    txn.id to runCatching { this@TransactionReportRepository.vouchers.voucherDetail(txn.id) }
+                        .onFailure { log.w("detail ${txn.number} failed: ${it.message}") }
+                        .getOrNull()
+                }
+            }.awaitAll().forEach { (id, detail) ->
+                linesById[id] = detail?.transactions.orEmpty().map { t ->
+                    val qty = t.itemQty.toDoubleOrNull() ?: 0.0
+                    val price = t.unitPrice.toDoubleOrNull() ?: 0.0
+                    val discount = t.discountPercentage.toDoubleOrNull() ?: 0.0
+                    DetailedTxnLine(
+                        itemNumber = t.itemNumber,
+                        itemName = t.itemName,
+                        unit = t.unitName,
+                        qty = qty,
+                        unitPrice = price,
+                        lineTotal = qty * price * (1.0 - discount / 100.0),
+                    )
+                }
+            }
+        }
+
+        val docs = flat.rows.map { txn ->
+            DetailedTxnDoc(
+                id = txn.id,
+                number = txn.number,
+                kind = txn.kind,
+                date = txn.date,
+                total = txn.total,
+                credit = txn.credit,
+                method = txn.method,
+                lines = linesById[txn.id].orEmpty(),
+            )
+        }
+        DetailedTxnReport(docs = docs, isLive = true)
+    }
+
+    private companion object {
+        const val BATCH = 6
+    }
+}
+
+
+// ── Detailed report ──────────────────────────────────────────────────────────
+
+/** One item line inside a voucher on the detailed report. */
+data class DetailedTxnLine(
+    val itemNumber: String,
+    val itemName: String,
+    val unit: String?,
+    val qty: Double,
+    val unitPrice: Double,
+    /**
+     * qty x price less the line's own discount. INDICATIVE: it is derived here
+     * for display, while the document's [DetailedTxnDoc.total] is the server's
+     * own figure. They can differ by voucher-level discount and tax handling,
+     * and when they do the server is right — which is why the paper never sums
+     * these lines to produce a document total.
+     */
+    val lineTotal: Double,
+)
+
+/** A voucher with its lines. */
+data class DetailedTxnDoc(
+    val id: String,
+    val number: String,
+    val kind: TxnKind,
+    val date: String,
+    val total: Double,
+    val credit: Double,
+    val method: String? = null,
+    val lines: List<DetailedTxnLine> = emptyList(),
+) {
+    val isCash: Boolean get() = kind != TxnKind.COLLECTION && credit <= 0.0
+}
+
+data class DetailedTxnReport(
+    val docs: List<DetailedTxnDoc> = emptyList(),
+    val isLive: Boolean = false,
+) {
+    val sales get() = docs.filter { it.kind == TxnKind.SALE }
+    val returns get() = docs.filter { it.kind == TxnKind.RETURN }
+    val collections get() = docs.filter { it.kind == TxnKind.COLLECTION }
+
+    val salesTotal: Double get() = sales.sumOf { it.total }
+    val returnsTotal: Double get() = returns.sumOf { it.total }
+    val collectionsTotal: Double get() = collections.sumOf { it.total }
+    val netTotal: Double get() = salesTotal - returnsTotal
+    val creditTotal: Double get() = sales.sumOf { it.credit } - returns.sumOf { it.credit }
+    val cashTotal: Double get() = netTotal - creditTotal
+
+    /** Every line across every voucher — what the customer actually took. */
+    val lineCount: Int get() = docs.sumOf { it.lines.size }
+    val totalQty: Double get() = docs.sumOf { d -> d.lines.sumOf { it.qty } }
 }

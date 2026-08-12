@@ -9,6 +9,9 @@ fun reportsModule(): Module = module {
         TransactionReportViewModel(customerId, get(), get())
     }
     viewModel { (customerId: String) ->
+        DetailedTxnReportViewModel(customerId, get(), get())
+    }
+    viewModel { (customerId: String) ->
         PaymentReportViewModel(customerId, get())
     }
     viewModel { (customerId: String) ->

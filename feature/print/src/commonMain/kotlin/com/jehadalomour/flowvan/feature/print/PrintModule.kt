@@ -18,6 +18,12 @@ fun printModule(): Module = module {
         VoucherSummaryViewModel(get(), get(), get(), get(), get(), get())
     }
     viewModel { (customerId: String, fromMillis: Long, toMillis: Long) ->
+        DetailedTxnPrintViewModel(
+            customerId, fromMillis, toMillis,
+            get(), get(), get(), get(), get(), get(),
+        )
+    }
+    viewModel { (customerId: String, fromMillis: Long, toMillis: Long) ->
         TxnReportPrintViewModel(
             customerId, fromMillis, toMillis,
             get(), get(), get(), get(), get(), get(),

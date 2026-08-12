@@ -807,4 +807,17 @@
     <string name="txn_report_col_doc">Transaction</string>
     <string name="txn_report_col_total">Amount</string>
     <string name="txn_report_col_credit">Credit</string>
+
+    <!-- Detailed transaction report -->
+    <string name="detailed_txn_title">Detailed transaction report</string>
+    <string name="detailed_txn_subtitle">Every voucher with its items, over a period</string>
+    <string name="detailed_txn_print_action">Print detailed report</string>
+    <string name="detailed_txn_lines">Line count</string>
+    <string name="detailed_txn_expand_all">Expand all</string>
+    <string name="detailed_txn_collapse_all">Collapse all</string>
+    <string name="detailed_txn_col_item">Item</string>
+    <string name="detailed_txn_col_qty">Qty</string>
+    <string name="detailed_txn_col_price">Price</string>
+    <string name="detailed_txn_col_value">Value</string>
+    <string name="detailed_txn_doc_total">Voucher total</string>
 </resources>

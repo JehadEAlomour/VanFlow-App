@@ -72,6 +72,7 @@ fun CustomerDashboardScreen(
     onOpenVoucherReport: (String) -> Unit,
     onOpenPaymentReport: (String) -> Unit,
     onOpenAccountStatement: (String) -> Unit,
+    onOpenDetailedTxnReport: (String) -> Unit = {},
     viewModel: CustomerDashboardViewModel = koinViewModel { parametersOf(customerId) },
 ) {
     val state by viewModel.state.collectAsState()
@@ -163,6 +164,9 @@ fun CustomerDashboardScreen(
                 )
             }
             item { StatementCard(onOpenAccountStatement = { onOpenAccountStatement(customerId) }) }
+            item {
+                DetailedTxnCard(onOpen = { onOpenDetailedTxnReport(customerId) })
+            }
         }
 
         // ── Bottom Action Bar ─────────────────────────────────────────────────
@@ -748,5 +752,57 @@ private fun ActionTile(
             )
         }
         Text(label, color = labelColor, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold)
+    }
+}
+
+/** التقرير المفصل للحركات — every voucher in a period with its item lines. */
+@Composable
+private fun DetailedTxnCard(onOpen: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpen),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
+        border = BorderStroke(0.5.dp, Fv.Border),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(Brush.linearGradient(listOf(Color(0xFF1FA4A4), Color(0xFF127070)))),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painterResource(Res.drawable.ic_receipt),
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(Res.string.detailed_txn_title),
+                    color = Fv.TextHigh,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                )
+                Text(
+                    stringResource(Res.string.detailed_txn_subtitle),
+                    color = Fv.TextMid,
+                    fontSize = 11.sp,
+                )
+            }
+            Icon(
+                painterResource(Res.drawable.ic_chevron_right),
+                contentDescription = null,
+                tint = Fv.TextMid,
+                modifier = Modifier.size(18.dp),
+            )
+        }
     }
 }

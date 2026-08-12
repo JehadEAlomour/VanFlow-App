@@ -29,6 +29,8 @@ import com.jehadalomour.flowvan.feature.reports.PaymentReportScreen
 import com.jehadalomour.flowvan.feature.print.ReceiptDetailScreen
 import com.jehadalomour.flowvan.feature.print.StatementPrintScreen
 import com.jehadalomour.flowvan.feature.print.TxnReportPrintScreen
+import com.jehadalomour.flowvan.feature.print.DetailedTxnPrintScreen
+import com.jehadalomour.flowvan.feature.reports.DetailedTxnReportScreen
 import com.jehadalomour.flowvan.feature.reports.ReceivablesReportScreen
 import com.jehadalomour.flowvan.feature.reports.TargetsScreen
 import com.jehadalomour.flowvan.feature.reports.TransactionReportScreen
@@ -92,6 +94,8 @@ object Routes {
     // same period the rep was looking at, not a default recomputed downstream.
     const val STATEMENT_PRINT = "statementprint/{customerId}/{from}/{to}"
     const val TXN_REPORT_PRINT = "txnreportprint/{customerId}/{from}/{to}"
+    const val DETAILED_TXN_REPORT = "detailedtxn/{customerId}"
+    const val DETAILED_TXN_PRINT = "detailedtxnprint/{customerId}/{from}/{to}"
     const val VOUCHER_SUMMARY = "vouchersummary"
     const val SETTINGS = "settings"
     fun customer(id: String) = "customer/$id"
@@ -112,6 +116,9 @@ object Routes {
         "statementprint/$customerId/$from/$to"
     fun txnReportPrint(customerId: String, from: Long, to: Long) =
         "txnreportprint/$customerId/$from/$to"
+    fun detailedTxn(customerId: String) = "detailedtxn/$customerId"
+    fun detailedTxnPrint(customerId: String, from: Long, to: Long) =
+        "detailedtxnprint/$customerId/$from/$to"
 }
 
 @Composable
@@ -224,6 +231,7 @@ fun FlowVanNavHost(
                 onOpenVoucherReport = { cid -> navController.navigate(Routes.voucherReport(cid)) },
                 onOpenPaymentReport = { cid -> navController.navigate(Routes.payReport(cid)) },
                 onOpenAccountStatement = { cid -> navController.navigate(Routes.statement(cid)) },
+                onOpenDetailedTxnReport = { cid -> navController.navigate(Routes.detailedTxn(cid)) },
             )
         }
         composable(
@@ -362,6 +370,34 @@ fun FlowVanNavHost(
                 onPrint = { from, to ->
                     navController.navigate(Routes.statementPrint(id, from, to))
                 },
+            )
+        }
+        composable(
+            Routes.DETAILED_TXN_REPORT,
+            arguments = listOf(navArgument("customerId") { type = NavType.StringType }),
+        ) { entry ->
+            val id = entry.arguments?.getString("customerId").orEmpty()
+            DetailedTxnReportScreen(
+                customerId = id,
+                onBack = { navController.popBackStack() },
+                onPrint = { from, to ->
+                    navController.navigate(Routes.detailedTxnPrint(id, from, to))
+                },
+            )
+        }
+        composable(
+            Routes.DETAILED_TXN_PRINT,
+            arguments = listOf(
+                navArgument("customerId") { type = NavType.StringType },
+                navArgument("from") { type = NavType.LongType },
+                navArgument("to") { type = NavType.LongType },
+            ),
+        ) { entry ->
+            DetailedTxnPrintScreen(
+                customerId = entry.arguments?.getString("customerId").orEmpty(),
+                fromMillis = entry.arguments?.getLong("from") ?: 0L,
+                toMillis = entry.arguments?.getLong("to") ?: 0L,
+                onBack = { navController.popBackStack() },
             )
         }
         composable(

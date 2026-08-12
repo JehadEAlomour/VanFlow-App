@@ -807,4 +807,17 @@
     <string name="txn_report_col_doc">الحركة</string>
     <string name="txn_report_col_total">القيمة</string>
     <string name="txn_report_col_credit">آجل</string>
+
+    <!-- Detailed transaction report -->
+    <string name="detailed_txn_title">التقرير المفصل للحركات</string>
+    <string name="detailed_txn_subtitle">كل سند ببنوده خلال فترة</string>
+    <string name="detailed_txn_print_action">طباعة التقرير المفصل</string>
+    <string name="detailed_txn_lines">عدد البنود</string>
+    <string name="detailed_txn_expand_all">توسيع الكل</string>
+    <string name="detailed_txn_collapse_all">طيّ الكل</string>
+    <string name="detailed_txn_col_item">الصنف</string>
+    <string name="detailed_txn_col_qty">الكمية</string>
+    <string name="detailed_txn_col_price">السعر</string>
+    <string name="detailed_txn_col_value">القيمة</string>
+    <string name="detailed_txn_doc_total">إجمالي السند</string>
 </resources>
