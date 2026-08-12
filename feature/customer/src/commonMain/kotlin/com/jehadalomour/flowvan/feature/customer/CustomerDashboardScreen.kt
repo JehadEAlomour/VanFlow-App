@@ -81,17 +81,10 @@ fun CustomerDashboardScreen(
     viewModel: CustomerDashboardViewModel = koinViewModel { parametersOf(customerId) },
 ) {
     val state by viewModel.state.collectAsState()
-    // The salesman "started a transaction" if they opened any create action this visit.
     var startedTxn by remember { mutableStateOf(false) }
-    // Pop back once the visit has been recorded.
     LaunchedEffect(state.navigateBack) { if (state.navigateBack) onBack() }
-    // Refresh the board every time it becomes visible again (e.g. returning from a
-    // sale/return/collection or the invoice print screen) so balances/totals are current.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     val requestLeave = { viewModel.onEvent(CustomerDashboardEvent.LeaveRequested(startedTxn)) }
-    // System back (Android) mirrors the top-bar back button: run the leave flow so the
-    // visit is recorded / the confirm-reason dialog shows — instead of a silent pop. If a
-    // leave dialog is already open, back dismisses it.
     AppBackHandler {
         if (state.leaveDialog != LeaveDialog.NONE) {
             viewModel.onEvent(CustomerDashboardEvent.DismissLeave)
@@ -162,6 +155,7 @@ fun CustomerDashboardScreen(
             item { IdentityBlock(state) }
             item { BalanceStrip(state) }
 
+
             // Why the four transaction tiles are dead, said once and in place of
             // them — a disabled tile with no explanation reads as a broken app.
             val block = when (state.proximityBlock) {
@@ -172,6 +166,8 @@ fun CustomerDashboardScreen(
             if (!state.actionsEnabled && block != null) {
                 item { ProximityNotice(stringResource(block)) }
             }
+            item { CustomerFigures(state) }
+            item{Spacer(Modifier.height(12.dp))}
 
             item {
                 CustomerGrid(
@@ -188,7 +184,6 @@ fun CustomerDashboardScreen(
                 )
             }
 
-            item { CustomerFigures(state) }
         }
     }
 

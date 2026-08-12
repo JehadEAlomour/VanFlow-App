@@ -895,33 +895,37 @@ private fun CartView(
 
 @Composable
 private fun PaymentToggle(current: PaymentMethod, onSelect: (PaymentMethod) -> Unit) {
+    // Flat segments with a visible border, not a pill inside a track. Cash and
+    // credit are the same decision the printed voucher records, and the choice
+    // has to survive being read at a glance in sunlight — so the selected one is
+    // a solid fill rather than a tint.
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Fv.SurfaceTop, RoundedCornerShape(14.dp))
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         listOf(
             PaymentMethod.CASH to stringResource(Res.string.payment_method_cash),
             PaymentMethod.CREDIT to stringResource(Res.string.payment_method_credit),
         ).forEach { (method, label) ->
             val active = method == current
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(11.dp))
-                    .background(if (active) Fv.Blue else Color.Transparent)
-                    .clickable { onSelect(method) }
-                    .padding(vertical = 9.dp),
-                contentAlignment = Alignment.Center,
+            Surface(
+                onClick = { onSelect(method) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(6.dp),
+                color = if (active) Fv.Blue else Fv.Surface,
+                border = BorderStroke(1.dp, if (active) Fv.Blue else Fv.Border),
             ) {
-                Text(
-                    label,
-                    color = if (active) Color.White else Fv.TextMid,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 11.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        label,
+                        color = if (active) Color.White else Fv.TextMid,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         }
     }
@@ -1251,17 +1255,22 @@ private fun ChooseFreeItemSheet(
 /** Small round +/− control for the gift-quantity stepper. Greys out when [enabled] is false. */
 @Composable
 private fun StepperButton(symbol: String, enabled: Boolean, onClick: () -> Unit) {
+    // 6px radius and a real border: at 32dp a rounded tinted square reads as a
+    // chip rather than a button, and this is the control a rep hits most.
+    // Disabled greys through the palette instead of two hard-coded hexes that
+    // predate it.
     Box(
         modifier = Modifier
             .size(32.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (enabled) Fv.Green.copy(alpha = 0.16f) else Color(0xFFF0F3F7))
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (enabled) Fv.Surface else Fv.SurfaceHigh)
+            .border(1.dp, if (enabled) Fv.Border else Fv.SurfaceTop, RoundedCornerShape(6.dp))
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             symbol,
-            color = if (enabled) Fv.Green else Color(0xFFB6C2D2),
+            color = if (enabled) Fv.TextHigh else Fv.TextLow,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
         )
