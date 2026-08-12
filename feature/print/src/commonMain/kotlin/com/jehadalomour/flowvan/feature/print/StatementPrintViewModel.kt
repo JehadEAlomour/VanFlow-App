@@ -10,6 +10,7 @@ import com.jehadalomour.flowvan.core.database.dao.PaymentDao
 import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
 import com.jehadalomour.flowvan.core.database.entity.PaymentEntity
 import com.jehadalomour.flowvan.core.datastore.SessionStore
+import com.jehadalomour.flowvan.core.domain.ledger.CustomerStatement
 import com.jehadalomour.flowvan.core.domain.printer.PaperWidth
 import com.jehadalomour.flowvan.core.domain.printer.PrintResult
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
@@ -111,22 +112,14 @@ class StatementPrintViewModel(
         }
     }
 
-    /**
-     * True when this voucher was settled at the point of sale and therefore never
-     * became a receivable. Mirrors the on-screen statement exactly; a null payment
-     * method is kept, since legacy rows predate the column and hiding them would
-     * silently drop real debt.
-     */
-    private fun settledAtPos(inv: InvoiceEntity): Boolean {
-        val pm = inv.paymentMethod
-        return (inv.type == "SALE" || inv.type == "RETURN") && pm != null && pm != "CREDIT"
-    }
+    // What belongs on the ledger, and what it does to the balance, is [CustomerStatement]
+    // — the same rule the on-screen statement uses. It used to be a copy of it here, and
+    // the copy had drifted: an order moved this paper's balance by its full value while
+    // moving the screen's by nothing.
 
     private fun balanceOf(invoices: List<InvoiceEntity>, payments: List<PaymentEntity>): Double {
-        val onAccount = invoices.filterNot(::settledAtPos)
-        val debits = onAccount.filter { it.type == "SALE" || it.type == "REQUEST" }.sumOf { it.total }
-        val returns = onAccount.filter { it.type == "RETURN" }.sumOf { it.total }
-        return debits - returns - payments.sumOf { it.amount }
+        val ledger = invoices.filter(CustomerStatement::isLedgerEntry)
+        return ledger.sumOf(CustomerStatement::movement) - payments.sumOf { it.amount }
     }
 
     /** Oldest first, each row carrying the balance as it stood after it. */
@@ -136,8 +129,8 @@ class StatementPrintViewModel(
         opening: Double,
     ): List<StatementRow> {
         val unsorted = buildList {
-            invoices.filterNot(::settledAtPos).forEach { inv ->
-                val isCredit = inv.type == "RETURN"
+            invoices.filter(CustomerStatement::isLedgerEntry).forEach { inv ->
+                val isCredit = CustomerStatement.isCredit(inv)
                 add(
                     StatementRow(
                         createdAt = inv.createdAt,

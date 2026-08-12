@@ -2,6 +2,7 @@ package com.jehadalomour.flowvan.feature.customer
 
 import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
 import com.jehadalomour.flowvan.core.database.entity.PaymentEntity
+import com.jehadalomour.flowvan.core.domain.ledger.CustomerStatement
 import com.jehadalomour.flowvan.core.model.Customer
 
 sealed interface StatementEntry {
@@ -36,7 +37,7 @@ data class StatementLine(
     /** True when this line reduced what the customer owes (payment or return). */
     val isCredit: Boolean get() = when (entry) {
         is StatementEntry.Payment -> true
-        is StatementEntry.Invoice -> entry.entity.type == "RETURN"
+        is StatementEntry.Invoice -> CustomerStatement.isCredit(entry.entity)
     }
 
     val key: String get() = when (entry) {
@@ -57,16 +58,16 @@ data class AccountStatementState(
 ) {
     private val entries: List<StatementEntry> get() = lines.map { it.entry }
 
+    // Summed through [CustomerStatement] so the foot of the page agrees with the
+    // running balance beside each line — see CustomerStatement.movement.
     val totalDebits: Double get() = entries
         .filterIsInstance<StatementEntry.Invoice>()
-        .filter { it.entity.type == "SALE" || it.entity.type == "REQUEST" }
-        .sumOf { it.amount }
+        .sumOf { CustomerStatement.movement(it.entity).coerceAtLeast(0.0) }
 
     val totalCredits: Double get() {
         val payments = entries.filterIsInstance<StatementEntry.Payment>().sumOf { it.amount }
         val returns = entries.filterIsInstance<StatementEntry.Invoice>()
-            .filter { it.entity.type == "RETURN" }
-            .sumOf { it.amount }
+            .sumOf { -CustomerStatement.movement(it.entity).coerceAtMost(0.0) }
         return payments + returns
     }
 

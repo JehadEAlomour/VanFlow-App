@@ -20,5 +20,6 @@ dependencies {
     "commonTestImplementation"(libs.kotlin.test)
     // Evaluator tests assert on the network EvaluationResultDto shape it returns.
     "commonTestImplementation"(projects.core.network)
+    "commonTestImplementation"(projects.core.database)
     "commonTestImplementation"(libs.kotlinx.datetime)
 }

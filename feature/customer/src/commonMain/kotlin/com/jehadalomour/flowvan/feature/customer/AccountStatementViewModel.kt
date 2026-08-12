@@ -7,6 +7,7 @@ import com.jehadalomour.flowvan.core.database.dao.PaymentDao
 import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
 import com.jehadalomour.flowvan.core.database.entity.PaymentEntity
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
+import com.jehadalomour.flowvan.core.domain.ledger.CustomerStatement
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.datetime.DateTimeUnit
@@ -71,24 +72,13 @@ class AccountStatementViewModel(
             .launchIn(viewModelScope)
     }
 
-    /**
-     * True when this voucher was settled at the counter and never became a
-     * receivable. Only ON-ACCOUNT movement belongs on a statement: a cash sale is
-     * already paid, and listing it would inflate both the debit total and the
-     * closing balance — handing the customer a demand for money they gave you.
-     * A null method is kept: those rows predate the column, and hiding them would
-     * silently drop real debt.
-     */
-    private fun settledAtPos(inv: InvoiceEntity): Boolean {
-        val pm = inv.paymentMethod
-        return (inv.type == "SALE" || inv.type == "RETURN") && pm != null && pm != "CREDIT"
-    }
+    // What belongs on the ledger, and what it does to the balance, is [CustomerStatement]
+    // — one rule shared with the printed statement and matching the office dashboard.
+    // Orders are not on it: an order is a promise of goods, not a debt.
 
     private fun balanceOf(invoices: List<InvoiceEntity>, payments: List<PaymentEntity>): Double {
-        val onAccount = invoices.filterNot(::settledAtPos)
-        val debits = onAccount.filter { it.type == "SALE" || it.type == "REQUEST" }.sumOf { it.total }
-        val returns = onAccount.filter { it.type == "RETURN" }.sumOf { it.total }
-        return debits - returns - payments.sumOf { it.amount }
+        val ledger = invoices.filter(CustomerStatement::isLedgerEntry)
+        return ledger.sumOf(CustomerStatement::movement) - payments.sumOf { it.amount }
     }
 
     /**
@@ -102,24 +92,20 @@ class AccountStatementViewModel(
         opening: Double,
     ): List<StatementLine> {
         val entries = buildList {
-            invoices.filterNot(::settledAtPos).forEach { add(StatementEntry.Invoice(it)) }
+            invoices.filter(CustomerStatement::isLedgerEntry).forEach { add(StatementEntry.Invoice(it)) }
             payments.forEach { add(StatementEntry.Payment(it)) }
         }.sortedBy { it.createdAt }
 
         var running = opening
         return entries.map { entry ->
-            // Deliberately the same three predicates the totals use, so the last
-            // line's balance always equals openingBalance + net. A shopkeeper who
-            // adds the column and lands somewhere other than the closing figure
-            // stops trusting the paper, and an unrecognised voucher type must not
-            // be able to cause that.
+            // The same function the totals and the opening balance use, so the last
+            // line's balance always equals openingBalance + net. A shopkeeper who adds
+            // the column and lands somewhere other than the closing figure stops
+            // trusting the paper, and an unrecognised voucher type must not be able to
+            // cause that.
             val movement = when (entry) {
                 is StatementEntry.Payment -> -entry.amount
-                is StatementEntry.Invoice -> when (entry.entity.type) {
-                    "SALE", "REQUEST" -> entry.amount
-                    "RETURN" -> -entry.amount
-                    else -> 0.0
-                }
+                is StatementEntry.Invoice -> CustomerStatement.movement(entry.entity)
             }
             running += movement
             StatementLine(entry = entry, balanceAfter = running)

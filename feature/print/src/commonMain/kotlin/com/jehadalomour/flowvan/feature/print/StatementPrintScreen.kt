@@ -502,10 +502,10 @@ private fun StatementBody(state: StatementPrintState) {
 
 @Composable
 private fun StatementPaperRow(row: StatementRow) {
+    // No order label: an order is not on a statement — see CustomerStatement.
     val label = when (row.docType) {
         "SALE" -> stringResource(Res.string.print_voucher_type_sale)
         "RETURN" -> stringResource(Res.string.print_voucher_type_return)
-        "REQUEST" -> stringResource(Res.string.print_voucher_type_request)
         "PAYMENT" -> when (row.method) {
             "CASH" -> stringResource(Res.string.method_cash_label)
             "CHEQUE" -> stringResource(Res.string.method_cheque_label)

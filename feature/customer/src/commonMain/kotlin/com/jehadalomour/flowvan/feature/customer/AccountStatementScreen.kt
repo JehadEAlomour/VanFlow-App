@@ -183,10 +183,10 @@ private fun StatementRow(line: StatementLine, onClick: () -> Unit) {
     var detail: String? = null
 
     when (val entry = line.entry) {
+        // No order branch: an order is not on a statement — see CustomerStatement.
         is StatementEntry.Invoice -> when (entry.entity.type) {
             "SALE" -> { badge = stringResource(Res.string.voucher_type_sale); color = Fv.Red }
             "RETURN" -> { badge = stringResource(Res.string.voucher_type_return); color = Fv.Green }
-            "REQUEST" -> { badge = stringResource(Res.string.voucher_type_request); color = Fv.Teal }
             else -> { badge = entry.entity.type; color = Fv.TextMid }
         }
 
