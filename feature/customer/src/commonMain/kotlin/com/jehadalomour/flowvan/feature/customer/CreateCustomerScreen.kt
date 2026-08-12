@@ -1,10 +1,11 @@
 package com.jehadalomour.flowvan.feature.customer
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,32 +19,48 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.core.designsystem.components.Fv
+import com.jehadalomour.flowvan.core.designsystem.components.FvButton
+import com.jehadalomour.flowvan.core.designsystem.components.FvNotice
+import com.jehadalomour.flowvan.core.designsystem.components.FvSectionLabel
+import com.jehadalomour.flowvan.core.designsystem.components.FvTone
+import com.jehadalomour.flowvan.core.designsystem.components.ReportTopBar
 import com.jehadalomour.flowvan.core.designsystem.resources.Res
-import com.jehadalomour.flowvan.core.designsystem.resources.ic_back
+import com.jehadalomour.flowvan.core.designsystem.resources.ic_check_circle
+import com.jehadalomour.flowvan.core.designsystem.resources.ic_map
+import com.jehadalomour.flowvan.core.designsystem.resources.ic_warning
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
 
+/**
+ * عميل جديد — a form the rep fills standing in the shop doorway.
+ *
+ * Three sections, each its own bordered block: من هو العميل, أين هو, وثيقته. The
+ * document used to live inside the location card, which made "وثيقة العميل
+ * (إلزامي)" read as part of capturing GPS — and it is the one field that decides
+ * whether the save is even accepted.
+ *
+ * Save is pinned to the bottom rather than scrolling with the form: it is the
+ * only action here, and its enabled state is the screen's answer to "am I done".
+ */
 @Composable
 fun CreateCustomerScreen(
     onBack: () -> Unit,
@@ -62,41 +79,18 @@ fun CreateCustomerScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize().background(Fv.BgDeepest)) {
-        // ── Top bar ─────────────────────────────────────────────────────────────
-        Surface(modifier = Modifier.fillMaxWidth(), color = Fv.Surface, shadowElevation = 2.dp) {
-            Row(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(11.dp))
-                        .background(Fv.SurfaceTop)
-                        .clickable(onClick = onBack),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painterResource(Res.drawable.ic_back),
-                        contentDescription = null,
-                        tint = Fv.TextHigh,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    "عميل جديد",
-                    color = Fv.TextHigh,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                )
-            }
-        }
+
+        ReportTopBar(title = "عميل جديد", onBack = onBack)
 
         Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            Spacer(Modifier.height(2.dp))
+
             // Said BEFORE the form, not after the save. Filling this in means
             // photographing a document — a rep who learns only from the answer
             // that their shop is not open for business yet has already spent
@@ -104,286 +98,277 @@ fun CreateCustomerScreen(
             if (state.willNeedApproval && !state.awaitingApproval &&
                 state.approvalDecision == null
             ) {
-                Surface(shape = RoundedCornerShape(10.dp), color = Fv.SurfaceTop) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Text("ℹ️", fontSize = 16.sp)
-                        Column {
-                            Text(
-                                "هذا العميل يحتاج موافقة الإدارة",
-                                color = Fv.Amber,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Text(
-                                "سيُرسل للمراجعة عند الحفظ، ولا يمكن البيع له قبل الاعتماد.",
-                                color = Fv.TextMid,
-                                fontSize = 12.sp,
-                            )
-                        }
-                    }
-                }
+                FvNotice(
+                    title = "هذا العميل يحتاج موافقة الإدارة",
+                    body = "سيُرسل للمراجعة عند الحفظ، ولا يمكن البيع له قبل الاعتماد.",
+                    tone = FvTone.Warning,
+                    icon = painterResource(Res.drawable.ic_warning),
+                )
             }
 
-            FieldLabel("اسم العميل")
-            Field(
-                value = state.name,
-                onChange = { viewModel.onEvent(CreateCustomerEvent.NameChanged(it)) },
-                placeholder = "مثال: سوبرماركت السلام",
-            )
+            // ── Who ─────────────────────────────────────────────────────────────
+            FormSection(title = "بيانات العميل") {
+                FieldLabel("اسم العميل")
+                Spacer(Modifier.height(6.dp))
+                Field(
+                    value = state.name,
+                    onChange = { viewModel.onEvent(CreateCustomerEvent.NameChanged(it)) },
+                    placeholder = "مثال: سوبرماركت السلام",
+                )
+                Spacer(Modifier.height(12.dp))
+                FieldLabel("رقم الهاتف")
+                Spacer(Modifier.height(6.dp))
+                Field(
+                    value = state.phone,
+                    onChange = { viewModel.onEvent(CreateCustomerEvent.PhoneChanged(it)) },
+                    placeholder = "07xxxxxxxx",
+                    keyboard = KeyboardType.Phone,
+                )
+            }
 
-            FieldLabel("رقم الهاتف")
-            Field(
-                value = state.phone,
-                onChange = { viewModel.onEvent(CreateCustomerEvent.PhoneChanged(it)) },
-                placeholder = "07xxxxxxxx",
-                keyboard = KeyboardType.Phone,
-            )
+            // ── Where ───────────────────────────────────────────────────────────
+            LocationSection(state, viewModel)
 
-            FieldLabel("الموقع")
-            LocationCard(state, viewModel)
+            // ── Proof ───────────────────────────────────────────────────────────
+            DocumentSection(state, viewModel)
 
-            state.errorAr?.let { msg ->
-                Text(msg, color = Fv.Red, fontSize = 13.sp, modifier = Modifier.fillMaxWidth())
+            // ── What happened ───────────────────────────────────────────────────
+            // The rep stays here until the office decides. Sending them back to a
+            // list with no idea whether the customer exists is what makes them
+            // phone the office.
+            if (state.awaitingApproval) {
+                FvNotice(
+                    title = "بانتظار موافقة المشرف…",
+                    body = "ابقَ على هذه الشاشة، سيتم إعلامك فور الاعتماد.",
+                    tone = FvTone.Warning,
+                    busy = true,
+                )
+            }
+
+            when (state.approvalDecision) {
+                ApprovalDecision.Approved -> FvNotice(
+                    title = "تم اعتماد العميل",
+                    body = "يمكنك الآن البيع لهذا العميل.",
+                    tone = FvTone.Success,
+                    icon = painterResource(Res.drawable.ic_check_circle),
+                )
+                // Previously this arrived as a bare red line indistinguishable
+                // from a validation message, on a form whose save button had
+                // silently stopped working. It is a decision, so it looks like one.
+                ApprovalDecision.Rejected -> FvNotice(
+                    title = "تم رفض العميل",
+                    body = state.errorAr ?: "راجع المشرف قبل إعادة المحاولة.",
+                    tone = FvTone.Danger,
+                    icon = painterResource(Res.drawable.ic_warning),
+                )
+                null -> state.errorAr?.let { msg ->
+                    FvNotice(
+                        title = msg,
+                        tone = FvTone.Danger,
+                        icon = painterResource(Res.drawable.ic_warning),
+                    )
+                }
             }
 
             Spacer(Modifier.height(4.dp))
-
-            // ── Save ────────────────────────────────────────────────────────────
-            Surface(
-                onClick = { if (state.canSave) viewModel.onEvent(CreateCustomerEvent.Save) },
-                enabled = state.canSave,
-                shape = RoundedCornerShape(12.dp),
-                color = if (state.canSave) Fv.Blue else Fv.SurfaceTop,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (state.isSaving) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
-                    } else {
-                        Text(
-                            "حفظ العميل",
-                            color = if (state.canSave) Color.White else Fv.TextMid,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                }
-            }
         }
+
+        FvButton(
+            label = "حفظ العميل",
+            onClick = { if (state.canSave) viewModel.onEvent(CreateCustomerEvent.Save) },
+            enabled = state.canSave,
+            busy = state.isSaving,
+            modifier = Modifier.padding(16.dp),
+        )
+    }
+}
+
+// ── Sections ──────────────────────────────────────────────────────────────────
+
+/** A bordered white block with a heading — the form's unit of grouping. */
+@Composable
+private fun FormSection(
+    title: String,
+    trailing: (@Composable () -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Fv.Surface, RoundedCornerShape(8.dp))
+            .border(1.dp, Fv.Border, RoundedCornerShape(8.dp))
+            .padding(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            FvSectionLabel(title, modifier = Modifier.weight(1f))
+            trailing?.invoke()
+        }
+        Spacer(Modifier.height(10.dp))
+        content()
     }
 }
 
 @Composable
-private fun LocationCard(state: CreateCustomerState, viewModel: CreateCustomerViewModel) {
-    Surface(shape = RoundedCornerShape(12.dp), color = Fv.Surface, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (state.hasLocation) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("📍", fontSize = 18.sp)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "${fmt(state.lat)}، ${fmt(state.lng)}",
-                        color = Fv.TextHigh,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        "مسح",
-                        color = Fv.Red,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.clickable { viewModel.onEvent(CreateCustomerEvent.ClearLocation) },
-                    )
-                }
-            } else {
+private fun LocationSection(state: CreateCustomerState, viewModel: CreateCustomerViewModel) {
+    FormSection(title = "الموقع") {
+        if (state.hasLocation) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painterResource(Res.drawable.ic_map),
+                    contentDescription = null,
+                    tint = Fv.Green,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
                 Text(
-                    "التقط موقع العميل الحالي عبر GPS.",
-                    color = Fv.TextMid,
-                    fontSize = 13.sp,
-                )
-            }
-
-            state.locationErrorAr?.let { Text(it, color = Fv.Amber, fontSize = 12.sp) }
-
-            Surface(
-                onClick = { if (!state.isCapturingLocation) viewModel.onEvent(CreateCustomerEvent.CaptureLocation) },
-                shape = RoundedCornerShape(10.dp),
-                color = Fv.SurfaceTop,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 11.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (state.isCapturingLocation) {
-                        CircularProgressIndicator(color = Fv.Blue, modifier = Modifier.size(18.dp))
-                    } else {
-                        Text(
-                            if (state.hasLocation) "إعادة التقاط الموقع" else "التقاط الموقع الحالي",
-                            color = Fv.Blue,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                }
-            }
-
-            // ── Document photo (required) ─────────────────────────────────────
-            Spacer(Modifier.height(4.dp))
-            FieldLabel("وثيقة العميل (إلزامي)")
-
-            val picker = rememberDocumentPicker()
-            val scope = rememberCoroutineScope()
-
-            when {
-                state.isUploadingDocument -> Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    CircularProgressIndicator(color = Fv.Blue, modifier = Modifier.size(16.dp))
-                    Text("جارٍ رفع الصورة…", color = Fv.TextMid, fontSize = 13.sp)
-                }
-
-                state.hasDocument -> Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("✓ تم إرفاق الوثيقة", color = Fv.Green, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        "مسح",
-                        color = Fv.Red,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.clickable {
-                            viewModel.onEvent(CreateCustomerEvent.ClearDocument)
-                        },
-                    )
-                }
-
-                else -> Text(
-                    "صوّر السجل التجاري أو هوية صاحب المحل — لا يمكن حفظ العميل بدونها.",
-                    color = Fv.TextMid,
-                    fontSize = 13.sp,
-                )
-            }
-
-            state.documentErrorAr?.let { Text(it, color = Fv.Amber, fontSize = 12.sp) }
-
-            // Both sources offered side by side: the rep either photographs the
-            // paper now, or picks the shot they already took on the way in.
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                DocumentSourceButton(
-                    label = "الكاميرا",
-                    enabled = !state.isUploadingDocument,
+                    "${fmt(state.lat)}، ${fmt(state.lng)}",
+                    color = Fv.TextHigh,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f),
-                ) {
+                )
+                Text(
+                    "مسح",
+                    color = Fv.Red,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clickable { viewModel.onEvent(CreateCustomerEvent.ClearLocation) }
+                        .padding(6.dp),
+                )
+            }
+        } else {
+            Text("التقط موقع العميل الحالي عبر GPS.", color = Fv.TextMid, fontSize = 13.sp)
+        }
+
+        state.locationErrorAr?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(it, color = Fv.Amber, fontSize = 12.sp)
+        }
+
+        Spacer(Modifier.height(10.dp))
+        FvButton(
+            label = if (state.hasLocation) "إعادة التقاط الموقع" else "التقاط الموقع الحالي",
+            onClick = { viewModel.onEvent(CreateCustomerEvent.CaptureLocation) },
+            enabled = !state.isCapturingLocation,
+            busy = state.isCapturingLocation,
+            primary = false,
+        )
+    }
+}
+
+@Composable
+private fun DocumentSection(state: CreateCustomerState, viewModel: CreateCustomerViewModel) {
+    val picker = rememberDocumentPicker()
+    val scope = rememberCoroutineScope()
+
+    FormSection(
+        title = "وثيقة العميل",
+        // The one field that decides whether the save is accepted at all, so it
+        // is marked on the heading rather than in a sentence below it.
+        trailing = {
+            Text("إلزامي", color = Fv.Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        },
+    ) {
+        when {
+            state.isUploadingDocument -> Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CircularProgressIndicator(
+                    color = Fv.Blue,
+                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(16.dp),
+                )
+                Text("جارٍ رفع الصورة…", color = Fv.TextMid, fontSize = 13.sp)
+            }
+
+            state.hasDocument -> Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painterResource(Res.drawable.ic_check_circle),
+                    contentDescription = null,
+                    tint = Fv.Green,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "تم إرفاق الوثيقة",
+                    color = Fv.Green,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    "مسح",
+                    color = Fv.Red,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .clickable { viewModel.onEvent(CreateCustomerEvent.ClearDocument) }
+                        .padding(6.dp),
+                )
+            }
+
+            else -> Text(
+                "صوّر السجل التجاري أو هوية صاحب المحل — لا يمكن حفظ العميل بدونها.",
+                color = Fv.TextMid,
+                fontSize = 13.sp,
+            )
+        }
+
+        state.documentErrorAr?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(it, color = Fv.Amber, fontSize = 12.sp)
+        }
+
+        Spacer(Modifier.height(10.dp))
+        HorizontalDivider(thickness = 1.dp, color = Fv.Border)
+        Spacer(Modifier.height(10.dp))
+
+        // Both sources offered side by side: the rep either photographs the
+        // paper now, or picks the shot they already took on the way in.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            FvButton(
+                label = "الكاميرا",
+                onClick = {
                     scope.launch {
                         picker.capture()?.let {
                             viewModel.onEvent(CreateCustomerEvent.DocumentPicked(it))
                         }
                     }
-                }
-                DocumentSourceButton(
-                    label = "المعرض",
-                    enabled = !state.isUploadingDocument,
-                    modifier = Modifier.weight(1f),
-                ) {
+                },
+                enabled = !state.isUploadingDocument,
+                primary = false,
+                modifier = Modifier.weight(1f),
+            )
+            FvButton(
+                label = "المعرض",
+                onClick = {
                     scope.launch {
                         picker.pickFromGallery()?.let {
                             viewModel.onEvent(CreateCustomerEvent.DocumentPicked(it))
                         }
                     }
-                }
-            }
-
-            // The rep stays here until the office decides. Sending them back to a
-            // list with no idea whether the customer exists is what makes them
-            // phone the office.
-            if (state.awaitingApproval) {
-                Spacer(Modifier.height(4.dp))
-                Surface(shape = RoundedCornerShape(10.dp), color = Fv.SurfaceTop) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        CircularProgressIndicator(color = Fv.Amber, modifier = Modifier.size(18.dp))
-                        Column {
-                            Text(
-                                "بانتظار موافقة المشرف…",
-                                color = Fv.Amber,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Text(
-                                "ابقَ على هذه الشاشة، سيتم إعلامك فور الاعتماد.",
-                                color = Fv.TextMid,
-                                fontSize = 12.sp,
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (state.approvalDecision == ApprovalDecision.Approved) {
-                Spacer(Modifier.height(4.dp))
-                Surface(shape = RoundedCornerShape(10.dp), color = Fv.SurfaceTop) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-                        Text(
-                            "✓ تم اعتماد العميل",
-                            color = Fv.Green,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Text("يمكنك الآن البيع لهذا العميل.", color = Fv.TextMid, fontSize = 12.sp)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DocumentSourceButton(
-    label: String,
-    enabled: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    Surface(
-        onClick = { if (enabled) onClick() },
-        shape = RoundedCornerShape(10.dp),
-        color = Fv.SurfaceTop,
-        modifier = modifier,
-    ) {
-        Box(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 11.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                label,
-                color = if (enabled) Fv.Blue else Fv.TextMid,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
+                },
+                enabled = !state.isUploadingDocument,
+                primary = false,
+                modifier = Modifier.weight(1f),
             )
         }
     }
 }
 
+// ── Fields ────────────────────────────────────────────────────────────────────
+
 @Composable
 private fun FieldLabel(text: String) {
-    Text(text, color = Fv.TextMid, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+    Text(text, color = Fv.TextMid, fontSize = 12.sp, fontWeight = FontWeight.Bold)
 }
 
 @Composable
@@ -396,8 +381,9 @@ private fun Field(
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
-        placeholder = { Text(placeholder, color = Fv.TextMid, fontSize = 13.sp) },
+        placeholder = { Text(placeholder, color = Fv.TextLow, fontSize = 13.sp) },
         singleLine = true,
+        shape = RoundedCornerShape(6.dp),
         keyboardOptions = KeyboardOptions(keyboardType = keyboard),
         modifier = Modifier.fillMaxWidth(),
         colors = TextFieldDefaults.colors(
@@ -407,7 +393,9 @@ private fun Field(
             unfocusedTextColor = Fv.TextHigh,
             cursorColor = Fv.Blue,
             focusedIndicatorColor = Fv.Blue,
-            unfocusedIndicatorColor = Fv.SurfaceTop,
+            // Was SurfaceTop, which is almost the field's own fill — an invisible
+            // outline outdoors, so the field read as a gap in the card.
+            unfocusedIndicatorColor = Fv.Border,
         ),
     )
 }

@@ -312,6 +312,139 @@ fun ReportEmptyDefault(modifier: Modifier = Modifier) =
 fun ReportErrorDefault(modifier: Modifier = Modifier, onRetry: () -> Unit) =
     ReportError(stringResource(Res.string.report_error), modifier, onRetry)
 
+// ── Notices ───────────────────────────────────────────────────────────────────
+
+/**
+ * What a notice is saying, which decides its colour. Meaning, not decoration —
+ * a rep reads the colour before the sentence.
+ */
+enum class FvTone { Warning, Success, Danger }
+
+private val FvTone.line: Color
+    get() = when (this) {
+        FvTone.Warning -> Fv.Amber
+        FvTone.Success -> Fv.Green
+        FvTone.Danger -> Fv.Red
+    }
+
+private val FvTone.fill: Color
+    get() = when (this) {
+        FvTone.Warning -> Color(0xFFFDF6EA)
+        FvTone.Success -> Color(0xFFEAF6F0)
+        FvTone.Danger -> Color(0xFFFDEDED)
+    }
+
+/**
+ * A bordered block that says something the rep must not scroll past: an approval
+ * is needed, a save was refused, the office has decided.
+ *
+ * Bordered and tinted rather than a bare coloured sentence, because a sentence
+ * in red is what every field validation looks like, and these are not that.
+ * [busy] replaces the icon with a spinner for the states that are still moving.
+ */
+@Composable
+fun FvNotice(
+    title: String,
+    tone: FvTone,
+    modifier: Modifier = Modifier,
+    body: String? = null,
+    icon: androidx.compose.ui.graphics.painter.Painter? = null,
+    busy: Boolean = false,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(tone.fill, RoundedCornerShape(8.dp))
+            .border(1.dp, tone.line, RoundedCornerShape(8.dp))
+            .padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        when {
+            busy -> CircularProgressIndicator(
+                color = tone.line,
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(18.dp),
+            )
+            icon != null -> Icon(icon, contentDescription = null, tint = tone.line, modifier = Modifier.size(18.dp))
+        }
+        Column {
+            Text(title, color = tone.line, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            if (!body.isNullOrBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(body, color = Fv.TextMid, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+// ── Forms ─────────────────────────────────────────────────────────────────────
+
+/**
+ * A labelled section of a form. The label sits above the block rather than
+ * floating inside a field, so it stays readable once the field is filled.
+ */
+@Composable
+fun FvSectionLabel(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text,
+        modifier = modifier,
+        color = Fv.TextMid,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Bold,
+    )
+}
+
+/** A flat full-width action. [primary] fills; otherwise it is outlined. */
+@Composable
+fun FvButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    primary: Boolean = true,
+    busy: Boolean = false,
+) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled && !busy,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        // A busy button keeps its live colours even though it is not clickable:
+        // the disabled fill is near-white, and a white spinner on it is invisible
+        // — the rep would read a save in flight as a button that did nothing.
+        color = when {
+            !enabled && !busy -> Fv.SurfaceTop
+            primary -> Fv.Blue
+            else -> Fv.Surface
+        },
+        border = if (primary) null else BorderStroke(1.dp, Fv.Border),
+    ) {
+        Box(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (busy) {
+                CircularProgressIndicator(
+                    color = if (primary) Color.White else Fv.Blue,
+                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(18.dp),
+                )
+            } else {
+                Text(
+                    label,
+                    color = when {
+                        !enabled -> Fv.TextLow
+                        primary -> Color.White
+                        else -> Fv.Blue
+                    },
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+    }
+}
+
 // ── Grid ──────────────────────────────────────────────────────────────────────
 
 /**
