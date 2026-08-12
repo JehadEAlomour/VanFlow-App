@@ -399,10 +399,17 @@ private fun StartShiftBar(onStartShift: () -> Unit, modifier: Modifier = Modifie
 /**
  * Every destination, three across.
  *
- * Twelve tiles rather than the brief's list because بيع, مرتجع and تحصيل need a
- * customer before they mean anything — they stay on the customer page, where the
- * customer is already chosen. Putting them here would have meant inventing a
- * "pick a shop first" flow, which is a behaviour change, not a redesign.
+ * Nine tiles — a clean 3×3.
+ *
+ * بيع, مرتجع and تحصيل are absent because they need a customer before they mean
+ * anything; they live on the customer page, where one is already chosen. Putting
+ * them here would have meant inventing a "pick a shop first" flow, which is a
+ * behaviour change rather than a redesign.
+ *
+ * الإعدادات, المساعد الذكي and إرجاع بالصنف were removed at the client's request.
+ * Their callbacks stay in the signature so restoring a tile is one line — and so
+ * the routes keep a caller, since dropping the parameters would make it look as
+ * though those destinations were deleted rather than hidden.
  */
 @Composable
 private fun FunctionGrid(
@@ -426,13 +433,10 @@ private fun FunctionGrid(
         Triple(Res.drawable.ic_customers, Res.string.home_new_customer, Fv.Blue) to onOpenNewCustomer,
         Triple(Res.drawable.ic_truck, Res.string.van_stock_title, Fv.Teal) to onOpenVanStock,
         Triple(Res.drawable.ic_inventory, Res.string.stock_request_title, Fv.Teal) to onOpenStockRequest,
-        Triple(Res.drawable.ic_return_arrow, Res.string.home_return_by_item, Fv.Red) to onOpenReturnByItem,
         Triple(Res.drawable.ic_cart, Res.string.offers_title, Fv.Amber) to onOpenOffers,
         Triple(Res.drawable.ic_bar_chart, Res.string.reports_title, Fv.TextHigh) to onOpenReports,
         Triple(Res.drawable.ic_receipt, Res.string.voucher_summary_title, Fv.TextHigh) to onOpenVoucherSummary,
         Triple(Res.drawable.ic_payment, Res.string.end_of_day_title, Fv.Amber) to onOpenEndOfDay,
-        Triple(Res.drawable.ic_ai_sparkle, Res.string.ai_title, Fv.Blue) to onOpenAi,
-        Triple(Res.drawable.ic_settings, Res.string.settings_title, Fv.TextHigh) to onOpenSettings,
     )
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         tiles.chunked(3).forEach { row ->
