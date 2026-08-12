@@ -169,6 +169,10 @@ Paste **§1** first, then one screen block at a time from §3.
 
 ### 3.3 Customer list — العملاء
 
+> Expanded into its own file: **`stitch-customer-list.md`** — row anatomy, the
+> filter screen, and the four states as separate generations. Use that instead of
+> the summary below.
+
 > Arabic RTL list screen, light only, Almarai. Search field pinned at the top
 > with a filter icon at its start. A single row of filter chips beneath:
 > الكل, على المسار, عليه ذمم, لم تتم زيارته — flat rectangles with a 6px radius,
