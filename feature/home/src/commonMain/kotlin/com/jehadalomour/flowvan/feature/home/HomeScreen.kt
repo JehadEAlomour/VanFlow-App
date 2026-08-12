@@ -65,6 +65,13 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import org.koin.compose.viewmodel.koinViewModel
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.DrawableResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.BorderStroke
 
 @OptIn(ExperimentalTime::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -78,6 +85,9 @@ fun HomeScreen(
     onOpenOffers: () -> Unit,
     onOpenReturnByItem: () -> Unit,
     onOpenStockRequest: () -> Unit,
+    onOpenNewCustomer: () -> Unit,
+    onOpenVoucherSummary: () -> Unit,
+    onOpenSettings: () -> Unit,
     onOpenCustomer: (String) -> Unit,
     onLogout: () -> Unit,
     viewModel: HomeViewModel = koinViewModel(),
@@ -106,88 +116,57 @@ fun HomeScreen(
         ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 32.dp),
+            contentPadding = PaddingValues(bottom = 28.dp),
         ) {
             item {
-                TopBar(onLogout = onLogout, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
-            }
-            item {
-                HeroCard(
-                    name = state.user?.nameAr ?: "...",
+                DashboardHeader(
+                    name = state.user?.nameAr ?: "…",
                     dateText = today.formatLevantine(AppLanguage.AR),
-                    isShiftActive = state.activeShift != null,
                     pendingPings = state.pendingPings,
-                    lastSyncAt = state.lastSyncAt,
-                    onStartShift = { viewModel.onEvent(HomeEvent.StartShift) },
-                    modifier = Modifier.padding(horizontal = 14.dp).padding(bottom = 12.dp),
+                    onLogout = onLogout,
                 )
             }
-            item {
-                StatsGrid(
-                    sales = state.kpi?.salesTotal ?: 0.0,
-                    collections = state.kpi?.collectionsTotal ?: 0.0,
-                    returns = state.kpi?.returnsTotal ?: 0.0,
-                    visited = state.kpi?.customersVisited ?: 0,
-                    planned = state.kpi?.customersPlanned ?: 0,
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                )
-            }
-            item {
-                VisitsProgressCard(
-                    visited = state.kpi?.customersVisited ?: 0,
-                    planned = state.kpi?.customersPlanned ?: 0,
-                    modifier = Modifier.padding(horizontal = 14.dp).padding(top = 10.dp),
-                )
-            }
-            item {
-                SectionHeader(
-                    title = stringResource(Res.string.home_quick_access),
-                    modifier = Modifier.padding(horizontal = 14.dp).padding(top = 18.dp, bottom = 10.dp),
-                )
-            }
-            item {
-                ActionGrid(
-                    onOpenRoute = onOpenRoute,
-                    onOpenCustomers = onOpenCustomers,
-                    onOpenVanStock = onOpenVanStock,
-                    onOpenAi = onOpenAi,
-                    onOpenEndOfDay = onOpenEndOfDay,
-                    onOpenReports = onOpenReports,
-                    onOpenOffers = onOpenOffers,
-                    onOpenReturnByItem = onOpenReturnByItem,
-                    onOpenStockRequest = onOpenStockRequest,
-                    modifier = Modifier.padding(horizontal = 14.dp),
-                )
-            }
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp)
-                        .padding(top = 18.dp, bottom = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(Res.string.route_title),
-                        color = Fv.TextHigh,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        stringResource(Res.string.view_all),
-                        color = Fv.Blue,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable(onClick = onOpenRoute).padding(8.dp),
+
+            // Starting the shift is the one thing that must happen before
+            // anything else works, so it is a bar across the top rather than a
+            // tile in the grid — and it disappears the moment it is done.
+            if (state.activeShift == null) {
+                item {
+                    StartShiftBar(
+                        onStartShift = { viewModel.onEvent(HomeEvent.StartShift) },
+                        modifier = Modifier.padding(horizontal = 14.dp).padding(bottom = 12.dp),
                     )
                 }
             }
+
+            // ── Actions, first and without scrolling ──────────────────────────
             item {
-                RoutePreviewCard(
-                    customers = state.routeTopFive,
-                    onOpenCustomer = onOpenCustomer,
+                FunctionGrid(
+                    onOpenCustomers = onOpenCustomers,
+                    onOpenRoute = onOpenRoute,
+                    onOpenNewCustomer = onOpenNewCustomer,
+                    onOpenVanStock = onOpenVanStock,
+                    onOpenStockRequest = onOpenStockRequest,
+                    onOpenReturnByItem = onOpenReturnByItem,
+                    onOpenOffers = onOpenOffers,
+                    onOpenReports = onOpenReports,
+                    onOpenVoucherSummary = onOpenVoucherSummary,
+                    onOpenEndOfDay = onOpenEndOfDay,
+                    onOpenAi = onOpenAi,
+                    onOpenSettings = onOpenSettings,
                     modifier = Modifier.padding(horizontal = 14.dp),
+                )
+            }
+
+            // ── The readout, below the fold on purpose ────────────────────────
+            item {
+                FiguresBlock(
+                    sales = state.kpi?.salesTotal ?: 0.0,
+                    collections = state.kpi?.collectionsTotal ?: 0.0,
+                    visited = state.kpi?.customersVisited ?: 0,
+                    planned = state.kpi?.customersPlanned ?: 0,
+                    returns = state.kpi?.returnsTotal ?: 0.0,
+                    modifier = Modifier.padding(horizontal = 14.dp).padding(top = 18.dp),
                 )
             }
         }
@@ -197,22 +176,6 @@ fun HomeScreen(
 
 // ── Top Bar ───────────────────────────────────────────────────────────────────
 
-@Composable
-private fun TopBar(onLogout: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            "كاش فلو",
-            color = Fv.Blue,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.ExtraBold,
-            modifier = Modifier.weight(1f),
-        )
-        TopBarIconBtn(painterResource(Res.drawable.ic_logout), onClick = onLogout)
-    }
-}
 
 @Composable
 private fun TopBarIconBtn(icon: Painter, onClick: () -> Unit) {
@@ -230,107 +193,6 @@ private fun TopBarIconBtn(icon: Painter, onClick: () -> Unit) {
 
 // ── Hero Card ─────────────────────────────────────────────────────────────────
 
-@Composable
-private fun HeroCard(
-    name: String,
-    dateText: String,
-    isShiftActive: Boolean,
-    pendingPings: Int,
-    lastSyncAt: Long?,
-    onStartShift: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val heroGradient = Brush.linearGradient(listOf(Color(0xFF2265CD), Color(0xFF0C447C)))
-    val infiniteTransition = rememberInfiniteTransition(label = "shift_dot")
-    val dotAlpha by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 0.3f,
-        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Reverse),
-        label = "dot_alpha",
-    )
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .background(heroGradient)
-            .padding(20.dp),
-    ) {
-        Column {
-            Text(
-                stringResource(Res.string.home_greeting_name, name),
-                color = Color.White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.ExtraBold,
-                lineHeight = 28.sp,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(dateText, color = Color.White.copy(alpha = 0.65f), fontSize = 12.sp)
-            Spacer(Modifier.height(14.dp))
-            if (isShiftActive) {
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White.copy(alpha = 0.14f))
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(Color(0xFF4ADE80).copy(alpha = dotAlpha), CircleShape),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        stringResource(Res.string.home_shift_active_tracking),
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = if (pendingPings == 0) {
-                            stringResource(Res.string.home_sync_synced)
-                        } else {
-                            stringResource(Res.string.home_sync_pending, pendingPings)
-                        },
-                        color = Color.White.copy(alpha = 0.8f),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    lastSyncAt?.let { ts ->
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            stringResource(Res.string.home_sync_last, formatHhMm(ts)),
-                            color = Color.White.copy(alpha = 0.6f),
-                            fontSize = 11.sp,
-                        )
-                    }
-                }
-            } else {
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White.copy(alpha = 0.14f))
-                        .clickable(onClick = onStartShift)
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painterResource(Res.drawable.ic_play_circle),
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(Res.string.home_shift_start), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-    }
-}
 
 /** Epoch-millis → "HH:mm" in the device timezone (mono-LTR digits). */
 @OptIn(ExperimentalTime::class)
@@ -343,258 +205,20 @@ private fun formatHhMm(epochMs: Long): String {
 
 // ── Stats Grid ────────────────────────────────────────────────────────────────
 
-@Composable
-private fun StatsGrid(
-    sales: Double,
-    collections: Double,
-    returns: Double,
-    visited: Int,
-    planned: Int,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatCard(
-                label = stringResource(Res.string.home_stat_sales),
-                value = sales.formatJod(AppLanguage.AR),
-                subLabel = stringResource(Res.string.currency_jod),
-                accent = Fv.Blue,
-                icon = painterResource(Res.drawable.ic_cart),
-                modifier = Modifier.weight(1f),
-            )
-        }
-        StatCard(
-            label = stringResource(Res.string.home_stat_collections),
-            value = collections.formatJod(AppLanguage.AR),
-            subLabel = stringResource(Res.string.currency_jod),
-            accent = Fv.Green,
-            icon = painterResource(Res.drawable.ic_payment),
-            modifier = Modifier.weight(1f),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatCard(
-                label = stringResource(Res.string.home_stat_returns),
-                value = returns.formatJod(AppLanguage.AR),
-                subLabel = stringResource(Res.string.currency_jod),
-                accent = Fv.Red,
-                icon = painterResource(Res.drawable.ic_return_arrow),
-                modifier = Modifier.weight(1f),
-            )
-            StatCard(
-                label = stringResource(Res.string.home_stat_visits),
-                value = "$visited / $planned",
-                subLabel = stringResource(Res.string.home_stat_customers_today),
-                accent = Fv.Amber,
-                icon = painterResource(Res.drawable.ic_map),
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
-}
 
-@Composable
-private fun StatCard(
-    label: String,
-    value: String,
-    subLabel: String,
-    accent: Color,
-    icon: Painter,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    label,
-                    color = Fv.TextMid,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
-                )
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .background(accent.copy(alpha = 0.14f), RoundedCornerShape(9.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            Text(value, color = accent, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, lineHeight = 22.sp)
-            Spacer(Modifier.height(2.dp))
-            Text(subLabel, color = Fv.TextMid, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-        }
-    }
-}
 
 // ── Visits Progress Card ──────────────────────────────────────────────────────
 
-@Composable
-private fun VisitsProgressCard(visited: Int, planned: Int, modifier: Modifier = Modifier) {
-    val ratio = if (planned > 0) visited.toFloat() / planned.toFloat() else 0f
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    painterResource(Res.drawable.ic_map),
-                    contentDescription = null,
-                    tint = Fv.Amber,
-                    modifier = Modifier.size(16.dp),
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    stringResource(Res.string.home_visits_today),
-                    color = Fv.TextMid,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
-                )
-                Text("$visited / $planned", color = Fv.Amber, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold)
-            }
-            Spacer(Modifier.height(10.dp))
-            // Progress track
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(7.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Fv.SurfaceTop),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(ratio.coerceIn(0f, 1f))
-                        .height(7.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(Brush.horizontalGradient(listOf(Fv.Amber, Color(0xFFF59E0B)))),
-                )
-            }
-            Spacer(Modifier.height(6.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(Res.string.home_visits_completed, visited), color = Fv.TextMid, fontSize = 10.sp, fontWeight = FontWeight.Medium)
-                Text(stringResource(Res.string.home_visits_remaining, (planned - visited).coerceAtLeast(0)), color = Fv.TextMid, fontSize = 10.sp, fontWeight = FontWeight.Medium)
-            }
-        }
-    }
-}
 
 // ── Section Header ────────────────────────────────────────────────────────────
 
-@Composable
-private fun SectionHeader(title: String, modifier: Modifier = Modifier) {
-    Text(title, color = Fv.TextHigh, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, modifier = modifier)
-}
 
 // ── Action Grid ───────────────────────────────────────────────────────────────
 
-@Composable
-private fun ActionGrid(
-    onOpenRoute: () -> Unit,
-    onOpenCustomers: () -> Unit,
-    onOpenVanStock: () -> Unit,
-    onOpenAi: () -> Unit,
-    onOpenEndOfDay: () -> Unit,
-    onOpenReports: () -> Unit,
-    onOpenOffers: () -> Unit,
-    onOpenReturnByItem: () -> Unit,
-    onOpenStockRequest: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ActionTile(painterResource(Res.drawable.ic_cart), stringResource(Res.string.offers_title), stringResource(Res.string.home_action_offers_sub), Fv.Purple, Modifier.weight(1f), onOpenOffers)
-//            ActionTile(painterResource(Res.drawable.ic_cart), "إرجاع بالصنف", "بدون تحديد فاتورة", Fv.Amber, Modifier.weight(1f), onOpenReturnByItem)
-            ActionTile(painterResource(Res.drawable.ic_truck), stringResource(Res.string.route_title), stringResource(Res.string.home_action_route_sub), Fv.Blue, Modifier.weight(1f), onOpenRoute)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ActionTile(painterResource(Res.drawable.ic_customers), stringResource(Res.string.home_action_customers), stringResource(Res.string.home_action_customers_sub), Fv.Teal, Modifier.weight(1f), onOpenCustomers)
-            ActionTile(painterResource(Res.drawable.ic_inventory), stringResource(Res.string.van_stock_title), stringResource(Res.string.home_action_van_stock_sub), Fv.Amber, Modifier.weight(1f), onOpenVanStock)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ActionTile(painterResource(Res.drawable.ic_truck), stringResource(Res.string.stock_request_title), stringResource(Res.string.home_action_stock_request_sub), Fv.Purple, Modifier.weight(1f), onOpenStockRequest)
-            Spacer(Modifier.weight(1f))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ActionTile(painterResource(Res.drawable.ic_moon), stringResource(Res.string.home_quick_end_of_day), stringResource(Res.string.home_action_end_of_day_sub), Fv.Red, Modifier.weight(1f), onOpenEndOfDay)
-            ActionTile(painterResource(Res.drawable.ic_bar_chart), stringResource(Res.string.reports_title), stringResource(Res.string.home_action_reports_sub), Fv.Green, Modifier.weight(1f), onOpenReports)
-        }
-//        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-//            ActionTile(painterResource(Res.drawable.ic_ai_sparkle), stringResource(Res.string.ai_title), stringResource(Res.string.home_action_ai_sub), Fv.Purple, Modifier.weight(1f), onOpenAi)
-//        }
-    }
-}
 
-@Composable
-private fun ActionTile(
-    icon: Painter,
-    label: String,
-    subLabel: String,
-    accent: Color,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    Card(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(accent.copy(alpha = 0.14f), RoundedCornerShape(13.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(22.dp))
-            }
-            Spacer(Modifier.width(10.dp))
-            Column {
-                Text(label, color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                Text(subLabel, color = Fv.TextMid, fontSize = 11.sp)
-            }
-        }
-    }
-}
 
 // ── Route Preview Card ────────────────────────────────────────────────────────
 
-@Composable
-private fun RoutePreviewCard(
-    customers: List<Customer>,
-    onOpenCustomer: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (customers.isEmpty()) return
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
-        Column {
-            customers.forEachIndexed { index, customer ->
-                RoutePreviewItem(customer = customer, onClick = { onOpenCustomer(customer.id) })
-                if (index < customers.lastIndex) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(0.5.dp).background(Fv.Border))
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun RoutePreviewItem(customer: Customer, onClick: () -> Unit) {
@@ -677,5 +301,243 @@ private fun TierCategoryBadge(tier: CustomerTier) {
             .padding(horizontal = 12.dp, vertical = 5.dp),
     ) {
         Text(label, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+    }
+}
+
+// ── Redesigned dashboard ─────────────────────────────────────────────────────
+// Actions before information. The old layout opened on a hero card, a stats
+// grid and a progress card, and put the buttons five blocks down — so a rep
+// standing in a shop doorway scrolled before they could start working. The grid
+// is now the first thing under the header and the figures moved beneath it:
+// scrolling is for reading, never for acting.
+
+/** Name, date, sync state, sign out. 64dp, and not a card. */
+@Composable
+private fun DashboardHeader(
+    name: String,
+    dateText: String,
+    pendingPings: Int,
+    onLogout: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(name, color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+            Text(dateText, color = Fv.TextMid, fontSize = 11.sp, maxLines = 1)
+        }
+        // Unsent GPS pings are the honest proxy for "is this device reaching the
+        // server", which is what a rep actually needs to know before they sell.
+        val synced = pendingPings == 0
+        Row(
+            modifier = Modifier
+                .background(
+                    if (synced) Fv.Green.copy(alpha = 0.10f) else Fv.Amber.copy(alpha = 0.12f),
+                    RoundedCornerShape(6.dp),
+                )
+                .padding(horizontal = 8.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(7.dp)
+                    .background(if (synced) Fv.Green else Fv.Amber, RoundedCornerShape(4.dp)),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                if (synced) stringResource(Res.string.home_synced) else stringResource(Res.string.home_pending_sync),
+                color = if (synced) Fv.Green else Fv.Amber,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Spacer(Modifier.width(6.dp))
+        IconButton(onClick = onLogout, modifier = Modifier.size(40.dp)) {
+            Icon(
+                painterResource(Res.drawable.ic_logout),
+                contentDescription = stringResource(Res.string.home_logout),
+                tint = Fv.TextMid,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun StartShiftBar(onStartShift: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        onClick = onStartShift,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = Fv.Blue,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 15.dp, horizontal = 16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                painterResource(Res.drawable.ic_play_circle),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                stringResource(Res.string.home_start_shift),
+                color = Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+        }
+    }
+}
+
+/**
+ * Every destination, three across.
+ *
+ * Twelve tiles rather than the brief's list because بيع, مرتجع and تحصيل need a
+ * customer before they mean anything — they stay on the customer page, where the
+ * customer is already chosen. Putting them here would have meant inventing a
+ * "pick a shop first" flow, which is a behaviour change, not a redesign.
+ */
+@Composable
+private fun FunctionGrid(
+    onOpenCustomers: () -> Unit,
+    onOpenRoute: () -> Unit,
+    onOpenNewCustomer: () -> Unit,
+    onOpenVanStock: () -> Unit,
+    onOpenStockRequest: () -> Unit,
+    onOpenReturnByItem: () -> Unit,
+    onOpenOffers: () -> Unit,
+    onOpenReports: () -> Unit,
+    onOpenVoucherSummary: () -> Unit,
+    onOpenEndOfDay: () -> Unit,
+    onOpenAi: () -> Unit,
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tiles = listOf(
+        Triple(Res.drawable.ic_customers, Res.string.customers_title, Fv.Blue) to onOpenCustomers,
+        Triple(Res.drawable.ic_map, Res.string.route_title, Fv.Blue) to onOpenRoute,
+        Triple(Res.drawable.ic_customers, Res.string.home_new_customer, Fv.Blue) to onOpenNewCustomer,
+        Triple(Res.drawable.ic_truck, Res.string.van_stock_title, Fv.Teal) to onOpenVanStock,
+        Triple(Res.drawable.ic_inventory, Res.string.stock_request_title, Fv.Teal) to onOpenStockRequest,
+        Triple(Res.drawable.ic_return_arrow, Res.string.home_return_by_item, Fv.Red) to onOpenReturnByItem,
+        Triple(Res.drawable.ic_cart, Res.string.offers_title, Fv.Amber) to onOpenOffers,
+        Triple(Res.drawable.ic_bar_chart, Res.string.reports_title, Fv.TextHigh) to onOpenReports,
+        Triple(Res.drawable.ic_receipt, Res.string.voucher_summary_title, Fv.TextHigh) to onOpenVoucherSummary,
+        Triple(Res.drawable.ic_payment, Res.string.end_of_day_title, Fv.Amber) to onOpenEndOfDay,
+        Triple(Res.drawable.ic_ai_sparkle, Res.string.ai_title, Fv.Blue) to onOpenAi,
+        Triple(Res.drawable.ic_settings, Res.string.settings_title, Fv.TextHigh) to onOpenSettings,
+    )
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        tiles.chunked(3).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEach { (spec, onClick) ->
+                    FunctionTile(
+                        iconRes = spec.first,
+                        labelRes = spec.second,
+                        tint = spec.third,
+                        onClick = onClick,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                // Keeps a short final row aligned to the same column widths.
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FunctionTile(
+    iconRes: DrawableResource,
+    labelRes: StringResource,
+    tint: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.aspectRatio(1f),
+        shape = RoundedCornerShape(8.dp),
+        color = Fv.Surface,
+        border = BorderStroke(1.dp, Fv.Border),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Icon(painterResource(iconRes), contentDescription = null, tint = tint, modifier = Modifier.size(26.dp))
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(labelRes),
+                color = Fv.TextHigh,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                lineHeight = 14.sp,
+            )
+        }
+    }
+}
+
+/** The day's numbers as a readout: one bordered block, no cards, no icons. */
+@Composable
+private fun FiguresBlock(
+    sales: Double,
+    collections: Double,
+    returns: Double,
+    visited: Int,
+    planned: Int,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            stringResource(Res.string.home_today_figures),
+            color = Fv.TextMid,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = Fv.Surface,
+            border = BorderStroke(1.dp, Fv.Border),
+        ) {
+            Column {
+                Row {
+                    FigureCell(stringResource(Res.string.home_sales_today), sales.formatJod(AppLanguage.AR), Fv.TextHigh, Modifier.weight(1f))
+                    VDivider()
+                    FigureCell(stringResource(Res.string.home_collections_today), collections.formatJod(AppLanguage.AR), Fv.Green, Modifier.weight(1f))
+                }
+                HorizontalDivider(color = Fv.Border)
+                Row {
+                    FigureCell(stringResource(Res.string.home_returns_today), returns.formatJod(AppLanguage.AR), Fv.Red, Modifier.weight(1f))
+                    VDivider()
+                    FigureCell(stringResource(Res.string.home_visits_today), "$visited / $planned", Fv.TextHigh, Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VDivider() {
+    Box(Modifier.width(1.dp).height(58.dp).background(Fv.Border))
+}
+
+@Composable
+private fun FigureCell(label: String, value: String, accent: Color, modifier: Modifier = Modifier) {
+    Column(modifier = modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+        Text(label, color = Fv.TextMid, fontSize = 11.sp, maxLines = 1)
+        Spacer(Modifier.height(3.dp))
+        Text(value, color = accent, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
     }
 }

@@ -165,6 +165,9 @@ fun FlowVanNavHost(
                 onOpenOffers = { navController.navigate(Routes.OFFERS) },
                 onOpenReturnByItem = { navController.navigate(Routes.RETURN_BY_ITEM) },
                 onOpenStockRequest = { navController.navigate(Routes.STOCK_REQUEST) },
+                onOpenNewCustomer = { navController.navigate(Routes.CREATE_CUSTOMER) },
+                onOpenVoucherSummary = { navController.navigate(Routes.VOUCHER_SUMMARY) },
+                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
                 onLogout = {
                     scope.launch {

@@ -820,4 +820,15 @@
     <string name="detailed_txn_col_price">السعر</string>
     <string name="detailed_txn_col_value">القيمة</string>
     <string name="detailed_txn_doc_total">إجمالي السند</string>
+
+    <!-- Dashboard (grid redesign) -->
+    <string name="home_new_customer">عميل جديد</string>
+    <string name="home_return_by_item">إرجاع بالصنف</string>
+    <string name="home_start_shift">ابدأ الدوام</string>
+    <string name="home_synced">متصل</string>
+    <string name="home_pending_sync">بانتظار المزامنة</string>
+    <string name="home_today_figures">أرقام اليوم</string>
+    <string name="home_sales_today">مبيعات اليوم</string>
+    <string name="home_collections_today">تحصيلات اليوم</string>
+    <string name="home_returns_today">مرتجعات اليوم</string>
 </resources>

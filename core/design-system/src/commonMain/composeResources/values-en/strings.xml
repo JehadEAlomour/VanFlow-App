@@ -820,4 +820,15 @@
     <string name="detailed_txn_col_price">Price</string>
     <string name="detailed_txn_col_value">Value</string>
     <string name="detailed_txn_doc_total">Voucher total</string>
+
+    <!-- Dashboard (grid redesign) -->
+    <string name="home_new_customer">New customer</string>
+    <string name="home_return_by_item">Return by item</string>
+    <string name="home_start_shift">Start shift</string>
+    <string name="home_synced">Online</string>
+    <string name="home_pending_sync">Pending sync</string>
+    <string name="home_today_figures">Today's figures</string>
+    <string name="home_sales_today">Sales today</string>
+    <string name="home_collections_today">Collections today</string>
+    <string name="home_returns_today">Returns today</string>
 </resources>
