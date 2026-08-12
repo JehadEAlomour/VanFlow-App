@@ -34,12 +34,13 @@ class CustomerListViewModel(
                 _state.update { it.copy(searchQuery = event.query) }
                 queryFlow.value = event.query
             }
-            is CustomerListEvent.TierFilter -> {
-                _state.update { it.copy(tierFilter = event.tier) }
+            is CustomerListEvent.FilterChanged -> {
+                _state.update { it.copy(filter = event.filter) }
                 recompute()
             }
-            is CustomerListEvent.SegmentFilter -> {
-                _state.update { it.copy(segmentFilter = event.segment) }
+            CustomerListEvent.ClearSearch -> {
+                _state.update { it.copy(searchQuery = "") }
+                queryFlow.value = ""
                 recompute()
             }
         }
@@ -65,13 +66,22 @@ class CustomerListViewModel(
     private fun recompute() {
         val s = _state.value
         val q = s.searchQuery.trim().lowercase()
-        // No tier/segment filtration — the list shows every customer that matches the search.
         val visible = s.all.filter { c ->
-            q.isEmpty() ||
+            val matchesQuery = q.isEmpty() ||
                 c.nameAr.lowercase().contains(q) ||
                 (c.nameEn?.lowercase()?.contains(q) == true) ||
                 c.code.lowercase().contains(q) ||
                 c.area.lowercase().contains(q)
+            val matchesFilter = when (s.filter) {
+                CustomerFilter.ALL -> true
+                CustomerFilter.ON_ROUTE -> c.isOnRoute
+                CustomerFilter.OWING -> c.balance > 0
+                // A limit of zero means "no limit set", not "everything is over
+                // it" — without that guard every customer with any balance would
+                // show as blocked from credit.
+                CustomerFilter.OVER_LIMIT -> c.creditLimit > 0 && c.balance >= c.creditLimit
+            }
+            matchesQuery && matchesFilter
         }
         _state.update { it.copy(visible = visible) }
     }

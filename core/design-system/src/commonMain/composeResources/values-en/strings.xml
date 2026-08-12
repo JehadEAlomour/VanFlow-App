@@ -831,4 +831,16 @@
     <string name="home_sales_today">Sales today</string>
     <string name="home_collections_today">Collections today</string>
     <string name="home_returns_today">Returns today</string>
+
+    <!-- Customer list -->
+    <string name="customers_filter_all">All</string>
+    <string name="customers_filter_route">On route</string>
+    <string name="customers_filter_owing">Owing</string>
+    <string name="customers_filter_overlimit">Over limit</string>
+    <string name="customers_count_suffix">customers</string>
+    <string name="customers_clear_search">Clear search</string>
+    <string name="customers_add">New customer</string>
+    <string name="customers_balance">Balance</string>
+    <string name="customers_no_balance">No balance</string>
+    <string name="customers_over_limit">Over limit</string>
 </resources>

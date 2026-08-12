@@ -831,4 +831,16 @@
     <string name="home_sales_today">مبيعات اليوم</string>
     <string name="home_collections_today">تحصيلات اليوم</string>
     <string name="home_returns_today">مرتجعات اليوم</string>
+
+    <!-- Customer list -->
+    <string name="customers_filter_all">الكل</string>
+    <string name="customers_filter_route">على المسار</string>
+    <string name="customers_filter_owing">عليه ذمم</string>
+    <string name="customers_filter_overlimit">تجاوز الحد</string>
+    <string name="customers_count_suffix">عميل</string>
+    <string name="customers_clear_search">مسح البحث</string>
+    <string name="customers_add">عميل جديد</string>
+    <string name="customers_balance">الرصيد</string>
+    <string name="customers_no_balance">لا يوجد رصيد</string>
+    <string name="customers_over_limit">تجاوز الحد</string>
 </resources>
