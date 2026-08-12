@@ -71,6 +71,8 @@ per type. Design بيع first, then §7.
 > When a filter is active the button fills solid `#1B5FD9` with white text.
 >
 > **Product rows** — flush list rows with a 1px divider, not cards. Each 76px:
+> - a 44px square thumbnail at the start edge (product photo, letter avatar as
+>   fallback); tapping the image opens the full-screen viewer, not the cart
 > - item name in 14 Bold on the first line
 > - on the second, in 11 `#6E7C93`: the item code and the unit — `10234 · كرتون`
 > - at the end, stacked and right-aligned: the unit price in 14 Bold, and beneath
@@ -194,7 +196,7 @@ bar and back chevron.
 
 | It returns | Say this |
 |---|---|
-| A shop-style product grid with images | "No product images. These are FMCG SKUs identified by name, code and unit — use list rows." |
+| A shop-style product **grid** | "Use list rows, not a grid. Keep a small 44px square thumbnail at the start of each row — the app has product photos and a full-screen viewer, and the photo is how a rep confirms they are holding the right box. What is wrong is the grid, not the image." |
 | A bottom sheet for the item picker | "Replace the sheet with a full screen with its own top bar and back button." |
 | Cards for cart lines | "Flush list rows with a 1px divider. No cards, no shadows." |
 | A circular FAB for the cart | "The cart is a labelled toggle in the top bar with a count badge." |
