@@ -853,4 +853,10 @@
     <string name="action_return">مرتجع</string>
     <string name="action_request">طلب</string>
     <string name="action_collection">تحصيل</string>
+
+    <!-- Report kit -->
+    <string name="report_print">طباعة</string>
+    <string name="report_retry">إعادة المحاولة</string>
+    <string name="report_empty">لا توجد بيانات في هذه الفترة.</string>
+    <string name="report_error">تعذّر جلب البيانات. تحقق من الاتصال.</string>
 </resources>

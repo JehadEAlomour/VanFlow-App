@@ -853,4 +853,10 @@
     <string name="action_return">Return</string>
     <string name="action_request">Order</string>
     <string name="action_collection">Collection</string>
+
+    <!-- Report kit -->
+    <string name="report_print">Print</string>
+    <string name="report_retry">Try again</string>
+    <string name="report_empty">No data in this period.</string>
+    <string name="report_error">Couldn't load the data. Check your connection.</string>
 </resources>
