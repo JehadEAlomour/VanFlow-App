@@ -1,8 +1,5 @@
 package com.jehadalomour.flowvan.feature.voucher
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,8 +32,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
@@ -73,23 +68,18 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.jehadalomour.flowvan.feature.voucher.AppBackHandler
-import com.jehadalomour.flowvan.core.designsystem.components.CartItemCard
 import com.jehadalomour.flowvan.core.designsystem.components.Fv
-import com.jehadalomour.flowvan.core.designsystem.components.ProductAvatar
 import com.jehadalomour.flowvan.core.designsystem.components.ProductThumb
 import com.jehadalomour.flowvan.core.designsystem.components.ProductImageViewerDialog
 import co.touchlab.kermit.Logger
 import com.jehadalomour.flowvan.core.designsystem.components.fvFieldColors
 import com.jehadalomour.flowvan.core.designsystem.components.standardUnits
-import com.jehadalomour.flowvan.core.model.AppliedOffer
 import com.jehadalomour.flowvan.core.model.CartLine
-import com.jehadalomour.flowvan.core.model.FreeLine
 import com.jehadalomour.flowvan.core.model.LineOffer
 import com.jehadalomour.flowvan.core.model.OfferChoice
 import com.jehadalomour.flowvan.core.model.PaymentMethod
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.ProductUnit
-import com.jehadalomour.flowvan.core.model.ServerLine
 import com.jehadalomour.flowvan.feature.voucher.ReturnReason
 import com.jehadalomour.flowvan.feature.voucher.DiscountType
 import com.jehadalomour.flowvan.feature.voucher.VoucherView
@@ -870,6 +860,8 @@ private data class CartRow(
     val gross: Double,
     val offers: List<LineOffer>,
     val isGift: Boolean,
+    /** False at the van's stock ceiling, or a return's sold quantity. */
+    val canAdd: Boolean,
     /** The cart line behind the row — null for a gift, which the rep cannot edit. */
     val productId: String?,
     val unitId: String,
@@ -919,6 +911,7 @@ private fun cartRows(state: VoucherState): List<CartRow> {
                 gross = srv.grossJod,
                 offers = offers,
                 isGift = false,
+                canAdd = cartLine == null || cartLine.qty < state.maxQtyFor(cartLine),
                 productId = productBySku[srv.itemNumber]?.id ?: cartLine?.productId,
                 unitId = cartLine?.unitId.orEmpty(),
             )
@@ -935,6 +928,7 @@ private fun cartRows(state: VoucherState): List<CartRow> {
                 gross = line.grossLineTotal,
                 offers = emptyList(),
                 isGift = false,
+                canAdd = line.qty < state.maxQtyFor(line),
                 productId = line.productId,
                 unitId = line.unitId,
             )
@@ -957,6 +951,7 @@ private fun cartRows(state: VoucherState): List<CartRow> {
                 gross = unitPrice * qty,
                 offers = emptyList(),
                 isGift = true,
+                canAdd = false,
                 productId = null,
                 unitId = "",
             )
@@ -1195,7 +1190,7 @@ private fun CartLineRow(
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                 )
-                StepperButton(symbol = "+", enabled = true) { onStep(1.0) }
+                StepperButton(symbol = "+", enabled = row.canAdd) { onStep(1.0) }
                 Spacer(Modifier.width(8.dp))
                 Box(
                     modifier = Modifier
@@ -2322,7 +2317,7 @@ private fun ReturnReferenceBanner(referenceNumber: String?, onPick: () -> Unit) 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            if (hasRef) stringResource(Res.string.return_reference_label, referenceNumber!!)
+            if (referenceNumber != null) stringResource(Res.string.return_reference_label, referenceNumber)
             else stringResource(Res.string.return_source_pick),
             color = if (hasRef) Fv.TextHigh else accent,
             fontSize = 13.sp,
