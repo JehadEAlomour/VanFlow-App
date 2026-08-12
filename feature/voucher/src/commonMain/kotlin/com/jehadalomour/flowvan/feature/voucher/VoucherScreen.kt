@@ -107,6 +107,8 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import androidx.compose.ui.draw.alpha
+import androidx.compose.material3.HorizontalDivider
 
 // ── Save-button palette — only colors live in the UI layer ───────────────────
 private val saleSaveGradient    = listOf(Color(0xFF1D9E75), Color(0xFF0F6E56))
@@ -542,9 +544,11 @@ private fun ProductListPicker(
             )
         }
 
+        // Flush rows separated by a divider, rather than spaced cards. A round is
+        // 200+ SKUs and a rep scrolls it looking for one; 8dp of gap and a card
+        // edge per item costs several screens of scrolling for decoration.
         LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 16.dp),
             modifier = Modifier.weight(1f),
         ) {
             items(products, key = { it.id }) { product ->
@@ -569,6 +573,7 @@ private fun ProductListPicker(
                     onTap = { onTapProduct(product) },
                     onExpandImage = onExpandImage,
                 )
+                HorizontalDivider(color = Fv.Border)
             }
             if (products.isEmpty()) {
                 item {
@@ -588,58 +593,100 @@ private fun ProductListCard(
     onTap: () -> Unit,
     onExpandImage: (String) -> Unit,
 ) {
-    // DIAGNOSTIC: log each product's image state so we can see, in logcat, whether the
-    // item actually carries an imageUrl (data problem) or it's present but not rendering.
-    LaunchedEffect(product.id, product.imageUrl) {
-        Logger.withTag("ProductImage").d(
-            "list item id=${product.id} sku=${product.sku} name=${product.nameAr} " +
-                "imageUrl=${product.imageUrl ?: "<null>"} blank=${product.imageUrl.isNullOrBlank()}",
-        )
-    }
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onTap),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Fv.Surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    // Out of stock is a hard limit, not advice: the row dims and its add button
+    // dies, because a rep who discovers the van is empty AFTER promising the
+    // shopkeeper has already lost the sale.
+    val outOfStock = product.vanStock <= 0
+    val alpha = if (outOfStock) 0.45f else 1f
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !outOfStock, onClick = onTap)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            // Show the product image when present, falling back to the letter avatar.
-            // Tapping the image (only when one exists) opens the full-screen viewer
-            // instead of the add-item sheet.
-            val hasImage = !product.imageUrl.isNullOrBlank()
-            Box(
-                modifier = Modifier.clickable(enabled = hasImage) {
+        // The thumbnail stays. The product photo is how a rep confirms they are
+        // holding the right box, and the app has a full-screen viewer behind it —
+        // tapping the image opens that rather than adding to the cart.
+        val hasImage = !product.imageUrl.isNullOrBlank()
+        Box(
+            modifier = Modifier
+                .alpha(alpha)
+                .clickable(enabled = hasImage && !outOfStock) {
                     product.imageUrl?.let(onExpandImage)
                 },
-            ) {
-                ProductThumb(
-                    imageUrl = product.imageUrl,
-                    seed = product.category,
-                    letter = product.nameAr.firstOrNull()?.toString() ?: "؟",
-                    size = 54.dp,
-                )
+        ) {
+            ProductThumb(
+                imageUrl = product.imageUrl,
+                seed = product.category,
+                letter = product.nameAr.firstOrNull()?.toString() ?: "؟",
+                size = 44.dp,
+            )
+        }
+        Spacer(Modifier.size(12.dp))
+
+        Column(modifier = Modifier.weight(1f).alpha(alpha)) {
+            Text(
+                product.nameAr,
+                color = Fv.TextHigh,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 17.sp,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                "${product.sku} · $unitName",
+                color = Fv.TextLow,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.size(10.dp))
+
+        // Price and stock stack at the end: both are numbers the rep reads
+        // together before deciding, so they share an edge.
+        Column(
+            horizontalAlignment = Alignment.End,
+            modifier = Modifier.alpha(alpha),
+        ) {
+            Text(
+                unitPrice.formatJod(AppLanguage.AR),
+                color = Fv.TextHigh,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+            if (showStockBadge) {
+                Spacer(Modifier.height(4.dp))
+                StockBadge(product)
             }
-            Spacer(Modifier.size(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    product.nameAr,
-                    color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+        }
+        Spacer(Modifier.size(10.dp))
+
+        // A square + rather than a chevron. The chevron promised navigation; this
+        // row's job is to put one of these in the cart.
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(if (outOfStock) Fv.SurfaceHigh else Fv.Surface)
+                .border(
+                    1.dp,
+                    if (outOfStock) Fv.SurfaceTop else Fv.Blue,
+                    RoundedCornerShape(6.dp),
                 )
-                Spacer(Modifier.height(3.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(product.sku, color = Fv.TextMid, fontSize = 11.sp)
-                    if (showStockBadge) StockBadge(product)
-                }
-                Spacer(Modifier.height(5.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(unitPrice.formatJod(AppLanguage.AR), color = Fv.Blue, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.width(4.dp))
-                    Text("/ $unitName", color = Fv.TextMid, fontSize = 12.sp)
-                }
-            }
-            Spacer(Modifier.size(8.dp))
-            Text("‹", color = Fv.TextMid, fontSize = 22.sp, fontWeight = FontWeight.Light)
+                .clickable(enabled = !outOfStock, onClick = onTap),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                "+",
+                color = if (outOfStock) Fv.TextLow else Fv.Blue,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }
@@ -648,16 +695,18 @@ private fun ProductListCard(
 private fun StockBadge(product: Product) {
     val outOfStock = product.vanStock <= 0
     val low = !outOfStock && product.vanStock < product.minStock
-    val chipColor = if (outOfStock) Fv.Red else if (low) Fv.Amber else Fv.Green
+    val chipColor = if (outOfStock) Fv.Red else if (low) Fv.Amber else Fv.Teal
     val chipLabel = when {
         outOfStock -> stringResource(Res.string.van_stock_out_of_stock)
         low -> stringResource(Res.string.voucher_stock_low_count, product.vanStock)
         else -> stringResource(Res.string.voucher_stock_available_count, product.vanStock)
     }
     Box(
-        modifier = Modifier.background(chipColor.copy(alpha = 0.14f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
+        modifier = Modifier
+            .background(chipColor.copy(alpha = 0.12f), RoundedCornerShape(4.dp))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
     ) {
-        Text(chipLabel, color = chipColor, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+        Text(chipLabel, color = chipColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -666,10 +715,14 @@ private fun StockBadge(product: Product) {
 /** A boxed, pill-shaped anchor that opens a dropdown; used by both picker filters. */
 @Composable
 private fun FilterAnchor(label: String, active: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    // An active filter fills SOLID rather than tinting. A tinted anchor and an
+    // untinted one look alike at arm's length in sun, and a rep who cannot tell
+    // a filter is on concludes the item is out of stock rather than hidden.
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (active) Fv.Blue.copy(alpha = 0.16f) else Fv.SurfaceTop)
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (active) Fv.Blue else Fv.Surface)
+            .border(1.dp, if (active) Fv.Blue else Fv.Border, RoundedCornerShape(6.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -677,14 +730,14 @@ private fun FilterAnchor(label: String, active: Boolean, onClick: () -> Unit, mo
     ) {
         Text(
             label,
-            color = if (active) Fv.Blue else Fv.TextHigh,
+            color = if (active) Color.White else Fv.TextHigh,
             fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        Text("▾", color = if (active) Fv.Blue else Fv.TextMid, fontSize = 14.sp)
+        Text("▾", color = if (active) Color.White else Fv.TextMid, fontSize = 14.sp)
     }
 }
 
@@ -779,13 +832,31 @@ private fun StockFilterDropdown(
 
 @Composable
 private fun PickerSummaryBar(itemCount: Int, total: Double) {
+    // Was a dark slab with a hard-coded #1A2A3A, the last dark surface left in the
+    // app now that the theme is light-only. It is a readout: the running total the
+    // rep quotes while still adding items, so it sits on the same white as
+    // everything else with a border to lift it off the list.
     Row(
-        modifier = Modifier.fillMaxWidth().background(Color(0xFF1A2A3A)).padding(horizontal = 20.dp, vertical = 14.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Fv.Surface)
+            .border(1.dp, Fv.Border)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(total.formatJod(AppLanguage.AR), color = Fv.Green, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        Text(stringResource(Res.string.voucher_item_count, itemCount), color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp)
+        Text(
+            stringResource(Res.string.voucher_item_count, itemCount),
+            color = Fv.TextMid,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            total.formatJod(AppLanguage.AR),
+            color = Fv.TextHigh,
+            fontSize = 19.sp,
+            fontWeight = FontWeight.ExtraBold,
+        )
     }
 }
 
