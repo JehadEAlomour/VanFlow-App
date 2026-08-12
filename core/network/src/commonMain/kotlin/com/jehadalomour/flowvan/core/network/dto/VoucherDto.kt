@@ -128,6 +128,14 @@ data class VoucherSummaryDto(
     val inDate: String? = null,
     val createdAt: String? = null,
     val netTotal: String = "0",
+    /**
+     * The slice of [netTotal] settled ON ACCOUNT, computed server-side from the
+     * voucher's CREDIT payment lines. Zero on a cash/cheque/transfer sale — that
+     * is what separates "sold" from "owed" on a transaction report, and the only
+     * place the split exists, since the header itself carries no payment type.
+     */
+    val creditTotal: String = "0",
+    val customerName: String? = null,
     val isPosted: Boolean = false,
 )
 

@@ -790,4 +790,21 @@
     <string name="statement_sign_customer">Customer signature</string>
     <string name="statement_sign_salesman">Salesman signature</string>
     <string name="statement_print_action">Print statement</string>
+
+    <!-- Customer transaction report -->
+    <string name="txn_report_print_action">Print transaction report</string>
+    <string name="txn_report_filter_collections">Collections</string>
+    <string name="txn_report_collection">Collection</string>
+    <string name="txn_report_cash">Cash</string>
+    <string name="txn_report_credit">Credit</string>
+    <string name="txn_report_total_collections">Total collections</string>
+    <string name="txn_report_total_cash">Cash sales</string>
+    <string name="txn_report_net_total">Net movement</string>
+    <string name="txn_report_total_credit">Total on credit</string>
+    <string name="txn_report_retry">Try again</string>
+    <string name="txn_report_period">Period</string>
+    <string name="txn_report_col_date">Date</string>
+    <string name="txn_report_col_doc">Transaction</string>
+    <string name="txn_report_col_total">Amount</string>
+    <string name="txn_report_col_credit">Credit</string>
 </resources>

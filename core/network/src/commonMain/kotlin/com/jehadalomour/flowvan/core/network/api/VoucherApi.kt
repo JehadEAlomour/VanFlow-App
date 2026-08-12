@@ -29,6 +29,34 @@ class VoucherApi(private val client: FlowVanApiClient) {
             mapOf("transKind" to "SALE", "customerNumber" to customerNumber),
         )
 
+    /**
+     * Every voucher a customer has on the SERVER in a date range — sales,
+     * returns and orders alike.
+     *
+     * Deliberately not the local cache: this device only holds what it synced,
+     * so a report built from it silently omits anything sold to that shop by
+     * another van or entered at the office, and the shopkeeper is looking at the
+     * same account from the other side.
+     *
+     * `dateFrom`/`dateTo` are inclusive `yyyy-MM-dd`, which is what the API's
+     * whitelist accepts — anything else is rejected outright rather than ignored.
+     */
+    suspend fun customerTransactions(
+        customerNumber: String,
+        dateFrom: String,
+        dateTo: String,
+        transKind: String? = null,
+    ): List<VoucherSummaryDto> =
+        client.getData(
+            "vouchers",
+            buildMap {
+                put("customerNumber", customerNumber)
+                put("dateFrom", dateFrom)
+                put("dateTo", dateTo)
+                if (transKind != null) put("transKind", transKind)
+            },
+        )
+
     /** Look up one SALE by its exact voucher number for a customer (manual return source). */
     suspend fun saleByNumber(
         voucherNumber: String,

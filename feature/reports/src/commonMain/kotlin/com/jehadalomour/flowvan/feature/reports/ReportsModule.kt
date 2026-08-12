@@ -6,7 +6,7 @@ import org.koin.dsl.module
 
 fun reportsModule(): Module = module {
     viewModel { (customerId: String) ->
-        TransactionReportViewModel(customerId, get())
+        TransactionReportViewModel(customerId, get(), get())
     }
     viewModel { (customerId: String) ->
         PaymentReportViewModel(customerId, get())

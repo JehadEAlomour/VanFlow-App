@@ -790,4 +790,21 @@
     <string name="statement_sign_customer">توقيع العميل</string>
     <string name="statement_sign_salesman">توقيع المندوب</string>
     <string name="statement_print_action">طباعة كشف الحساب</string>
+
+    <!-- Customer transaction report -->
+    <string name="txn_report_print_action">طباعة تقرير الحركات</string>
+    <string name="txn_report_filter_collections">التحصيلات</string>
+    <string name="txn_report_collection">تحصيل</string>
+    <string name="txn_report_cash">نقدي</string>
+    <string name="txn_report_credit">آجل</string>
+    <string name="txn_report_total_collections">إجمالي التحصيلات</string>
+    <string name="txn_report_total_cash">المبيعات النقدية</string>
+    <string name="txn_report_net_total">صافي الحركات</string>
+    <string name="txn_report_total_credit">إجمالي الآجل</string>
+    <string name="txn_report_retry">إعادة المحاولة</string>
+    <string name="txn_report_period">الفترة</string>
+    <string name="txn_report_col_date">التاريخ</string>
+    <string name="txn_report_col_doc">الحركة</string>
+    <string name="txn_report_col_total">القيمة</string>
+    <string name="txn_report_col_credit">آجل</string>
 </resources>
