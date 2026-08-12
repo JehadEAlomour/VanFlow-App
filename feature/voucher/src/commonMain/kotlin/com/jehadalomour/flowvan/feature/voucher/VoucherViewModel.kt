@@ -15,6 +15,7 @@ import com.jehadalomour.flowvan.core.data.repository.TobaccoTaxProfileRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
 import com.jehadalomour.flowvan.core.model.CartLine
+import kotlin.math.floor
 import com.jehadalomour.flowvan.core.model.InvoiceLine
 import com.jehadalomour.flowvan.core.model.LineTaxType
 import com.jehadalomour.flowvan.core.model.OfferEvaluation
@@ -601,10 +602,34 @@ class VoucherViewModel(
 
     private fun changeQty(productId: String, unitId: String, qty: Double) {
         _state.update { s ->
-            val newCart = if (qty <= 0.0) s.cart.filterNot { it.isLine(productId, unitId) }
-            else s.cart.map { if (it.isLine(productId, unitId)) it.copy(qty = qty) else it }
-            s.copy(cart = newCart)
+            if (qty <= 0.0) return@update s.copy(cart = s.cart.filterNot { it.isLine(productId, unitId) })
+            val line = s.cart.firstOrNull { it.isLine(productId, unitId) } ?: return@update s
+            val capped = capLineQty(s, line, qty)
+            if (capped <= 0.0) return@update s
+            s.copy(cart = s.cart.map { if (it.isLine(productId, unitId)) it.copy(qty = capped) else it })
         }
+    }
+
+    /**
+     * The ceiling on a line's quantity — both caps the add-item sheet applies, so the
+     * in-cart stepper can never reach a quantity the sheet would have refused:
+     *
+     *  • RETURN — no more than the source invoice sold of this unit.
+     *  • SALE   — no more than the van holds of the pool this unit draws from. A variant
+     *    (أحمر) has its own stock; a packaging unit (كرتونة ×12) shares the item's.
+     */
+    private fun capLineQty(s: VoucherState, line: CartLine, qty: Double): Double {
+        var capped = capReturnQty(s, line.productId, line.unitId, line.unitConversionQty, qty)
+        if (type == VoucherType.SALE && line.unitConversionQty > 0.0) {
+            val unit = s.productUnits[line.productId]?.firstOrNull { it.id == line.unitId }
+            val availableBase =
+                if (unit != null && unit.isStockUnit) unit.vanStock.toDouble()
+                else s.products.firstOrNull { it.id == line.productId }?.vanStock?.toDouble()
+            if (availableBase != null) {
+                capped = capped.coerceAtMost(floor(availableBase / line.unitConversionQty))
+            }
+        }
+        return capped
     }
 
     private fun save() {

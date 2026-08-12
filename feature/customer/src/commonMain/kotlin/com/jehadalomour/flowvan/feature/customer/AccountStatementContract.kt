@@ -22,13 +22,41 @@ sealed interface StatementEntry {
     }
 }
 
+/**
+ * One movement, plus the balance as it stood immediately after it.
+ *
+ * The running balance is per line and not only at the foot because the argument
+ * in the shop doorway is never about the total — it is about one invoice, and
+ * the disputed figure has to sit next to the disputed document.
+ */
+data class StatementLine(
+    val entry: StatementEntry,
+    val balanceAfter: Double,
+) {
+    /** True when this line reduced what the customer owes (payment or return). */
+    val isCredit: Boolean get() = when (entry) {
+        is StatementEntry.Payment -> true
+        is StatementEntry.Invoice -> entry.entity.type == "RETURN"
+    }
+
+    val key: String get() = when (entry) {
+        is StatementEntry.Invoice -> "inv-${entry.entity.id}"
+        is StatementEntry.Payment -> "pay-${entry.entity.id}"
+    }
+}
+
 data class AccountStatementState(
     val customer: Customer? = null,
-    val entries: List<StatementEntry> = emptyList(),
+    /** Newest first, as the list renders them. */
+    val lines: List<StatementLine> = emptyList(),
+    /** What was owed the moment before [fromMillis]. */
+    val openingBalance: Double = 0.0,
     val fromMillis: Long = 0L,
     val toMillis: Long = 0L,
     val isLoading: Boolean = true,
 ) {
+    private val entries: List<StatementEntry> get() = lines.map { it.entry }
+
     val totalDebits: Double get() = entries
         .filterIsInstance<StatementEntry.Invoice>()
         .filter { it.entity.type == "SALE" || it.entity.type == "REQUEST" }
@@ -43,6 +71,9 @@ data class AccountStatementState(
     }
 
     val net: Double get() = totalDebits - totalCredits
+
+    /** What is owed at the end of the period — the number the screen exists for. */
+    val closingBalance: Double get() = openingBalance + net
 }
 
 sealed interface AccountStatementEvent {

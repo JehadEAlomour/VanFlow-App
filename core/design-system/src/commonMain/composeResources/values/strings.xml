@@ -610,7 +610,7 @@
     <string name="visits_rate_label">معدل الزيارة</string>
     <string name="visits_total_sales_value">مبيعات %1$s</string>
     <string name="voucher_add_to_cart">أضف إلى السلة</string>
-    <string name="voucher_cart_empty_hint">ابحث عن منتج لإضافته</string>
+    <string name="voucher_cart_empty_hint">السلة فارغة. أضف أصنافاً من قائمة الأصناف.</string>
     <string name="voucher_confirm_save_title">تأكيد حفظ السند</string>
     <string name="voucher_delivery_date_label">تاريخ التسليم</string>
     <string name="voucher_delivery_date_placeholder">اختر تاريخ التسليم</string>
@@ -628,7 +628,7 @@
     <string name="voucher_final_total">الإجمالي النهائي</string>
     <string name="voucher_item_count">%1$d صنف</string>
     <string name="voucher_line_discount">خصم السطر</string>
-    <string name="voucher_line_discount_total">إجمالي خصم الأسطر</string>
+    <string name="voucher_line_discount_total">الخصومات والعروض</string>
     <string name="voucher_line_total">إجمالي السطر</string>
     <string name="voucher_no_products">لا توجد منتجات</string>
     <string name="voucher_filter_category">الفئة</string>
@@ -790,6 +790,8 @@
     <string name="statement_sign_customer">توقيع العميل</string>
     <string name="statement_sign_salesman">توقيع المندوب</string>
     <string name="statement_print_action">طباعة كشف الحساب</string>
+    <string name="statement_cheque_due">استحقاق %1$s</string>
+    <string name="statement_period_empty">لا توجد حركات في هذه الفترة</string>
 
     <!-- Customer transaction report -->
     <string name="txn_report_print_action">طباعة تقرير الحركات</string>
@@ -859,4 +861,12 @@
     <string name="report_retry">إعادة المحاولة</string>
     <string name="report_empty">لا توجد بيانات في هذه الفترة.</string>
     <string name="report_error">تعذّر جلب البيانات. تحقق من الاتصال.</string>
+
+    <!-- Cart -->
+    <string name="voucher_cart_go_to_items">الأصناف</string>
+    <string name="voucher_gift_tag">هدية</string>
+    <string name="voucher_offer_discount">خصم العرض</string>
+    <string name="voucher_line_remove">حذف السطر</string>
+    <string name="voucher_credit_no_limit">لا يوجد حد ائتماني لهذا العميل — البيع نقداً فقط.</string>
+    <string name="voucher_credit_over_limit">تجاوز العميل الحد الائتماني — البيع نقداً فقط. المتاح: %1$s</string>
 </resources>

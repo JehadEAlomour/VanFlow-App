@@ -790,6 +790,8 @@
     <string name="statement_sign_customer">Customer signature</string>
     <string name="statement_sign_salesman">Salesman signature</string>
     <string name="statement_print_action">Print statement</string>
+    <string name="statement_cheque_due">Due %1$s</string>
+    <string name="statement_period_empty">No transactions in this period</string>
 
     <!-- Customer transaction report -->
     <string name="txn_report_print_action">Print transaction report</string>
