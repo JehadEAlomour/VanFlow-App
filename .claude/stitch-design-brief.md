@@ -1,277 +1,322 @@
-# FlowVan — design brief for Stitch
+# FlowVan — design brief for Stitch (v2)
 
-Paste **§1 Global style** into Stitch first so it holds the palette and the RTL
-rule, then paste one screen block from §3 at a time. Each block is written to
-stand alone — Stitch loses context between generations, so every one repeats the
-constraints that matter rather than saying "as before".
+Supersedes the first brief. The direction changed on five points, and all five
+are things Stitch will undo unless they are repeated in every prompt:
 
-Two things to say up front and repeat often, because they are the two Stitch
-gets wrong on a Gulf/Levant app: **Arabic is the primary language, not a
-translation**, and **the layout is right-to-left**.
+| | |
+|---|---|
+| **Font** | **Almarai (المراعي)** everywhere. Not Cairo, not Tajawal, not Noto. |
+| **Theme** | **Light only. No dark mode, ever.** |
+| **Navigation** | **No bottom sheets. No modals.** Every action is its own screen. |
+| **Dashboard** | **A 3-column grid of every function, first thing on the screen.** |
+| **Look** | Flat and functional. **No gradients, no glassmorphism, no AI-styling.** |
+
+Paste **§1** first, then one screen block at a time from §3.
 
 ---
 
 ## 1. Global style
 
-> Design a mobile app called **FlowVan** — an Arabic-first field sales app for
-> van salesmen ("مندوب") who sell FMCG stock door-to-door to small shops in
-> Jordan. The user is standing in a shop or sitting in a van, one-handed, often
-> in bright sunlight, frequently on a bad connection.
+> Design a mobile app called **FlowVan** — an Arabic field sales app for van
+> salesmen ("مندوب") selling FMCG stock to small shops in Jordan and the Gulf.
+> The user is standing in a shop doorway, one-handed, in **bright morning
+> sunlight**, on a poor connection, and is trying to start a task in under two
+> seconds.
 >
-> **Language and direction: Arabic (RTL) is primary.** All labels, headings and
-> body text in Arabic. The entire layout mirrors right-to-left: back arrows point
-> right, text aligns right, rows read right-to-left. Numbers and currency use
-> Western digits (1 2 3, never ٠١٢) and stay left-to-right inside the Arabic
-> text. Currency is Jordanian Dinar shown to **three** decimals — `45.500`.
+> ### Language and direction
+> **Arabic is the only interface language and the layout is right-to-left.** All
+> labels, titles and body text in Arabic. Back chevrons point right, text aligns
+> right, rows read right-to-left, lists indent from the right.
+> **Numbers stay Western (1 2 3, never ٠١٢) and left-to-right** inside the Arabic
+> text. Currency is Jordanian Dinar to three decimals — `45.500`.
 >
-> **Style:** clean, dense, utilitarian. A working tool, not a consumer app. Flat
-> cards on a soft blue-grey ground, generous rounded corners, thin hairline
-> borders, restrained shadows. No illustrations, no gradients on large surfaces,
-> no decorative imagery. Small colour gradients are allowed only on icon tiles.
+> ### Typeface
+> **Almarai** for everything — the Arabic geometric sans by Boutros. Use its four
+> weights deliberately: Light 300 nowhere, Regular 400 for body, Bold 700 for
+> titles and figures, ExtraBold 800 for the one number that matters on a screen.
+> Do not substitute Cairo, Tajawal, Dubai or Noto Sans Arabic.
 >
-> **Light and dark themes, both designed.** Dark is not an inversion — keep the
-> accent legible on a dark ground.
+> ### Theme: light only
+> **There is no dark mode.** These users work mornings in direct sun; the design
+> is optimised for a bright screen washed out by daylight, which means **high
+> contrast and solid fills**, not subtlety. Never propose a dark variant.
 >
-> **Colours (light theme):**
-> - Page background `#F4F6FB`
-> - Card surface `#FFFFFF`
-> - Raised surface `#E6EBF4`
-> - Hairline border `#E1E6F0`
-> - Primary text `#0F1A2E`
-> - Secondary text `#5A6A85`
-> - Tertiary text `#6E7C93`
-> - Accent / primary action `#2C6FE4`
-> - Success, cash, positive `#0FA968`
-> - Warning, credit, pending `#B36C00`
-> - Danger, returns, debt `#D63B3B`
-> - Teal for stock and quantities `#0E9E91`
-> - Purple for reports and analysis `#7757D4`
+> ### Colours
+> - Page background `#F2F5FA`
+> - Card / tile surface `#FFFFFF`
+> - Border `#D9E1EE` — visible, not a whisper. Sunlight eats hairlines.
+> - Primary text `#0B1626`
+> - Secondary text `#4A5A73`
+> - Tertiary text `#6E7C93` — the lightest text permitted anywhere
+> - Accent, primary action `#1B5FD9`
+> - Cash, success, positive `#0B8F58`
+> - Credit, warning, pending `#9A5B00`
+> - Return, debt, danger `#C42F2F`
+> - Stock, quantity `#0B7E74`
 >
-> **Colours (dark theme):**
-> - Page background `#0B1220`, card surface `#121B2C`, raised `#16202F`
-> - Border `#22304A`, primary text `#E8EDF7`, secondary `#97A5BC`
-> - Accent `#5B94F5`, success `#34C48A`, warning `#D89434`, danger `#EE6A6A`
+> All body text sits at 4.5:1 or better against its background. There is no
+> pale-grey-on-white anywhere.
 >
-> **Type scale** (Arabic sans, e.g. IBM Plex Sans Arabic or Noto Sans Arabic):
-> - Screen title 17sp Semibold
-> - Card title 14sp ExtraBold
-> - Body 13sp Regular
-> - Label / caption 11sp Regular
-> - Money 13–15sp Bold, tabular figures
-> - Big money 22sp ExtraBold
+> ### The look: flat and functional
+> This is a working tool, closer to a ledger or a POS terminal than a consumer
+> app. Build it from **solid fills, clear borders and honest rectangles**.
 >
-> **Spacing:** 4 / 8 / 16 / 24 only. **Radii:** 12 for cards, 10 for chips and
-> buttons, 8 for inputs. **Touch targets:** minimum 48×48.
+> **Do not use:** gradients of any kind, glassmorphism, blur, soft coloured
+> shadows, glow, neumorphism, pill-shaped everything, oversized rounded corners,
+> emoji as icons, decorative illustrations, centred hero sections, or purple.
 >
-> **Semantic colour is never decoration.** Green means cash or positive, amber
-> means credit or waiting, red means a return or a debt. Do not use them to make
-> a screen look lively.
+> **Do use:** flat solid colour, 8px corner radius on tiles and cards, 6px on
+> inputs and chips, 1px `#D9E1EE` borders, a single hairline divider between
+> list rows, and a shadow only where something genuinely floats.
+>
+> Icons are **single-weight line icons in one colour**, sized 24. No two-tone,
+> no filled-and-outlined mixing, no gradient icon tiles.
+>
+> ### Structure
+> - Spacing: 4 / 8 / 12 / 16 / 24 only.
+> - Radius: 8 tiles and cards, 6 controls, 0 for full-bleed bars.
+> - Touch targets: 48×48 minimum. Grid tiles are far larger.
+> - Type scale: title 18 Bold · card title 15 Bold · body 13 Regular ·
+>   label 11 Regular · money 15 Bold · hero money 24 ExtraBold.
+>
+> ### Navigation: no sheets, no modals
+> **Never use a bottom sheet, a modal dialog, or a popup menu.** Every action
+> opens a full screen with its own top bar and back chevron. The only permitted
+> overlay is a destructive confirmation — and only for delete.
+>
+> The reason: a rep taps with one thumb while holding a crate. A sheet that
+> covers half the screen and can be dismissed by a stray drag loses their work.
 
 ---
 
-## 2. Shared components
+## 2. The rule that shapes every screen
 
-Ask Stitch for these once, then reference them by name in screen prompts.
-
-| Component | Description to give Stitch |
-|---|---|
-| **Top bar** | Right-aligned title with optional subtitle underneath, back chevron pointing right at the far right, optional action icon at the far left. No elevation, sits on the page background. |
-| **Stat card** | White card, 12 radius, hairline border. A 36×36 rounded-square icon tile with a small two-stop gradient, then a title and a caption stacked, then a value or chevron at the end. |
-| **Summary pill** | Small tile inside a card: 11sp label on top, bold value beneath, a 3px coloured bar or tinted background carrying the semantic colour. |
-| **Filter chip row** | Horizontally scrollable pills. Selected = accent fill, white text. Unselected = raised surface, secondary text. |
-| **Transaction row** | Card with a coloured type badge at the start (بيع green, مرتجع red, طلب teal, تحصيل blue), document number and date stacked in the middle, amount and a settlement label (نقدي / آجل) at the end. |
-| **Date range bar** | A single row control showing "من … إلى …" with both dates, tapping opens a range picker. Presets: هذا الشهر, الشهر الماضي, آخر ٣٠ يوم. |
-| **Empty state** | Centred: a light line icon, one sentence in secondary text. No button. |
-| **Error state** | Card with amber text explaining what failed and what to do, and an "إعادة المحاولة" button. **Must look different from the empty state** — a rep has to be able to tell "no transactions" from "the request failed". |
-| **Loading** | Centred circular indicator in accent colour, nothing else. |
+> **Actions come before information.**
+>
+> The old dashboard opened on statistics and buried the buttons below the fold, so
+> the rep had to scroll before they could start working. Invert it: the first
+> thing on every screen is **what you can do**, laid out as a grid. Numbers come
+> after, and the rep scrolls to *read*, never to *act*.
+>
+> Nothing a rep needs to tap in a shop doorway may require scrolling.
 
 ---
 
 ## 3. Screens
 
-### 3.1 Login — تسجيل الدخول
+### 3.1 Dashboard — الرئيسية · the main screen
 
-> An Arabic RTL mobile login screen for a field sales app. Dark navy page with a
-> subtle radial glow behind the centre. Centred logo mark, then the title
-> "تسجيل الدخول" and subtitle "لوحة تحكم العمليات". A single card holding two
-> fields — "رقم المستخدم" and "كلمة المرور" with a show/hide eye at the start of
-> the field — and a full-width mint-green primary button reading "دخول". A small
-> company name in muted text at the bottom. No social login, no sign-up link:
-> accounts are created by the office.
+> Arabic RTL mobile home screen for a field sales app, **light theme only**,
+> **Almarai** font, flat and functional with no gradients.
+>
+> **Top strip, compact — 64px tall, not a hero.** On the right the rep's name and
+> today's Gregorian date in small text; on the left a sync status chip
+> (green "متصل" or amber "غير متصل") and a notifications icon. That is all: no
+> avatar circle, no greeting card, no illustration.
+>
+> **Immediately below, filling the screen: a 3-column grid of every function.**
+> Twelve square tiles, three across, four rows. Each tile is a white square with
+> an 8px radius and a 1px `#D9E1EE` border, containing a 24px line icon in the
+> tile's semantic colour and an Arabic label in 12sp Bold beneath it, both
+> centred. Nothing else — no counts, no descriptions, no gradient behind the
+> icon.
+>
+> The twelve tiles in order:
+> 1. العملاء — customers (accent blue)
+> 2. مسار اليوم — today's route (accent blue)
+> 3. بيع — sale (green)
+> 4. مرتجع — return (red)
+> 5. طلب — order (teal)
+> 6. تحصيل — collection (green)
+> 7. عميل جديد — new customer (accent blue)
+> 8. تحميل المركبة — van stock (teal)
+> 9. طلب بضاعة — stock request (teal)
+> 10. التقارير — reports (dark slate)
+> 11. تقفيل اليوم — end of day (amber)
+> 12. الإعدادات — settings (dark slate)
+>
+> **Below the grid, and only below it,** a compact figures strip the rep scrolls
+> down to read: four cells in a single bordered block, two per row — مبيعات
+> اليوم, التحصيلات, عدد الزيارات, رصيد المركبة. Each is a small Arabic label with
+> a bold Western-digit figure. No cards, no icons, no gradients — this is a
+> readout, not a feature.
+>
+> **No bottom navigation bar.** The grid is the navigation.
 
-### 3.2 Home — الرئيسية
+### 3.2 Customer page — صفحة العميل
 
-> Arabic RTL home screen for a van salesman. Top: a greeting with the rep's name
-> and today's date, and a connection/sync status chip. Then a 2×2 grid of stat
-> cards: مبيعات اليوم, التحصيلات, عدد الزيارات, رصيد المركبة — each with a
-> gradient icon tile, a big number in Western digits and a small caption. Below,
-> a "مسار اليوم" card showing progress through today's route as a horizontal bar
-> with "١٢ من ١٨ عميل". Then a row of large action tiles: عميل جديد, طلب بضاعة,
-> تقفيل اليوم, التقارير. Bottom navigation with 4 items, labels in Arabic.
+> Arabic RTL customer detail screen, **light only**, **Almarai**, flat, no
+> gradients, no bottom sheet.
+>
+> **Identity block at the top, compact.** Shop name in 18 Bold, code and area
+> beneath in secondary text. On the left of that row, two 40px square outline
+> buttons: call and map. Then a single bordered strip showing الرصيد — the
+> outstanding balance — in 24 ExtraBold, red when they owe and green when clear.
+> This is the one number that decides what the rep does next, so it is the only
+> large figure on the screen.
+>
+> **Then, immediately, a 3-column grid of everything you can do with this
+> customer** — same tile design as the dashboard, nine tiles, three rows:
+> 1. بيع (green) · 2. مرتجع (red) · 3. طلب (teal)
+> 4. تحصيل (green) · 5. كشف الحساب (blue) · 6. تقرير الحركات (blue)
+> 7. التقرير المفصل (blue) · 8. تقرير السندات (slate) · 9. الموقع (slate)
+>
+> **Below the grid**, the readout: آخر زيارة, آخر عملية, إجمالي المبيعات,
+> التحصيلات — a bordered block of label/value rows, no cards.
+>
+> The rep must be able to open a sale, a collection or the statement **without
+> scrolling at all**.
 
 ### 3.3 Customer list — العملاء
 
-> Arabic RTL searchable customer list. Sticky search field at top with a filter
-> icon. Chips for فلترة: الكل, على المسار, عليه ذمم, لم تتم زيارته. Each row is a
-> card: customer name in bold, shop code and area beneath in secondary text, and
-> at the end the outstanding balance — red when they owe money, muted grey when
-> zero. A small green dot on rows already visited today. Floating action button
-> at the bottom start corner for "عميل جديد".
-
-### 3.4 Customer details — صفحة العميل
-
-> Arabic RTL customer detail screen. Header card: shop name, code, phone with a
-> call button, and address with a map button. Then two stat cards side by side —
-> إجمالي المبيعات in blue and التحصيلات in green. Then a row of four circular
-> action buttons: بيع, مرتجع, طلب, تحصيل. Then a stacked list of report cards,
-> each with a gradient icon tile, title and one-line description, and a chevron:
-> كشف الحساب, تقرير الحركات, التقرير المفصل للحركات, تقرير السندات, تقرير
-> الدفعات. Dense but calm — this screen is the hub the rep returns to.
-
-### 3.5 New customer — عميل جديد
-
-> Arabic RTL form screen. **At the very top, before any field**, an information
-> banner in amber: "هذا العميل يحتاج موافقة الإدارة — سيُرسل للمراجعة عند الحفظ،
-> ولا يمكن البيع له قبل الاعتماد." Then fields: اسم العميل, رقم الهاتف, and a
-> location card with a "التقاط الموقع الحالي" button showing captured
-> coordinates once taken. Then a required document section titled "وثيقة العميل
-> (إلزامي)" with two side-by-side buttons — camera and gallery — and a green
-> "✓ تم إرفاق الوثيقة" confirmation once attached. Full-width blue "حفظ العميل"
-> button, disabled until name and document are present.
+> Arabic RTL list screen, light only, Almarai. Search field pinned at the top
+> with a filter icon at its start. A single row of filter chips beneath:
+> الكل, على المسار, عليه ذمم, لم تتم زيارته — flat rectangles with a 6px radius,
+> selected one filled solid `#1B5FD9` with white text, unselected white with a
+> `#D9E1EE` border.
 >
-> Also design the waiting state: after saving, the form is replaced by a card
-> with a spinner and "بانتظار موافقة المشرف…" and the line "ابقَ على هذه الشاشة،
-> سيتم إعلامك فور الاعتماد."
-
-### 3.6 Sale — سند بيع
-
-> Arabic RTL point-of-sale cart screen. Top bar with the customer name. A search
-> field for adding items. Cart lines as cards: item name in bold, unit and price
-> beneath, a quantity stepper (− number +) and the line total at the end. Swipe
-> or a small red icon to remove. A sticky summary panel at the bottom above the
-> action button: المجموع, الخصم, الضريبة, and الإجمالي in large bold. Payment
-> method as a segmented control: نقدي / آجل / شيك. Full-width green "حفظ السند"
-> button. Show a low-stock warning chip in amber on any line exceeding van stock.
-
-### 3.7 Collection — تحصيل
-
-> Arabic RTL payment collection screen. Customer name and current balance at the
-> top in a red-tinted card. A large numeric amount field with the currency
-> suffix. Method as three big selectable tiles: نقداً, شيك, حوالة — each with an
-> icon, the selected one filled with the accent colour. When شيك is selected,
-> reveal extra fields: رقم الشيك, البنك, تاريخ الاستحقاق, and a "تصوير الشيك"
-> button. Full-width green "تسجيل التحصيل" button.
-
-### 3.8 Account statement — كشف الحساب
-
-> Arabic RTL account statement screen. Top bar with title, customer name
-> underneath, and a print icon at the far left. A date range bar. A summary card
-> with two pills — مدين in red and دائن in green — a divider, then الرصيد in
-> large bold, red when the customer owes. Then a chronological list of entries,
-> each a card with a type badge, document number and date, and the amount with
-> "مدين" or "دائن" beneath it.
-
-### 3.9 Transaction report — تقرير الحركات
-
-> Arabic RTL report screen. Top bar with a print icon. Date range bar, then a
-> filter chip row: الكل, المبيعات, المرتجعات, التحصيلات. Then a totals card
-> holding four summary pills in a 2×2 grid — إجمالي المبيعات green, إجمالي
-> المرتجعات red, إجمالي التحصيلات blue, المبيعات النقدية teal — a divider, then
-> two emphasised rows: صافي الحركات and إجمالي الآجل in amber. Then the
-> transaction rows. Include the error state: an amber card reading "تعذّر جلب
-> الحركات من الخادم" with an "إعادة المحاولة" button.
-
-### 3.10 Detailed transaction report — التقرير المفصل للحركات
-
-> Same as the transaction report, plus expandable vouchers. Each voucher card can
-> be tapped to reveal its item lines underneath, separated by a divider: item
-> name in bold, then "٣ كرتون × 12.500" in secondary text, and the line value at
-> the end. Two small buttons above the list: توسيع الكل and طيّ الكل. Collapsed
-> by default.
-
-### 3.11 Print preview — thermal receipt
-
-> Arabic RTL print preview screen. Dark navy top bar. Below it a row of two
-> buttons: a filled blue "طباعة حرارية" and an outlined "مشاركة PDF", then a
-> small centred printer status line in green when connected. The rest of the
-> screen is a light grey backdrop holding a **white paper receipt** with torn
-> zigzag edges top and bottom, floating with a soft shadow.
+> Rows are **not cards** — they are list rows separated by a 1px divider, flush
+> to the screen edges, which fits more shops per screen. Each row: shop name in
+> 15 Bold, code and area beneath in 11 secondary, and at the end the balance in
+> 15 Bold, red when owing and grey `#6E7C93` when zero. A 4px vertical green bar
+> at the start edge of rows already visited today.
 >
-> The receipt itself is **pure black on white — no colour at all**, because it
-> prints on a 1-bit thermal head. Hierarchy comes from weight, size and rules
-> only. Centred company logo, company name large and bold, tax number, then the
-> document title reversed out white-on-black in a full-width bar. Then
-> label/value lines, a bordered table of movements, and the final total reversed
-> out white-on-black. Signature lines at the bottom: توقيع العميل and توقيع
-> المندوب.
+> A rectangular "عميل جديد" button fixed at the bottom, full width, flat accent
+> blue, 8px radius — **not** a circular floating action button.
 
-### 3.12 End of day — تقفيل اليوم
+### 3.4 Sale — بيع
 
-> Arabic RTL daily settlement screen. A summary card with the day's figures:
-> المبيعات النقدية, المبيعات الآجلة, التحصيلات النقدية, الشيكات, and المتوقع في
-> الصندوق in large bold. A field for النقد المسلَّم with a live difference
-> indicator that turns green at zero, red when short and amber when over. A list
-> of the day's vouchers, collapsible. A full-width primary "تقفيل اليوم" button,
-> and a secondary "طباعة التقرير" beside it.
+> Arabic RTL point-of-sale screen, light only, Almarai, **no bottom sheet at any
+> point**. Top bar with the customer name and balance. A search field for adding
+> an item; results appear as a full list on the same screen, not in a sheet.
+>
+> Cart lines are list rows with dividers: item name 14 Bold, unit and unit price
+> beneath, a quantity stepper (− 3 +) with square 32px buttons, and the line total
+> at the end in Bold. A red outline icon at the far end removes the line.
+>
+> A **fixed totals panel** above the bottom of the screen, always visible without
+> scrolling: المجموع, الخصم, الضريبة as small label/value rows, then الإجمالي in
+> 24 ExtraBold. Payment method as three flat rectangular segments — نقدي / آجل /
+> شيك — the selected one filled solid. Full-width green "حفظ السند" button.
 
-### 3.13 Reports hub — التقارير
+### 3.5 Collection — تحصيل
 
-> Arabic RTL grid of report entry points, two columns. Each tile: a gradient icon
-> square, a title, and a one-line description. Entries: المبيعات, الدفعات,
-> الزيارات, التدفق النقدي, مبيعات الأصناف, الذمم, الأهداف, ملخص السندات. Purple
-> and blue gradients, calm and evenly weighted — no tile should look more
-> important than the others.
+> Arabic RTL collection screen, light only, Almarai, no sheets. The customer's
+> outstanding balance in a bordered strip at the top, red. A large amount input,
+> 28 ExtraBold, with "د.أ" as a suffix. Method as three flat square tiles in a
+> row — نقداً, شيك, حوالة — each an icon and a label, selected one filled solid
+> accent blue with white content.
+>
+> When شيك is selected, the cheque fields appear **inline below, on the same
+> screen** — رقم الشيك, البنك, تاريخ الاستحقاق, and a "تصوير الشيك" button — never
+> in a sheet or dialog. Full-width green "تسجيل التحصيل" button.
 
-### 3.14 Van stock — تحميل المركبة
+### 3.6 Reports — التقارير
 
-> Arabic RTL van inventory screen. Search field, then item rows: item name and
-> code, and at the end the quantity with a coloured chip — green when healthy,
-> amber when low, red when out. A summary bar at the top with عدد الأصناف and
-> قيمة المخزون. A primary button "طلب بضاعة" at the bottom.
+> Arabic RTL screen, light only, Almarai. A 3-column grid of report tiles
+> matching the dashboard exactly: المبيعات, الدفعات, الزيارات, التدفق النقدي,
+> مبيعات الأصناف, الذمم, الأهداف, ملخص السندات, تقفيل اليوم. Flat white squares,
+> line icon, Arabic label. No descriptions under the labels — the label is the
+> description.
 
-### 3.15 Settings — الإعدادات
+### 3.7 Statement / transaction reports — كشف الحساب · تقرير الحركات
 
-> Arabic RTL settings screen, grouped sections with small uppercase-style Arabic
-> section headers. Groups: الحساب (name, role, sign out), الطابعة (connect,
-> paired device, test print), المزامنة (last sync time, sync now, pending count),
-> التطبيق (language toggle Arabic/English, theme toggle light/dark/system),
-> عن التطبيق (version, server address). Rows are label at the start, value or
-> switch at the end, chevrons pointing left.
+> Arabic RTL report screen, light only, Almarai, no sheets. Top bar with a print
+> icon at the far end. A **date range bar as a full-width flat control** reading
+> "من ٠١/٠٨ إلى ١١/٠٨" — tapping it opens a full date-range screen, never a
+> picker sheet.
+>
+> A bordered totals block, two columns of label/value pairs: إجمالي المبيعات,
+> إجمالي المرتجعات, إجمالي التحصيلات, المبيعات النقدية — then a divider, then
+> صافي الحركات and إجمالي الآجل in 18 Bold with the amber colour on the credit
+> figure.
+>
+> Then the entries as list rows with dividers: a 3px coloured bar at the start
+> edge encoding the type (green sale, red return, teal order, blue collection),
+> the document number and date stacked, and the amount with نقدي or آجل beneath
+> it at the end.
+>
+> Also produce the **error state** as its own screen: a bordered amber block
+> reading "تعذّر جلب الحركات من الخادم" with an "إعادة المحاولة" button — visibly
+> different from the empty state, which is a single grey sentence and no button.
+
+### 3.8 New customer — عميل جديد
+
+> Arabic RTL form, light only, Almarai. **Before any field**, a bordered amber
+> notice: "هذا العميل يحتاج موافقة الإدارة — سيُرسل للمراجعة عند الحفظ، ولا يمكن
+> البيع له قبل الاعتماد."
+>
+> Fields stacked full width: اسم العميل, رقم الهاتف, then a location block with a
+> "التقاط الموقع الحالي" button showing the captured coordinates once taken. Then
+> "وثيقة العميل (إلزامي)" with two flat square buttons side by side — camera and
+> gallery — and a green "✓ تم إرفاق الوثيقة" line once attached. Full-width blue
+> "حفظ العميل" button, greyed until name and document are present.
+
+### 3.9 Print preview — معاينة الطباعة
+
+> Arabic RTL print screen, light only, Almarai for the interface. A dark slate
+> top bar. Two flat rectangular buttons in a row: filled blue "طباعة حرارية" and
+> outlined "مشاركة PDF". A small printer status line beneath in green or grey.
+>
+> The rest is a grey backdrop holding a **white paper receipt** with torn zigzag
+> edges, floating on a soft shadow. The receipt is **pure black on white, no
+> colour whatsoever** — it prints on a 1-bit thermal head where any hue dithers
+> into a stipple. Hierarchy comes from weight, size and rules only. Company logo
+> centred, company name large and bold, then the document title reversed out
+> white-on-black in a full-width bar, label/value lines, a ruled table, and the
+> final total reversed out white-on-black.
+
+### 3.10 End of day — تقفيل اليوم
+
+> Arabic RTL settlement screen, light only, Almarai, no sheets. A bordered block
+> of the day's figures as label/value rows: المبيعات النقدية, المبيعات الآجلة,
+> التحصيلات النقدية, الشيكات — then a divider and المتوقع في الصندوق in 24
+> ExtraBold. A single input for النقد المسلَّم, and beneath it a live difference
+> row that reads الفرق and turns green at zero, red when short, amber when over.
+> Two full-width buttons: green "تقفيل اليوم" and outlined "طباعة التقرير".
+
+### 3.11 Settings — الإعدادات
+
+> Arabic RTL settings, light only, Almarai. Grouped sections with a small bold
+> Arabic header above each group and a bordered block containing the rows.
+> Groups: الحساب, الطابعة, المزامنة, التطبيق, عن التطبيق. Each row is a label at
+> the start and a value, switch or left-pointing chevron at the end.
+> **No theme toggle** — there is only one theme.
 
 ---
 
 ## 4. Prompting notes
 
-**Repeat the direction every time.** Stitch drifts back to LTR after a few
-generations. Start each prompt with "Arabic RTL mobile screen" rather than
-assuming it remembers.
+**Repeat the five constraints in every prompt.** Almarai, light-only, no sheets,
+3-column grid, no gradients. Stitch reverts to a dark hero with a purple gradient
+within three generations if you let it.
 
-**Give it real content, not placeholders.** Use "سوبرماركت السلام", "45.500",
-"S-101-000123". Lorem or English placeholders produce layouts that break the
-moment real Arabic goes in — Arabic runs longer than English at the same
-meaning, so a design proved on placeholders will overflow.
+**Say "flat" and "no gradient" explicitly, every time.** It is the single
+strongest signal against the generated-looking default.
 
-**Ask for both themes explicitly** by pasting the dark palette in a follow-up:
-"now the same screen in the dark theme using these colours…".
+**Reject anything centred.** This is a scanning tool; content aligns to the
+reading edge. The only centred things are the grid tile contents.
 
-**Do not accept centred layouts.** Stitch likes centring things; this app is a
-scanning tool and almost everything should be aligned to the reading edge.
+**Use real Arabic content, never placeholders.** "سوبرماركت السلام",
+"45.500", "S-101-000123". Arabic runs longer than English at the same meaning, so
+a layout proved on Latin placeholder text overflows the moment it is translated.
 
-**Regenerate the states separately.** Ask for the empty, loading and error
-version of any list screen as its own generation, or you will only ever get the
-happy path — and the empty-versus-error distinction is the one this app is
-currently missing.
+**Ask for the empty, loading and error state of any list as separate
+generations,** or you will only ever receive the happy path.
+
+**If it returns a bottom sheet, say so plainly:** "replace the bottom sheet with
+a full screen that has its own top bar and back button". It will comply, but only
+if told each time.
 
 ---
 
-## 5. Carry the audit's fixes in
+## 5. What changed from v1, and why
 
-Four decisions from the design audit are already folded into §1, so anything
-generated from this brief lands on the corrected side of them:
-
-1. **Tertiary text is `#6E7C93`**, not the app's current `#A8B3C6` — the old
-   value is 2.1:1 on white and unreadable in sunlight.
-2. **Both themes are specified**, so nothing generated here assumes light only.
-3. **One type scale and one spacing scale**, rather than per-screen sizes.
-4. **Empty, loading and error are named components**, so they stop being
-   redesigned per screen.
+| Decision | Reason |
+|---|---|
+| Almarai everywhere | One family, four weights, drawn for Arabic UI rather than adapted from Latin. |
+| Light theme only | These reps sell in the morning, in sun. A dark UI is unreadable there, and maintaining a second theme buys nothing for this audience. |
+| No bottom sheets | One thumb, a crate in the other arm. A sheet dismissed by a stray drag loses work. A screen with a back button does not. |
+| 3-column grid of everything | Twelve functions reachable without scrolling. A launcher, not a feed. |
+| Actions above information | The rep opens the app to *do* something. Statistics are what you read afterwards, and they move below the fold. |
+| Flat, no gradients | Gradient icon tiles and soft shadows are the current generated-design signature. Solid fills and honest borders also survive sunlight better. |
