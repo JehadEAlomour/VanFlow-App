@@ -15,7 +15,7 @@ import com.jehadalomour.flowvan.navigation.FlowVanNavHost
 
 @Composable
 fun App() {
-    AppTheme(darkTheme = false) {
+    AppTheme {
         // Lay the UI out LTR (back button on the leading-left, actions on the right),
         // matching iOS. Android otherwise forces RTL from the Arabic locale, which
         // mirrors every top bar to the wrong side. Arabic text still shapes
