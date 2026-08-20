@@ -47,11 +47,35 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
+/**
+ * Navigate to a bare point — a prospect found in customer search that is not a
+ * customer yet. Same screen, a Point instead of an id.
+ */
+@Composable
+fun MapNavigationScreen(
+    lat: Double,
+    lng: Double,
+    label: String,
+    onBack: () -> Unit,
+) {
+    val point = remember(lat, lng, label) { MapNavigationViewModel.Point(lat, lng, label) }
+    val viewModel: MapNavigationViewModel = koinViewModel { parametersOf(point) }
+    MapNavigationContent(viewModel = viewModel, onBack = onBack)
+}
+
 @Composable
 fun MapNavigationScreen(
     customerId: String,
     onBack: () -> Unit,
     viewModel: MapNavigationViewModel = koinViewModel { parametersOf(customerId) },
+) {
+    MapNavigationContent(viewModel = viewModel, onBack = onBack)
+}
+
+@Composable
+private fun MapNavigationContent(
+    viewModel: MapNavigationViewModel,
+    onBack: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
     val customer = state.customer
@@ -96,7 +120,7 @@ fun MapNavigationScreen(
                 Spacer(Modifier.width(6.dp))
                 Column {
                     Text(
-                        customer?.nameAr ?: stringResource(Res.string.map_navigation_fallback),
+                        state.destName.ifEmpty { stringResource(Res.string.map_navigation_fallback) },
                         color = Fv.TextHigh,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -126,13 +150,13 @@ fun MapNavigationScreen(
                         }
                     }
 
-                    customer?.lat != null && customer.lng != null -> {
+                    state.destLat != null && state.destLng != null -> {
                         PlatformMapContent(
                             userLat = state.userLocation?.lat,
                             userLng = state.userLocation?.lng,
-                            customerLat = customer.lat!!,
-                            customerLng = customer.lng!!,
-                            customerName = customer.nameAr,
+                            customerLat = state.destLat!!,
+                            customerLng = state.destLng!!,
+                            customerName = state.destName,
                             modifier = Modifier.fillMaxSize(),
                             isNavigating = isNavigating,
                             onRouteInfo = { dur, dist -> driveDuration = dur; driveDistance = dist },

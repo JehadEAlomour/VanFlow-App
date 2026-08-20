@@ -25,6 +25,7 @@ import com.jehadalomour.flowvan.core.network.api.CollectionApi
 import com.jehadalomour.flowvan.core.network.api.CustomerApi
 import com.jehadalomour.flowvan.core.network.api.InvoiceApi
 import com.jehadalomour.flowvan.core.network.api.MyRouteApi
+import com.jehadalomour.flowvan.core.network.api.ProspectingApi
 import com.jehadalomour.flowvan.core.network.api.OfferApi
 import com.jehadalomour.flowvan.core.network.api.TobaccoTaxProfileApi
 import com.jehadalomour.flowvan.core.network.api.PriceListApi
@@ -152,6 +153,7 @@ fun sharedModule(): Module = module {
     single { TargetApi(get()) }
     single { VoucherApi(get()) }
     single { MyRouteApi(get()) }
+    single { ProspectingApi(get()) }
     single { OfferApi(get()) }
     single { TobaccoTaxProfileApi(get()) }
     single { PriceListApi(get()) }

@@ -66,3 +66,15 @@ sealed interface CreateCustomerEvent {
     data class DocumentPicked(val doc: PickedDocument) : CreateCustomerEvent
     data object ClearDocument : CreateCustomerEvent
 }
+
+/**
+ * Values carried in when the create screen is opened from customer search. All
+ * optional except the lead id — the rep may edit any of them before saving.
+ */
+data class CreateCustomerPrefill(
+    val name: String?,
+    val phone: String?,
+    val lat: Double?,
+    val lng: Double?,
+    val prospectId: String,
+)

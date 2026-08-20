@@ -86,6 +86,11 @@ class SessionStore(private val settings: Settings) {
         get() = settings.getBoolean(SettingsKeys.CAN_PRINT_LINE_DISCOUNT, false)
         set(value) = settings.putBoolean(SettingsKeys.CAN_PRINT_LINE_DISCOUNT, value)
 
+    /** Whether the Find Customers screen is shown (permissions.canFindCustomers). */
+    var canFindCustomers: Boolean
+        get() = settings.getBoolean(SettingsKeys.CAN_FIND_CUSTOMERS, false)
+        set(value) = settings.putBoolean(SettingsKeys.CAN_FIND_CUSTOMERS, value)
+
     /** Max direct-discount % encoded as "vouchers.discount.max:<n>", or null = uncapped. */
     fun discountMaxPct(): Double? =
         currentPermKeys.orEmpty().split(',')
@@ -137,6 +142,7 @@ class SessionStore(private val settings: Settings) {
         settings.remove(SettingsKeys.CURRENT_USER_CODE)
         settings.remove(SettingsKeys.CURRENT_PERM_KEYS)
         settings.remove(SettingsKeys.CAN_ADD_CUSTOMER)
+        settings.remove(SettingsKeys.CAN_FIND_CUSTOMERS)
     }
 
     /** Forgets the tracking credential too — only for a released/reset device. */

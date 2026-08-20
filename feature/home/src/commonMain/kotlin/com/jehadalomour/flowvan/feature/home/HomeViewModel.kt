@@ -116,7 +116,14 @@ class HomeViewModel(
             _state.update { it.copy(isLoading = true) }
             val user = getCurrentUser()
             val kpi = getDailyKpi()
-            _state.update { it.copy(user = user, kpi = kpi, isLoading = false) }
+            _state.update {
+                it.copy(
+                    user = user,
+                    kpi = kpi,
+                    isLoading = false,
+                    canFindCustomers = sessionStore.canFindCustomers,
+                )
+            }
         }
         // …and pull fresh data from the backend in the background, then recompute KPIs.
         viewModelScope.launch {

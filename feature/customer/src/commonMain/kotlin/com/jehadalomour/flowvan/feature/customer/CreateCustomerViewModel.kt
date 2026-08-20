@@ -32,6 +32,9 @@ class CreateCustomerViewModel(
     private val customers: CustomerRepository,
     private val session: SessionStore,
     private val locationProvider: LocationProvider,
+    // Set when the screen was opened from customer search: the shop's name,
+    // phone and location come prefilled, and the lead id rides through to save.
+    private val prefill: CreateCustomerPrefill? = null,
 ) : ViewModel() {
 
     private var approvalWatch: Job? = null
@@ -39,7 +42,13 @@ class CreateCustomerViewModel(
     // Seeded from the session so the screen can warn BEFORE the rep fills a form
     // and photographs a document, rather than only in the answer to the save.
     private val _state = MutableStateFlow(
-        CreateCustomerState(willNeedApproval = !session.canCreateCustomerDirect),
+        CreateCustomerState(
+            willNeedApproval = !session.canCreateCustomerDirect,
+            name = prefill?.name.orEmpty(),
+            phone = prefill?.phone.orEmpty(),
+            lat = prefill?.lat,
+            lng = prefill?.lng,
+        ),
     )
     val state: StateFlow<CreateCustomerState> = _state.asStateFlow()
 
@@ -178,6 +187,7 @@ class CreateCustomerViewModel(
                         longitude = s.lng?.toString(),
                         repId = session.currentRepId?.takeIf { it.isNotBlank() },
                         photoId = s.documentPhotoId,
+                        sourceProspectId = prefill?.prospectId,
                     ),
                 )
             }

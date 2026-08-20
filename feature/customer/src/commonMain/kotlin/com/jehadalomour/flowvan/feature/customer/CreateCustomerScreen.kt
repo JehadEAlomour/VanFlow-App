@@ -49,6 +49,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 /**
  * عميل جديد — a form the rep fills standing in the shop doorway.
@@ -61,6 +62,20 @@ import org.koin.compose.viewmodel.koinViewModel
  * Save is pinned to the bottom rather than scrolling with the form: it is the
  * only action here, and its enabled state is the screen's answer to "am I done".
  */
+/**
+ * Prefilled from a customer-search result: name, phone and location seeded, and
+ * the lead id carried through so the saved customer records where it came from.
+ */
+@Composable
+fun CreateCustomerScreen(
+    prefill: CreateCustomerPrefill,
+    onBack: () -> Unit,
+    onSaved: (customerId: String) -> Unit,
+) {
+    val viewModel: CreateCustomerViewModel = koinViewModel { parametersOf(prefill) }
+    CreateCustomerScreen(onBack = onBack, onSaved = onSaved, viewModel = viewModel)
+}
+
 @Composable
 fun CreateCustomerScreen(
     onBack: () -> Unit,

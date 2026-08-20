@@ -13,6 +13,8 @@ data class HomeState(
     val activeShift: ShiftEntity? = null,
     val pendingPings: Int = 0,
     val lastSyncAt: Long? = null,
+    /** Gates the Find Customers tile — permissions.canFindCustomers, read from the session. */
+    val canFindCustomers: Boolean = false,
 )
 
 sealed interface HomeEvent {

@@ -18,6 +18,7 @@ import androidx.navigation.navArgument
 import com.jehadalomour.flowvan.feature.ai.AiAssistantScreen
 import com.jehadalomour.flowvan.feature.home.SettingsScreen
 import com.jehadalomour.flowvan.feature.map.MapNavigationScreen
+import com.jehadalomour.flowvan.feature.prospecting.FindCustomersScreen
 import com.jehadalomour.flowvan.feature.customer.AccountStatementScreen
 import com.jehadalomour.flowvan.feature.reports.AllPaymentsReportScreen
 import com.jehadalomour.flowvan.feature.reports.AllSalesReportScreen
@@ -38,6 +39,7 @@ import com.jehadalomour.flowvan.feature.print.VoucherDetailScreen
 import com.jehadalomour.flowvan.feature.reports.VoucherReportScreen
 import com.jehadalomour.flowvan.feature.voucher.CollectionScreen
 import com.jehadalomour.flowvan.feature.customer.CreateCustomerScreen
+import com.jehadalomour.flowvan.feature.customer.CreateCustomerPrefill
 import com.jehadalomour.flowvan.feature.voucher.ReturnByItemScreen
 import com.jehadalomour.flowvan.feature.voucher.StockRequestScreen
 import com.jehadalomour.flowvan.feature.customer.CustomerDashboardScreen
@@ -63,6 +65,8 @@ object Routes {
     const val ROUTE = "route"
     const val CUSTOMERS = "customers"
     const val CREATE_CUSTOMER = "create_customer"
+    const val CREATE_CUSTOMER_PREFILL = "create_customer_prefill"
+    const val FIND_CUSTOMERS = "find_customers"
     const val RETURN_BY_ITEM = "return_by_item"
     const val STOCK_REQUEST = "stock_request"
     const val VAN_STOCK = "van_stock"
@@ -75,6 +79,7 @@ object Routes {
     const val REQUEST = "request/{customerId}"
     const val COLLECTION = "collection/{customerId}"
     const val MAP = "map/{customerId}"
+    const val MAP_POINT = "map_point/{lat}/{lng}/{label}"
     const val TRANSACTION_REPORT = "txnreport/{customerId}"
     const val PAYMENT_REPORT = "payreport/{customerId}"
     const val ACCOUNT_STATEMENT = "statement/{customerId}"
@@ -105,6 +110,8 @@ object Routes {
     fun collection(id: String) = "collection/$id"
     fun ai(customerId: String? = null) = if (customerId != null) "ai?customerId=$customerId" else "ai"
     fun map(customerId: String) = "map/$customerId"
+    fun mapPoint(lat: Double, lng: Double, label: String) =
+        "map_point/$lat/$lng/${encodeArg(label)}"
     fun txnReport(customerId: String) = "txnreport/$customerId"
     fun payReport(customerId: String) = "payreport/$customerId"
     fun statement(customerId: String) = "statement/$customerId"
@@ -118,6 +125,14 @@ object Routes {
         "txnreportprint/$customerId/$from/$to"
     fun salesReportPrint(from: Long, to: Long) = "salesreportprint/$from/$to"
     fun detailedTxn(customerId: String) = "detailedtxn/$customerId"
+
+    /** Encode a path segment so a label with spaces or slashes survives the route. */
+    private fun encodeArg(v: String): String =
+        v.encodeToByteArray().joinToString("") {
+            val b = it.toInt() and 0xFF
+            if (b in 0x30..0x39 || b in 0x41..0x5A || b in 0x61..0x7A) b.toChar().toString()
+            else "%" + b.toString(16).padStart(2, '0').uppercase()
+        }
 }
 
 @Composable
@@ -142,6 +157,11 @@ fun FlowVanNavHost(
             }
         }
     }
+
+    // Prefill for the create screen when opened from customer search. Held here
+    // rather than in the route because a shop name carries Arabic, spaces and
+    // '&', which URL-encoding into a nav argument mangles.
+    var createPrefill by remember { mutableStateOf<CreateCustomerPrefill?>(null) }
 
     val dest = startDestination ?: run {
         CircularProgressIndicator()
@@ -169,6 +189,7 @@ fun FlowVanNavHost(
                 onOpenReturnByItem = { navController.navigate(Routes.RETURN_BY_ITEM) },
                 onOpenStockRequest = { navController.navigate(Routes.STOCK_REQUEST) },
                 onOpenNewCustomer = { navController.navigate(Routes.CREATE_CUSTOMER) },
+                onOpenFindCustomers = { navController.navigate(Routes.FIND_CUSTOMERS) },
                 onOpenVoucherSummary = { navController.navigate(Routes.VOUCHER_SUMMARY) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
@@ -214,6 +235,42 @@ fun FlowVanNavHost(
                     navController.navigate(Routes.customer(id)) {
                         popUpTo(Routes.CREATE_CUSTOMER) { inclusive = true }
                     }
+                },
+            )
+        }
+        composable(Routes.CREATE_CUSTOMER_PREFILL) {
+            // Guard against a direct hit with nothing staged (process death, deep
+            // link): fall back to the empty create screen rather than crash.
+            val prefill = createPrefill
+            if (prefill == null) {
+                CreateCustomerScreen(
+                    onBack = { navController.popBackStack() },
+                    onSaved = { id -> navController.navigate(Routes.customer(id)) {
+                        popUpTo(Routes.CREATE_CUSTOMER_PREFILL) { inclusive = true }
+                    } },
+                )
+            } else {
+                CreateCustomerScreen(
+                    prefill = prefill,
+                    onBack = { navController.popBackStack() },
+                    onSaved = { id ->
+                        createPrefill = null
+                        navController.navigate(Routes.customer(id)) {
+                            popUpTo(Routes.FIND_CUSTOMERS) { inclusive = true }
+                        }
+                    },
+                )
+            }
+        }
+        composable(Routes.FIND_CUSTOMERS) {
+            FindCustomersScreen(
+                onBack = { navController.popBackStack() },
+                onOpenMap = { lat, lng, label ->
+                    navController.navigate(Routes.mapPoint(lat, lng, label))
+                },
+                onAddCustomer = { name, phone, lat, lng, prospectId ->
+                    createPrefill = CreateCustomerPrefill(name, phone, lat, lng, prospectId)
+                    navController.navigate(Routes.CREATE_CUSTOMER_PREFILL)
                 },
             )
         }
@@ -335,6 +392,19 @@ fun FlowVanNavHost(
         ) { entry ->
             val id = entry.arguments?.getString("customerId").orEmpty()
             MapNavigationScreen(customerId = id, onBack = { navController.popBackStack() })
+        }
+        composable(
+            Routes.MAP_POINT,
+            arguments = listOf(
+                navArgument("lat") { type = NavType.StringType },
+                navArgument("lng") { type = NavType.StringType },
+                navArgument("label") { type = NavType.StringType },
+            ),
+        ) { entry ->
+            val lat = entry.arguments?.getString("lat")?.toDoubleOrNull() ?: 0.0
+            val lng = entry.arguments?.getString("lng")?.toDoubleOrNull() ?: 0.0
+            val label = decodeArg(entry.arguments?.getString("label").orEmpty())
+            MapNavigationScreen(lat = lat, lng = lng, label = label, onBack = { navController.popBackStack() })
         }
         composable(
             Routes.TRANSACTION_REPORT,
@@ -519,4 +589,21 @@ fun FlowVanNavHost(
             SettingsScreen(onBack = { navController.popBackStack() })
         }
     }
+}
+
+/** Reverse of Routes.encodeArg — %HH back to a UTF-8 string. */
+private fun decodeArg(v: String): String {
+    val bytes = ArrayList<Byte>(v.length)
+    var i = 0
+    while (i < v.length) {
+        val c = v[i]
+        if (c == '%' && i + 2 < v.length) {
+            bytes.add(v.substring(i + 1, i + 3).toInt(16).toByte())
+            i += 3
+        } else {
+            bytes.add(c.code.toByte())
+            i += 1
+        }
+    }
+    return bytes.toByteArray().decodeToString()
 }

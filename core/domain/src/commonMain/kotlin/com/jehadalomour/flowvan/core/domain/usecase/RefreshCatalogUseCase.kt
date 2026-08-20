@@ -213,6 +213,7 @@ class RefreshCatalogUseCase(
             session.currentPermKeys = me.permKeys.joinToString(",")
             session.canAddCustomer = me.permissions["canAddCustomer"] == true
             session.canCreateCustomerDirect = me.permissions["canCreateCustomerDirect"] == true
+            session.canFindCustomers = me.permissions["canFindCustomers"] == true
             session.canPrintLineDiscount = me.permissions["canPrintLineDiscount"] == true
         } catch (e: Exception) {
             log.w("permissions sync failed: ${e.message}")

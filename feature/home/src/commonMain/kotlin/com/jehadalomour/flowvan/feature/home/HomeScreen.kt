@@ -86,6 +86,7 @@ fun HomeScreen(
     onOpenReturnByItem: () -> Unit,
     onOpenStockRequest: () -> Unit,
     onOpenNewCustomer: () -> Unit,
+    onOpenFindCustomers: () -> Unit,
     onOpenVoucherSummary: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenCustomer: (String) -> Unit,
@@ -158,6 +159,7 @@ fun HomeScreen(
                     onOpenNewCustomer = onOpenNewCustomer,
                     onOpenVanStock = onOpenVanStock,
                     onOpenStockRequest = onOpenStockRequest,
+                    onOpenFindCustomers = onOpenFindCustomers.takeIf { state.canFindCustomers },
                     onOpenReturnByItem = onOpenReturnByItem,
                     onOpenOffers = onOpenOffers,
                     onOpenReports = onOpenReports,
@@ -419,6 +421,8 @@ private fun FunctionGrid(
     onOpenNewCustomer: () -> Unit,
     onOpenVanStock: () -> Unit,
     onOpenStockRequest: () -> Unit,
+    // Null hides the tile — the office has not granted canFindCustomers.
+    onOpenFindCustomers: (() -> Unit)?,
     onOpenReturnByItem: () -> Unit,
     onOpenOffers: () -> Unit,
     onOpenReports: () -> Unit,
@@ -428,17 +432,21 @@ private fun FunctionGrid(
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val tiles = listOf(
-        Triple(Res.drawable.ic_customers, Res.string.customers_title, Fv.Blue) to onOpenCustomers,
-        Triple(Res.drawable.ic_map, Res.string.route_title, Fv.Blue) to onOpenRoute,
-        Triple(Res.drawable.ic_customers, Res.string.home_new_customer, Fv.Blue) to onOpenNewCustomer,
-        Triple(Res.drawable.ic_truck, Res.string.van_stock_title, Fv.Teal) to onOpenVanStock,
-        Triple(Res.drawable.ic_inventory, Res.string.stock_request_title, Fv.Teal) to onOpenStockRequest,
-        Triple(Res.drawable.ic_cart, Res.string.offers_title, Fv.Amber) to onOpenOffers,
-        Triple(Res.drawable.ic_bar_chart, Res.string.reports_title, Fv.TextHigh) to onOpenReports,
-        Triple(Res.drawable.ic_receipt, Res.string.voucher_summary_title, Fv.TextHigh) to onOpenVoucherSummary,
-        Triple(Res.drawable.ic_payment, Res.string.end_of_day_title, Fv.Amber) to onOpenEndOfDay,
-    )
+    val tiles = buildList {
+        add(Triple(Res.drawable.ic_customers, Res.string.customers_title, Fv.Blue) to onOpenCustomers)
+        add(Triple(Res.drawable.ic_map, Res.string.route_title, Fv.Blue) to onOpenRoute)
+        add(Triple(Res.drawable.ic_customers, Res.string.home_new_customer, Fv.Blue) to onOpenNewCustomer)
+        // Only when the office granted it; the callback is null otherwise.
+        onOpenFindCustomers?.let {
+            add(Triple(Res.drawable.ic_map, Res.string.home_find_customers, Fv.Blue) to it)
+        }
+        add(Triple(Res.drawable.ic_truck, Res.string.van_stock_title, Fv.Teal) to onOpenVanStock)
+        add(Triple(Res.drawable.ic_inventory, Res.string.stock_request_title, Fv.Teal) to onOpenStockRequest)
+        add(Triple(Res.drawable.ic_cart, Res.string.offers_title, Fv.Amber) to onOpenOffers)
+        add(Triple(Res.drawable.ic_bar_chart, Res.string.reports_title, Fv.TextHigh) to onOpenReports)
+        add(Triple(Res.drawable.ic_receipt, Res.string.voucher_summary_title, Fv.TextHigh) to onOpenVoucherSummary)
+        add(Triple(Res.drawable.ic_payment, Res.string.end_of_day_title, Fv.Amber) to onOpenEndOfDay)
+    }
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         tiles.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

@@ -67,6 +67,12 @@ data class CreateCustomerRequest(
     val taxExemptionType: String? = null,
     val taxExemptionNumber: String? = null,
     val taxExemptionReason: String? = null,
+    /**
+     * The prospecting lead this customer was filed from, when it came through
+     * Find Customers. The backend stamps source='PROSPECTING' and closes the
+     * lead; omit for a hand-typed customer.
+     */
+    val sourceProspectId: String? = null,
 )
 
 /** Body for `POST /customers/:id/location` — a rep seeding a missing store pin. */

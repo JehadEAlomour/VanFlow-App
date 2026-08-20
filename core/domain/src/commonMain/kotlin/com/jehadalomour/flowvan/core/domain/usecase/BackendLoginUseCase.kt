@@ -67,6 +67,7 @@ class BackendLoginUseCase(
             session.canCreateCustomerDirect =
                 resp.user.permissions["canCreateCustomerDirect"] == true
             session.canPrintLineDiscount = resp.user.permissions["canPrintLineDiscount"] == true
+            session.canFindCustomers = resp.user.permissions["canFindCustomers"] == true
             session.boundDeviceId = device.deviceId
             // Kept outside the session on purpose: this is what keeps the phone
             // reporting once the rep signs out.

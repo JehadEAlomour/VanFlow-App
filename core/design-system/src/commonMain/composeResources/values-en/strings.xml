@@ -825,6 +825,7 @@
 
     <!-- Dashboard (grid redesign) -->
     <string name="home_new_customer">New customer</string>
+    <string name="home_find_customers">Find customers</string>
     <string name="home_return_by_item">Return by item</string>
     <string name="home_start_shift">Start shift</string>
     <string name="home_synced">Online</string>
