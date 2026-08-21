@@ -8,9 +8,14 @@ import org.koin.dsl.module
 
 fun customerModule(): Module = module {
     viewModel { CustomerListViewModel(get(), get()) }
-    viewModel { CreateCustomerViewModel(get(), get(), get(), get(), get()) }
-    viewModel { (prefill: CreateCustomerPrefill) ->
-        CreateCustomerViewModel(get(), get(), get(), get(), get(), prefill)
+    // ONE definition — Koin keys viewModel by type, so a second def for the same
+    // type silently replaces the first. The prefill is optional: the plain
+    // create screen passes none, the from-search screen passes one.
+    viewModel { params ->
+        CreateCustomerViewModel(
+            get(), get(), get(), get(), get(),
+            params.getOrNull<CreateCustomerPrefill>(),
+        )
     }
     viewModel { FindCustomersViewModel(get(), get()) }
     viewModel { (customerId: String) ->
