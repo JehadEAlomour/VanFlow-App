@@ -8,6 +8,8 @@ import android.location.Location
 import android.location.LocationManager
 import android.os.Looper
 import androidx.core.content.ContextCompat
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -45,10 +47,20 @@ class AndroidLocationProvider(private val context: Context) : LocationProvider {
     }
 
     @SuppressLint("MissingPermission")
-    private suspend fun fused(): LatLng? = runCatching {
-        LocationServices.getFusedLocationProviderClient(context)
-            .lastLocation.await()?.toLatLng()
-    }.getOrNull()
+    private suspend fun fused(): LatLng? {
+        // No Play Services ⇒ do not even construct the fused client; it only
+        // logs SERVICE_DISABLED and fails. Straight to LocationManager instead.
+        if (!playServicesAvailable()) return null
+        return runCatching {
+            LocationServices.getFusedLocationProviderClient(context)
+                .lastLocation.await()?.toLatLng()
+        }.getOrNull()
+    }
+
+    private fun playServicesAvailable(): Boolean = runCatching {
+        GoogleApiAvailability.getInstance()
+            .isGooglePlayServicesAvailable(context) == ConnectionResult.SUCCESS
+    }.getOrDefault(false)
 
     @SuppressLint("MissingPermission")
     private fun cachedFromManager(): LatLng? {
