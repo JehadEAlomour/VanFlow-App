@@ -41,6 +41,7 @@ fun ReportsHubScreen(
     onOpenReceivables: () -> Unit,
     onOpenTargets: () -> Unit,
     onOpenVoucherSummary: () -> Unit,
+    onOpenMyMaterials: () -> Unit,
 ) {
     // Ordered by how often a rep opens them, not alphabetically or by module.
     val tiles = listOf(
@@ -52,6 +53,7 @@ fun ReportsHubScreen(
         ReportTile(Res.drawable.ic_map, stringResource(Res.string.reports_visits_title), Fv.Teal, onOpenVisitReport),
         ReportTile(Res.drawable.ic_check_circle, stringResource(Res.string.targets_title), Fv.Amber, onOpenTargets),
         ReportTile(Res.drawable.ic_receipt, stringResource(Res.string.voucher_summary_title), Fv.TextMid, onOpenVoucherSummary),
+        ReportTile(Res.drawable.ic_truck, stringResource(Res.string.reports_my_materials_title), Fv.Blue, onOpenMyMaterials),
     )
 
     Surface(modifier = Modifier.fillMaxSize(), color = Fv.BgDeepest) {

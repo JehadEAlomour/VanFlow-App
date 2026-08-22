@@ -8,6 +8,7 @@ import com.jehadalomour.flowvan.core.network.dto.LocationPingDto
 import com.jehadalomour.flowvan.core.network.dto.LocationPingRequest
 import com.jehadalomour.flowvan.core.network.dto.RepKpiDto
 import com.jehadalomour.flowvan.core.network.dto.VanStockItemDto
+import com.jehadalomour.flowvan.core.network.dto.RepMaterialsDto
 import com.jehadalomour.flowvan.core.network.http.FlowVanApiClient
 import com.jehadalomour.flowvan.core.network.http.getData
 import com.jehadalomour.flowvan.core.network.http.postData
@@ -18,6 +19,10 @@ class RepApi(private val client: FlowVanApiClient) {
 
     /** Read-only: per-rep van stock (server derives it from posted voucher transactions). */
     suspend fun vanStock(repId: String): List<VanStockItemDto> = client.getData("reps/$repId/van-stock")
+
+    /** The signed-in rep's materials grouped by warehouse (read-only). */
+    suspend fun myMaterialsByWarehouse(): RepMaterialsDto =
+        client.getData("reps/me/materials-by-warehouse")
 
     suspend fun postLocation(repId: String, body: LocationPingRequest): LocationPingDto =
         client.postData("reps/$repId/location", body)

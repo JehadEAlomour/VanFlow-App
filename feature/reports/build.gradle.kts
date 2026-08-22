@@ -26,4 +26,5 @@ dependencies {
     "commonMainImplementation"(projects.core.data)
     "commonMainImplementation"(projects.core.database)
     "commonMainImplementation"(projects.core.designSystem)
+    "commonMainImplementation"(projects.core.network)
 }

@@ -33,6 +33,7 @@ import com.jehadalomour.flowvan.feature.print.SalesReportPrintScreen
 import com.jehadalomour.flowvan.feature.print.TxnReportPrintScreen
 import com.jehadalomour.flowvan.feature.reports.DetailedTxnReportScreen
 import com.jehadalomour.flowvan.feature.reports.ReceivablesReportScreen
+import com.jehadalomour.flowvan.feature.reports.RepMaterialsScreen
 import com.jehadalomour.flowvan.feature.reports.TargetsScreen
 import com.jehadalomour.flowvan.feature.reports.TransactionReportScreen
 import com.jehadalomour.flowvan.feature.print.VoucherDetailScreen
@@ -93,6 +94,7 @@ object Routes {
     const val CASH_FLOW_REPORT = "cashflow"
     const val ITEMS_SALES_REPORT = "itemssales"
     const val RECEIVABLES_REPORT = "receivables"
+    const val MY_MATERIALS = "my_materials"
     const val TARGETS_REPORT = "targets"
     const val VOUCHER_PRINT = "voucherprint/{invoiceId}"
     // The date range travels in the route: the printed statement must be the
@@ -528,6 +530,7 @@ fun FlowVanNavHost(
                 onOpenReceivables = { navController.navigate(Routes.RECEIVABLES_REPORT) },
                 onOpenTargets = { navController.navigate(Routes.TARGETS_REPORT) },
                 onOpenVoucherSummary = { navController.navigate(Routes.VOUCHER_SUMMARY) },
+                onOpenMyMaterials = { navController.navigate(Routes.MY_MATERIALS) },
             )
         }
         composable(Routes.VOUCHER_SUMMARY) {
@@ -535,6 +538,9 @@ fun FlowVanNavHost(
         }
         composable(Routes.RECEIVABLES_REPORT) {
             ReceivablesReportScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.MY_MATERIALS) {
+            RepMaterialsScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.TARGETS_REPORT) {
             TargetsScreen(onBack = { navController.popBackStack() })

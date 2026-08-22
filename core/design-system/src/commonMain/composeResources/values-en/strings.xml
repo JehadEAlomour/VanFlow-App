@@ -195,6 +195,7 @@
     <string name="reports_cash_flow_title">Daily Statement</string>
     <string name="reports_cash_flow_subtitle">Full daily sales, collections and returns summary</string>
     <string name="reports_items_title">Item Sales</string>
+    <string name="reports_my_materials_title">My Materials by Warehouse</string>
     <string name="reports_items_subtitle">Total sales per item over a date range</string>
     <string name="reports_receivables_title">Customer Receivables</string>
     <string name="reports_receivables_subtitle">Customers with outstanding balances sorted by amount</string>
