@@ -214,6 +214,7 @@ class RefreshCatalogUseCase(
             session.canAddCustomer = me.permissions["canAddCustomer"] == true
             session.canCreateCustomerDirect = me.permissions["canCreateCustomerDirect"] == true
             session.canFindCustomers = me.permissions["canFindCustomers"] == true
+            session.routesOnly = me.permissions["routesOnly"] == true
             session.canPrintLineDiscount = me.permissions["canPrintLineDiscount"] == true
         } catch (e: Exception) {
             log.w("permissions sync failed: ${e.message}")

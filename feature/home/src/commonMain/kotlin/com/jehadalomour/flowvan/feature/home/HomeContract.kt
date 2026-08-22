@@ -15,6 +15,8 @@ data class HomeState(
     val lastSyncAt: Long? = null,
     /** Gates the Find Customers tile — permissions.canFindCustomers, read from the session. */
     val canFindCustomers: Boolean = false,
+    /** Route-only: hide the Customers tile so the rep works from the route only. */
+    val routesOnly: Boolean = false,
 )
 
 sealed interface HomeEvent {

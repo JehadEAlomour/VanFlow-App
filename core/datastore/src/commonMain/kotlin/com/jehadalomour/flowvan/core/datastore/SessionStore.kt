@@ -91,6 +91,11 @@ class SessionStore(private val settings: Settings) {
         get() = settings.getBoolean(SettingsKeys.CAN_FIND_CUSTOMERS, false)
         set(value) = settings.putBoolean(SettingsKeys.CAN_FIND_CUSTOMERS, value)
 
+    /** Route-only: hide the Customers list on home (permissions.routesOnly). */
+    var routesOnly: Boolean
+        get() = settings.getBoolean(SettingsKeys.ROUTES_ONLY, false)
+        set(value) = settings.putBoolean(SettingsKeys.ROUTES_ONLY, value)
+
     /** Max direct-discount % encoded as "vouchers.discount.max:<n>", or null = uncapped. */
     fun discountMaxPct(): Double? =
         currentPermKeys.orEmpty().split(',')
@@ -143,6 +148,7 @@ class SessionStore(private val settings: Settings) {
         settings.remove(SettingsKeys.CURRENT_PERM_KEYS)
         settings.remove(SettingsKeys.CAN_ADD_CUSTOMER)
         settings.remove(SettingsKeys.CAN_FIND_CUSTOMERS)
+        settings.remove(SettingsKeys.ROUTES_ONLY)
     }
 
     /** Forgets the tracking credential too — only for a released/reset device. */

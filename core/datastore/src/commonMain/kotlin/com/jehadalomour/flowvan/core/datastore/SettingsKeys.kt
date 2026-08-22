@@ -44,6 +44,9 @@ object SettingsKeys {
     /** Show the Find Customers screen (permissions.canFindCustomers). */
     const val CAN_FIND_CUSTOMERS = "can_find_customers"
 
+    /** Hide the Customers list; reach customers via the route only (permissions.routesOnly). */
+    const val ROUTES_ONLY = "routes_only"
+
     // ── Device binding (survives sign-out on purpose) ───────────────
     /** Long-lived, location-only credential. NOT cleared by SessionStore.clear(). */
     const val TRACKING_TOKEN = "tracking_token"

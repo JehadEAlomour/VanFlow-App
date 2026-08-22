@@ -122,6 +122,7 @@ class HomeViewModel(
                     kpi = kpi,
                     isLoading = false,
                     canFindCustomers = sessionStore.canFindCustomers,
+                    routesOnly = sessionStore.routesOnly,
                 )
             }
         }

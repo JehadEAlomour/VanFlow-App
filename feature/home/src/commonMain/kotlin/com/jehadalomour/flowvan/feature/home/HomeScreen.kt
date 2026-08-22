@@ -154,7 +154,9 @@ fun HomeScreen(
             // ── Actions, first and without scrolling ──────────────────────────
             item {
                 FunctionGrid(
-                    onOpenCustomers = onOpenCustomers,
+                    // Route-only reps reach customers through the route, so the
+                    // Customers list tile is hidden for them.
+                    onOpenCustomers = onOpenCustomers.takeIf { !state.routesOnly },
                     onOpenRoute = onOpenRoute,
                     onOpenNewCustomer = onOpenNewCustomer,
                     onOpenVanStock = onOpenVanStock,
@@ -416,7 +418,8 @@ private fun StartShiftBar(onStartShift: () -> Unit, modifier: Modifier = Modifie
  */
 @Composable
 private fun FunctionGrid(
-    onOpenCustomers: () -> Unit,
+    // Null hides the tile — a route-only salesman.
+    onOpenCustomers: (() -> Unit)?,
     onOpenRoute: () -> Unit,
     onOpenNewCustomer: () -> Unit,
     onOpenVanStock: () -> Unit,
@@ -433,7 +436,9 @@ private fun FunctionGrid(
     modifier: Modifier = Modifier,
 ) {
     val tiles = buildList {
-        add(Triple(Res.drawable.ic_customers, Res.string.customers_title, Fv.Blue) to onOpenCustomers)
+        onOpenCustomers?.let {
+            add(Triple(Res.drawable.ic_customers, Res.string.customers_title, Fv.Blue) to it)
+        }
         add(Triple(Res.drawable.ic_map, Res.string.route_title, Fv.Blue) to onOpenRoute)
         add(Triple(Res.drawable.ic_customers, Res.string.home_new_customer, Fv.Blue) to onOpenNewCustomer)
         // Only when the office granted it; the callback is null otherwise.
