@@ -1,5 +1,7 @@
 package com.jehadalomour.flowvan.feature.voucher
 
+import com.jehadalomour.flowvan.core.common.search.matchesTokenSearch
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
@@ -64,11 +66,8 @@ class RequestVoucherViewModel(
     }
 
     private fun applySearch() {
-        val q = _state.value.searchQuery.trim().lowercase()
-        val filtered = if (q.isEmpty()) _state.value.products else _state.value.products.filter {
-            it.nameAr.lowercase().contains(q) ||
-                it.nameEn.lowercase().contains(q) ||
-                it.sku.lowercase().contains(q)
+        val filtered = _state.value.products.filter {
+            matchesTokenSearch(_state.value.searchQuery, it.nameAr, it.nameEn, it.sku)
         }
         _state.update { it.copy(visibleProducts = filtered) }
     }

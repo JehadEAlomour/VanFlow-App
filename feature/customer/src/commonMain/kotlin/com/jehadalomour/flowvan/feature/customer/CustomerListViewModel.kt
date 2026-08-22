@@ -1,5 +1,7 @@
 package com.jehadalomour.flowvan.feature.customer
 
+import com.jehadalomour.flowvan.core.common.search.matchesTokenSearch
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
@@ -65,13 +67,9 @@ class CustomerListViewModel(
 
     private fun recompute() {
         val s = _state.value
-        val q = s.searchQuery.trim().lowercase()
         val visible = s.all.filter { c ->
-            val matchesQuery = q.isEmpty() ||
-                c.nameAr.lowercase().contains(q) ||
-                (c.nameEn?.lowercase()?.contains(q) == true) ||
-                c.code.lowercase().contains(q) ||
-                c.area.lowercase().contains(q)
+            val matchesQuery =
+                matchesTokenSearch(s.searchQuery, c.nameAr, c.nameEn, c.code, c.area)
             val matchesFilter = when (s.filter) {
                 CustomerFilter.ALL -> true
                 CustomerFilter.ON_ROUTE -> c.isOnRoute

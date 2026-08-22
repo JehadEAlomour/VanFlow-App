@@ -1,5 +1,7 @@
 package com.jehadalomour.flowvan.feature.home
 
+import com.jehadalomour.flowvan.core.common.search.matchesTokenSearch
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
@@ -74,12 +76,10 @@ class RouteViewModel(
     }
 
     private fun applyFilter(query: String, list: List<Customer>) {
-        val q = query.trim().lowercase()
-        val filtered = if (q.isEmpty()) emptyList() else list.filter {
-            it.nameAr.lowercase().contains(q) ||
-                (it.nameEn?.lowercase()?.contains(q) == true) ||
-                it.code.lowercase().contains(q) ||
-                it.area.lowercase().contains(q)
+        // Empty query yields no route suggestions here (an explicit search box),
+        // so keep that behaviour rather than matching everything.
+        val filtered = if (query.isBlank()) emptyList() else list.filter {
+            matchesTokenSearch(query, it.nameAr, it.nameEn, it.code, it.area)
         }
         _state.update { it.copy(searchResults = filtered) }
     }

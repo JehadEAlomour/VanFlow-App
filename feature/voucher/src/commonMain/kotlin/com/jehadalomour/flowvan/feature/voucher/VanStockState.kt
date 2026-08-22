@@ -1,5 +1,7 @@
 package com.jehadalomour.flowvan.feature.voucher
 
+import com.jehadalomour.flowvan.core.common.search.matchesTokenSearch
+
 import com.jehadalomour.flowvan.core.model.Product
 
 enum class StockStatus { GOOD, LOW, OUT, EXPIRING }
@@ -31,10 +33,8 @@ data class VanStockState(
         var list = allProducts
         if (selectedCategory != null) list = list.filter { it.category == selectedCategory }
         if (searchQuery.isNotBlank()) {
-            val q = searchQuery.trim().lowercase()
             list = list.filter {
-                it.nameAr.contains(q) || it.nameEn.lowercase().contains(q) ||
-                    it.sku.lowercase().contains(q) || it.category.lowercase().contains(q)
+                matchesTokenSearch(searchQuery, it.nameAr, it.nameEn, it.sku, it.category)
             }
         }
         return list.sortedWith(compareBy({ it.stockStatus(nowMs).ordinal }, { it.nameAr }))
