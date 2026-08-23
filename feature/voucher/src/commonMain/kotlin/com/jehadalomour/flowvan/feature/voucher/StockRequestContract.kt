@@ -29,6 +29,10 @@ data class StockRequestState(
     /** Units per product id, as synced. Empty list = the item has only its base unit. */
     val productUnits: Map<String, List<ProductUnit>> = emptyMap(),
 
+    /** Main-depot stock per pool, keyed "itemNumber|stockUnitCode". A van load cannot exceed it. */
+    val mainStock: Map<String, Double> = emptyMap(),
+    val mainStoreName: String? = null,
+
     val cart: List<CartLine> = emptyList(),
     val view: StockRequestView = StockRequestView.PICKER,
     val searchQuery: String = "",
@@ -60,6 +64,10 @@ data class StockRequestState(
     /** Units for one product, smallest first — the order a rep reads them in. */
     fun unitsFor(productId: String): List<ProductUnit> =
         (productUnits[productId] ?: emptyList()).sortedBy { it.conversionQty }
+
+    /** Base pieces the main depot holds for this product+unit's pool. */
+    fun availableBase(sku: String, unit: ProductUnit): Double =
+        mainStock["$sku|${if (unit.isStockUnit) unit.code else ""}"] ?: 0.0
 
     /** Cart quantity per product, for the picker's badge. Summed across units. */
     val cartQtyByProduct: Map<String, Double>

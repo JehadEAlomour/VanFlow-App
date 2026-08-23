@@ -1,6 +1,7 @@
 package com.jehadalomour.flowvan.core.network.api
 
 import com.jehadalomour.flowvan.core.network.dto.CreateStockRequestBody
+import com.jehadalomour.flowvan.core.network.dto.MainStoreStockDto
 import com.jehadalomour.flowvan.core.network.dto.StockRequestDto
 import com.jehadalomour.flowvan.core.network.http.FlowVanApiClient
 import com.jehadalomour.flowvan.core.network.http.getData
@@ -22,6 +23,10 @@ class StockRequestApi(private val client: FlowVanApiClient) {
     /** This rep's own requests, newest first. Polled while waiting on a decision. */
     suspend fun mine(): List<StockRequestDto> =
         client.getData("stock-requests/mine")
+
+    /** Main depot stock per pool, shown as availability and enforced on create. */
+    suspend fun mainStoreStock(): MainStoreStockDto =
+        client.getData("stock-requests/main-store-stock")
 
     suspend fun cancel(id: String): StockRequestDto =
         client.postEmpty("stock-requests/$id/cancel")

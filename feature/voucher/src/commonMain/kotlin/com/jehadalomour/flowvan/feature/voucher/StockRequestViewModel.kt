@@ -49,6 +49,20 @@ class StockRequestViewModel(
             }
         }
         refreshMine()
+        loadMainStock()
+    }
+
+    /**
+     * Main-depot stock, so the rep sees availability per item and cannot request
+     * more than the depot holds (the server enforces the same on create).
+     */
+    private fun loadMainStock() {
+        viewModelScope.launch {
+            runCatching { api.mainStoreStock() }.onSuccess { s ->
+                val map = s.items.associate { "${it.itemNumber}|${it.stockUnitCode}" to it.qty }
+                _state.update { it.copy(mainStock = map, mainStoreName = s.storeName) }
+            }
+        }
     }
 
     fun onEvent(event: StockRequestEvent) {
@@ -105,6 +119,18 @@ class StockRequestViewModel(
             // A zero on an existing line means "take it off", which is what the
             // rep expects from typing 0 rather than hunting for a delete.
             _state.update { s -> s.copy(cart = s.cart.filterNot { it.isLine(product.id, unit.id) }) }
+            return
+        }
+        // Cannot request more than the main depot holds. Compare in base pieces:
+        // the pool balance is base units, and one requested unit is conversionQty
+        // pieces. Only guard when we actually loaded the depot stock.
+        val available = _state.value.availableBase(product.sku, unit)
+        val conv = unit.conversionQty.takeIf { it > 0.0 } ?: 1.0
+        val requestedBase = qty * conv
+        if (_state.value.mainStock.isNotEmpty() && requestedBase > available + 1e-6) {
+            _state.update {
+                it.copy(errorAr = "الكمية تتجاوز رصيد المستودع الرئيسي (المتوفر: ${trimQty(available)})")
+            }
             return
         }
         _state.update { s ->
@@ -231,4 +257,9 @@ class StockRequestViewModel(
         const val ERR_ACTION = "تعذّر تنفيذ العملية. حاول مرة أخرى."
         const val RECEIVED = "تم استلام البضاعة وتحديث مخزون المركبة."
     }
+
+    /** Whole numbers without a decimal tail. */
+    private fun trimQty(q: Double): String =
+        if (q % 1.0 == 0.0) q.toLong().toString() else q.toString()
+
 }

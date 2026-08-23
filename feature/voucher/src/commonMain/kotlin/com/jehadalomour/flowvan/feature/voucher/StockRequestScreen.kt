@@ -173,6 +173,7 @@ fun StockRequestScreen(
             cartLines = state.cart.filter { it.productId == product.id },
             initialUnitId = sheetUnitId,
             dbUnits = state.unitsFor(product.id),
+            availableFor = { unit -> state.availableBase(product.sku, unit) },
             onConfirm = { qty, unit ->
                 viewModel.onEvent(StockRequestEvent.ConfirmItem(product, qty, unit))
                 sheetProduct = null
@@ -371,6 +372,8 @@ private fun StockItemSheet(
     cartLines: List<CartLine>,
     initialUnitId: String?,
     dbUnits: List<ProductUnit>,
+    /** Main-depot pieces available for a unit's pool. Caps the request. */
+    availableFor: (ProductUnit) -> Double,
     onConfirm: (qty: Double, unit: ProductUnit) -> Unit,
     onDelete: (unitId: String) -> Unit,
     onDismiss: () -> Unit,
@@ -411,6 +414,8 @@ private fun StockItemSheet(
     val onVan =
         if (selectedUnit.isStockUnit) selectedUnit.vanStock else product.vanStock
     val requestedBase = qty * selectedUnit.conversionQty
+    val availableBase = availableFor(selectedUnit)
+    val overMain = requestedBase > availableBase + 1e-6
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
@@ -443,7 +448,11 @@ private fun StockItemSheet(
                             modifier = Modifier.padding(horizontal = 24.dp),
                         )
                         Spacer(Modifier.height(4.dp))
-                        Text("${product.sku} · على المركبة $onVan", color = Fv.TextLow, fontSize = 11.sp)
+                        Text(
+                            "${product.sku} · على المركبة $onVan · بالمستودع ${trimQtyLabel(availableBase)}",
+                            color = if (overMain) Fv.Red else Fv.TextLow,
+                            fontSize = 11.sp,
+                        )
                     }
 
                     Column(
@@ -578,16 +587,16 @@ private fun StockItemSheet(
                         Box(
                             modifier = Modifier.weight(2f)
                                 .background(
-                                    if (qty > 0) Fv.Blue else Fv.SurfaceTop,
+                                    if (qty > 0 && !overMain) Fv.Blue else Fv.SurfaceTop,
                                     RoundedCornerShape(10.dp),
                                 )
-                                .clickable(enabled = qty > 0) { onConfirm(qty, selectedUnit) }
+                                .clickable(enabled = qty > 0 && !overMain) { onConfirm(qty, selectedUnit) }
                                 .padding(vertical = 13.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                if (currentLine != null) "تعديل" else "إضافة للسلة",
-                                color = if (qty > 0) Color.White else Fv.TextLow,
+                                if (overMain) "يتجاوز المتوفر" else if (currentLine != null) "تعديل" else "إضافة للسلة",
+                                color = if (qty > 0 && !overMain) Color.White else Fv.TextLow,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -757,3 +766,7 @@ private fun RequestCard(
         }
     }
 }
+
+/** Whole numbers without a decimal tail — for the availability label. */
+private fun trimQtyLabel(q: Double): String =
+    if (q % 1.0 == 0.0) q.toLong().toString() else q.toString()
