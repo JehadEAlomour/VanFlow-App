@@ -31,6 +31,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -744,11 +745,12 @@ private fun RequestCard(
                 } else if (req.status == "approved") {
                     // The action that actually moves stock. Worded as the physical
                     // act, not the system one: the rep is looking at boxes.
+                    var confirming by remember { mutableStateOf(false) }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(Fv.Green, RoundedCornerShape(9.dp))
-                            .clickable { onReceive() }
+                            .clickable { confirming = true }
                             .padding(vertical = 11.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -757,6 +759,40 @@ private fun RequestCard(
                             color = Color.White,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    if (confirming) {
+                        // Receiving MOVES stock (raises a transfer). Make the rep
+                        // confirm against the actual items+quantities first, so a
+                        // stray tap cannot silently change the van's inventory.
+                        val lines = req.items.map { l ->
+                            val q = (l.approvedBaseQty?.toDoubleOrNull() ?: l.baseQty.toDoubleOrNull() ?: 0.0).toInt()
+                            "${l.itemName} — $q حبة"
+                        }
+                        AlertDialog(
+                            onDismissRequest = { confirming = false },
+                            title = { Text("تأكيد استلام البضاعة") },
+                            text = {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text("سيتم تحويل هذه الأصناف إلى مخزون مركبتك:", fontSize = 12.sp, color = Fv.TextMid)
+                                    lines.forEach { Text("• $it", fontSize = 12.sp, color = Fv.TextHigh) }
+                                }
+                            },
+                            confirmButton = {
+                                Text(
+                                    "تأكيد الاستلام",
+                                    color = Fv.Green,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.clickable { confirming = false; onReceive() }.padding(8.dp),
+                                )
+                            },
+                            dismissButton = {
+                                Text(
+                                    "إلغاء",
+                                    color = Fv.TextMid,
+                                    modifier = Modifier.clickable { confirming = false }.padding(8.dp),
+                                )
+                            },
                         )
                     }
                 } else {

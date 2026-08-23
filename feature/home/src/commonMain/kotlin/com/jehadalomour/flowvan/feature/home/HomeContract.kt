@@ -17,6 +17,8 @@ data class HomeState(
     val canFindCustomers: Boolean = false,
     /** Route-only: hide the Customers tile so the rep works from the route only. */
     val routesOnly: Boolean = false,
+    /** Unread notifications, for the home bell badge. */
+    val unreadNotifications: Int = 0,
 )
 
 sealed interface HomeEvent {

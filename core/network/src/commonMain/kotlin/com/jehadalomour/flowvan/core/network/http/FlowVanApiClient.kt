@@ -228,3 +228,8 @@ suspend inline fun <reified B, reified T> FlowVanApiClient.patchData(
 suspend fun FlowVanApiClient.deleteUnit(path: String) {
     execute(HttpMethod.Delete, path)
 }
+
+/** POST with no body and no response payload (a 204 action, e.g. mark-read). */
+suspend fun FlowVanApiClient.postUnit(path: String) {
+    execute(HttpMethod.Post, path)
+}

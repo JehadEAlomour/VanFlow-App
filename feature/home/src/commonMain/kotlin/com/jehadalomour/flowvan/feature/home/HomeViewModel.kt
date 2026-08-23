@@ -33,6 +33,7 @@ class HomeViewModel(
     private val refreshCatalog: RefreshCatalogUseCase,
     private val realtimeSync: RealtimeSyncCoordinator,
     private val locationPointDao: LocationPointDao,
+    private val notificationApi: com.jehadalomour.flowvan.core.network.api.NotificationApi,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeState())
@@ -131,6 +132,12 @@ class HomeViewModel(
             if (refreshCatalog().getOrNull()?.skipped == false) {
                 _state.update { it.copy(kpi = getDailyKpi()) }
             }
+        }
+        // Unread notification count for the home badge. Polled (GMS-less handsets
+        // cannot receive push), refreshed on every load / ON_RESUME.
+        viewModelScope.launch {
+            runCatching { notificationApi.list(unreadOnly = true, limit = 1).unread }
+                .onSuccess { u -> _state.update { it.copy(unreadNotifications = u) } }
         }
     }
 }

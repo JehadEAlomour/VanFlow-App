@@ -50,6 +50,7 @@ import com.jehadalomour.flowvan.feature.home.HomeScreen
 import com.jehadalomour.flowvan.feature.home.OffersScreen
 import com.jehadalomour.flowvan.feature.auth.LoginScreen
 import com.jehadalomour.flowvan.feature.home.TodayRouteScreen
+import com.jehadalomour.flowvan.feature.home.NotificationsScreen
 import com.jehadalomour.flowvan.feature.print.VoucherPrintScreen
 import com.jehadalomour.flowvan.feature.print.VoucherSummaryScreen
 import com.jehadalomour.flowvan.feature.voucher.VoucherScreen
@@ -105,6 +106,7 @@ object Routes {
     const val DETAILED_TXN_REPORT = "detailedtxn/{customerId}"
     const val VOUCHER_SUMMARY = "vouchersummary"
     const val SETTINGS = "settings"
+    const val NOTIFICATIONS = "notifications"
     fun customer(id: String) = "customer/$id"
     fun sale(id: String) = "sale/$id"
     fun returns(id: String) = "return/$id"
@@ -194,6 +196,7 @@ fun FlowVanNavHost(
                 onOpenFindCustomers = { navController.navigate(Routes.FIND_CUSTOMERS) },
                 onOpenVoucherSummary = { navController.navigate(Routes.VOUCHER_SUMMARY) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                onOpenNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
                 onOpenCustomer = { id -> navController.navigate(Routes.customer(id)) },
                 onLogout = {
                     scope.launch {
@@ -228,6 +231,12 @@ fun FlowVanNavHost(
         }
         composable(Routes.STOCK_REQUEST) {
             StockRequestScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.NOTIFICATIONS) {
+            NotificationsScreen(
+                onBack = { navController.popBackStack() },
+                onOpenStockRequest = { _ -> navController.navigate(Routes.STOCK_REQUEST) },
+            )
         }
         composable(Routes.CREATE_CUSTOMER) {
             CreateCustomerScreen(

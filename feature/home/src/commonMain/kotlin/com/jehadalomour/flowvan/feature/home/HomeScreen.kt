@@ -89,6 +89,7 @@ fun HomeScreen(
     onOpenFindCustomers: () -> Unit,
     onOpenVoucherSummary: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenNotifications: () -> Unit,
     onOpenCustomer: (String) -> Unit,
     onLogout: () -> Unit,
     viewModel: HomeViewModel = koinViewModel(),
@@ -124,6 +125,8 @@ fun HomeScreen(
                     name = state.user?.nameAr ?: "…",
                     dateText = today.formatLevantine(AppLanguage.AR),
                     pendingPings = state.pendingPings,
+                    unreadNotifications = state.unreadNotifications,
+                    onOpenNotifications = onOpenNotifications,
                     onLogout = onLogout,
                 )
             }
@@ -322,6 +325,8 @@ private fun DashboardHeader(
     name: String,
     dateText: String,
     pendingPings: Int,
+    unreadNotifications: Int,
+    onOpenNotifications: () -> Unit,
     onLogout: () -> Unit,
 ) {
     Row(
@@ -360,6 +365,30 @@ private fun DashboardHeader(
             )
         }
         Spacer(Modifier.width(6.dp))
+        Box {
+            IconButton(onClick = onOpenNotifications, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    painterResource(Res.drawable.ic_alarm),
+                    contentDescription = "الإشعارات",
+                    tint = Fv.TextMid,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            if (unreadNotifications > 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 4.dp, end = 4.dp)
+                        .background(Fv.Red, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 5.dp, vertical = 1.dp),
+                ) {
+                    Text(
+                        if (unreadNotifications > 9) "9+" else unreadNotifications.toString(),
+                        color = Fv.TextHigh, fontSize = 9.sp, fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
         IconButton(onClick = onLogout, modifier = Modifier.size(40.dp)) {
             Icon(
                 painterResource(Res.drawable.ic_logout),
