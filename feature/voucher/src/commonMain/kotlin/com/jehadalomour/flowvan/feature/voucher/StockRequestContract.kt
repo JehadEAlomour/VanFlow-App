@@ -21,7 +21,17 @@ import com.jehadalomour.flowvan.core.network.dto.StockRequestDto
  * own stock pool, so the pool a line draws on is (productId, unitId) — the same
  * identity the cart is keyed on.
  */
+/** Within the "new request" flow: pick items, then review the cart. */
 enum class StockRequestView { PICKER, CART }
+
+/**
+ * The screen's two halves, deliberately split:
+ *  - NEW  — build and send a request (picker → cart).
+ *  - MINE — track requests already sent (status, and the button that receives them).
+ * They answer two different questions ("what do I need?" vs "am I getting it?"),
+ * so mixing them in one scroll made each harder to act on.
+ */
+enum class StockRequestTab { NEW, MINE }
 
 data class StockRequestState(
     val products: List<Product> = emptyList(),
@@ -34,6 +44,9 @@ data class StockRequestState(
     val mainStoreName: String? = null,
 
     val cart: List<CartLine> = emptyList(),
+    /** Which half of the screen is showing. */
+    val tab: StockRequestTab = StockRequestTab.NEW,
+    /** Within the NEW tab: the item picker or the cart review. */
     val view: StockRequestView = StockRequestView.PICKER,
     val searchQuery: String = "",
     val note: String = "",
@@ -61,6 +74,9 @@ data class StockRequestState(
     /** Distinct items, for the cart badge. A 2-unit item still counts as 2 lines. */
     val lineCount: Int get() = cart.size
 
+    /** Requests still in play (awaiting a decision or awaiting receipt) — the MINE tab badge. */
+    val activeCount: Int get() = mine.count { it.status == "pending" || it.status == "approved" }
+
     /** Units for one product, smallest first — the order a rep reads them in. */
     fun unitsFor(productId: String): List<ProductUnit> =
         (productUnits[productId] ?: emptyList()).sortedBy { it.conversionQty }
@@ -75,6 +91,9 @@ data class StockRequestState(
 }
 
 sealed interface StockRequestEvent {
+    /** Switch between the "new request" and "my requests" halves. */
+    data class SelectTab(val tab: StockRequestTab) : StockRequestEvent
+
     /** Swap between the item picker and the cart. */
     data object ToggleView : StockRequestEvent
     data class SearchChanged(val v: String) : StockRequestEvent

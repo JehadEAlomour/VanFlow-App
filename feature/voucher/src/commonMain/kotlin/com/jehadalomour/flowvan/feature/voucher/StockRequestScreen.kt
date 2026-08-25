@@ -80,90 +80,113 @@ fun StockRequestScreen(
     var sheetProduct by remember { mutableStateOf<Product?>(null) }
     var sheetUnitId by remember { mutableStateOf<String?>(null) }
 
-    // In the cart, back returns to the picker rather than leaving the screen —
-    // otherwise one stray back gesture discards a cart the rep just built.
-    AppBackHandler(enabled = state.view == StockRequestView.CART) {
-        viewModel.onEvent(StockRequestEvent.ToggleView)
+    // Back never leaves in one stray gesture from a place with unfinished work:
+    // the cart returns to the picker, and "my requests" returns to the new-request
+    // tab; only the picker itself leaves the screen.
+    AppBackHandler(
+        enabled = state.tab == StockRequestTab.MINE || state.view == StockRequestView.CART,
+    ) {
+        when {
+            state.tab == StockRequestTab.MINE ->
+                viewModel.onEvent(StockRequestEvent.SelectTab(StockRequestTab.NEW))
+            state.view == StockRequestView.CART ->
+                viewModel.onEvent(StockRequestEvent.ToggleView)
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize().background(Fv.BgDeepest)) {
         Surface(modifier = Modifier.fillMaxWidth(), color = Fv.Surface, shadowElevation = 2.dp) {
-            Row(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    "رجوع",
-                    color = Fv.Blue,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable {
-                        if (state.view == StockRequestView.CART) {
-                            viewModel.onEvent(StockRequestEvent.ToggleView)
-                        } else {
-                            onBack()
-                        }
-                    },
-                )
-                Spacer(Modifier.width(14.dp))
-                Text("طلب بضاعة", color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.weight(1f))
-                // The cart badge doubles as the way into the cart, so the count and
-                // the way to act on it are never in two different places.
-                Box(
-                    modifier = Modifier
-                        .background(
-                            if (state.cart.isEmpty()) Fv.SurfaceTop else Fv.Blue,
-                            RoundedCornerShape(9.dp),
-                        )
-                        .clickable(enabled = state.cart.isNotEmpty()) {
-                            viewModel.onEvent(StockRequestEvent.ToggleView)
-                        }
-                        .padding(horizontal = 12.dp, vertical = 7.dp),
+            Column {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        if (state.view == StockRequestView.CART) {
-                            "الأصناف"
-                        } else {
-                            "السلة (${state.lineCount})"
+                        "رجوع",
+                        color = Fv.Blue,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clickable {
+                            when {
+                                state.tab == StockRequestTab.MINE ->
+                                    viewModel.onEvent(StockRequestEvent.SelectTab(StockRequestTab.NEW))
+                                state.view == StockRequestView.CART ->
+                                    viewModel.onEvent(StockRequestEvent.ToggleView)
+                                else -> onBack()
+                            }
                         },
-                        color = if (state.cart.isEmpty()) Fv.TextLow else Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
                     )
+                    Spacer(Modifier.width(14.dp))
+                    Text("طلب بضاعة", color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.weight(1f))
+                    // The cart badge belongs to the new-request flow only, and doubles
+                    // as the way into the cart — count and action never apart.
+                    if (state.tab == StockRequestTab.NEW) {
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    if (state.cart.isEmpty()) Fv.SurfaceTop else Fv.Blue,
+                                    RoundedCornerShape(9.dp),
+                                )
+                                .clickable(enabled = state.cart.isNotEmpty()) {
+                                    viewModel.onEvent(StockRequestEvent.ToggleView)
+                                }
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                        ) {
+                            Text(
+                                if (state.view == StockRequestView.CART) "الأصناف" else "السلة (${state.lineCount})",
+                                color = if (state.cart.isEmpty()) Fv.TextLow else Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
                 }
+
+                TabBar(
+                    tab = state.tab,
+                    activeCount = state.activeCount,
+                    onSelect = { viewModel.onEvent(StockRequestEvent.SelectTab(it)) },
+                )
             }
         }
 
         state.errorAr?.let { Banner(it, Fv.Red) { viewModel.onEvent(StockRequestEvent.DismissError) } }
         state.noticeAr?.let { Banner(it, Fv.Green) { viewModel.onEvent(StockRequestEvent.DismissError) } }
 
-        when (state.view) {
-            StockRequestView.PICKER -> ProductPickerColumn(
-                products = state.visibleProducts,
-                searchQuery = state.searchQuery,
-                onSearch = { viewModel.onEvent(StockRequestEvent.SearchChanged(it)) },
-                onAdd = { sheetProduct = it; sheetUnitId = null },
-                // Van stock is context here, not a limit: being low is the REASON
-                // to ask, so a badge informs and nothing is capped by it.
-                showStockBadge = true,
-                showPrice = false,
-                cartQtyMap = state.cartQtyByProduct,
-                modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp),
-            )
+        when (state.tab) {
+            StockRequestTab.NEW -> when (state.view) {
+                StockRequestView.PICKER -> ProductPickerColumn(
+                    products = state.visibleProducts,
+                    searchQuery = state.searchQuery,
+                    onSearch = { viewModel.onEvent(StockRequestEvent.SearchChanged(it)) },
+                    onAdd = { sheetProduct = it; sheetUnitId = null },
+                    // Van stock is context here, not a limit: being low is the REASON
+                    // to ask, so a badge informs and nothing is capped by it.
+                    showStockBadge = true,
+                    showPrice = false,
+                    cartQtyMap = state.cartQtyByProduct,
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp),
+                )
 
-            StockRequestView.CART -> CartView(
+                StockRequestView.CART -> CartView(
+                    state = state,
+                    onTapLine = { productId, unitId ->
+                        sheetProduct = state.products.firstOrNull { it.id == productId }
+                        sheetUnitId = unitId
+                    },
+                    onNote = { viewModel.onEvent(StockRequestEvent.NoteChanged(it)) },
+                    onSubmit = { viewModel.onEvent(StockRequestEvent.Submit) },
+                    onAddMore = { viewModel.onEvent(StockRequestEvent.ToggleView) },
+                )
+            }
+
+            StockRequestTab.MINE -> MineView(
                 state = state,
-                onTapLine = { productId, unitId ->
-                    sheetProduct = state.products.firstOrNull { it.id == productId }
-                    sheetUnitId = unitId
-                },
-                onNote = { viewModel.onEvent(StockRequestEvent.NoteChanged(it)) },
-                onSubmit = { viewModel.onEvent(StockRequestEvent.Submit) },
-                onAddMore = { viewModel.onEvent(StockRequestEvent.ToggleView) },
                 onRefresh = { viewModel.onEvent(StockRequestEvent.Refresh) },
                 onCancel = { viewModel.onEvent(StockRequestEvent.Cancel(it)) },
                 onReceive = { viewModel.onEvent(StockRequestEvent.Receive(it)) },
+                onNewRequest = { viewModel.onEvent(StockRequestEvent.SelectTab(StockRequestTab.NEW)) },
             )
         }
     }
@@ -199,9 +222,6 @@ private fun CartView(
     onNote: (String) -> Unit,
     onSubmit: () -> Unit,
     onAddMore: () -> Unit,
-    onRefresh: () -> Unit,
-    onCancel: (String) -> Unit,
-    onReceive: (String) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
@@ -309,10 +329,39 @@ private fun CartView(
             }
         }
 
+        item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+// ── My requests (split out of the cart) ──────────────────────────────────────
+
+/**
+ * Requests already sent, and what to do next about them: cancel one still
+ * pending, or confirm receipt of one the office approved (the tap that actually
+ * moves stock). Its own tab, because "am I getting it?" is a different job from
+ * building the next request.
+ */
+@Composable
+private fun MineView(
+    state: StockRequestState,
+    onRefresh: () -> Unit,
+    onCancel: (String) -> Unit,
+    onReceive: (String) -> Unit,
+    onNewRequest: () -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp),
+    ) {
         item {
-            Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("طلباتي", color = Fv.TextHigh, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    if (state.activeCount > 0) "طلبات نشطة (${state.activeCount})" else "طلباتي",
+                    color = Fv.TextHigh,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                )
                 Spacer(Modifier.weight(1f))
                 if (state.isLoadingMine) {
                     CircularProgressIndicator(
@@ -329,12 +378,18 @@ private fun CartView(
         if (state.mine.isEmpty() && !state.isLoadingMine) {
             item {
                 PlainCard {
-                    Text(
-                        "لا توجد طلبات سابقة.",
-                        color = Fv.TextMid,
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(14.dp),
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            "لا توجد طلبات بعد.",
+                            color = Fv.TextMid,
+                            fontSize = 13.sp,
+                        )
+                        Pill("+ طلب جديد", Fv.Blue) { onNewRequest() }
+                    }
                 }
             }
         }
@@ -349,6 +404,60 @@ private fun CartView(
         }
 
         item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+// ── Tab bar ──────────────────────────────────────────────────────────────────
+
+/** Two segmented pills: build a new request, or track the ones already sent. */
+@Composable
+private fun TabBar(
+    tab: StockRequestTab,
+    activeCount: Int,
+    onSelect: (StockRequestTab) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp)
+            .padding(bottom = 10.dp)
+            .background(Fv.SurfaceTop, RoundedCornerShape(10.dp))
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        TabPill(
+            label = "طلب جديد",
+            selected = tab == StockRequestTab.NEW,
+            modifier = Modifier.weight(1f),
+        ) { onSelect(StockRequestTab.NEW) }
+        TabPill(
+            label = if (activeCount > 0) "طلباتي ($activeCount)" else "طلباتي",
+            selected = tab == StockRequestTab.MINE,
+            modifier = Modifier.weight(1f),
+        ) { onSelect(StockRequestTab.MINE) }
+    }
+}
+
+@Composable
+private fun TabPill(
+    label: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = modifier
+            .background(if (selected) Fv.Surface else Color.Transparent, RoundedCornerShape(8.dp))
+            .clickable { onClick() }
+            .padding(vertical = 9.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            color = if (selected) Fv.Blue else Fv.TextMid,
+            fontSize = 13.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+        )
     }
 }
 

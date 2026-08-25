@@ -67,6 +67,13 @@ class StockRequestViewModel(
 
     fun onEvent(event: StockRequestEvent) {
         when (event) {
+            is StockRequestEvent.SelectTab -> {
+                _state.update { it.copy(tab = event.tab) }
+                // Opening "my requests" is exactly when the rep wants the latest
+                // status, so pull it fresh on entry.
+                if (event.tab == StockRequestTab.MINE) refreshMine()
+            }
+
             StockRequestEvent.ToggleView -> _state.update {
                 it.copy(
                     view = if (it.view == StockRequestView.PICKER) {
@@ -176,12 +183,15 @@ class StockRequestViewModel(
                     _state.update {
                         it.copy(
                             isSubmitting = false,
-                            // Clear the cart, keep the screen and drop back to the
-                            // picker: the answer arrives in the list below, and the
-                            // rep is usually about to add a second request anyway.
+                            // Clear the cart and hand the rep straight to "my
+                            // requests": right after sending, the question is "am I
+                            // getting it?", and the sent request — with its status —
+                            // is now on that tab. The picker is one tap back for a
+                            // second request.
                             cart = emptyList(),
                             note = "",
                             view = StockRequestView.PICKER,
+                            tab = StockRequestTab.MINE,
                             mine = listOf(created) + it.mine,
                             noticeAr = "أُرسل الطلب ${created.requestNumber} إلى الإدارة.",
                         )
