@@ -6,6 +6,7 @@ import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.core.data.repository.CompanyInfoRepository
 import com.jehadalomour.flowvan.core.data.repository.TransactionReportRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
+import com.jehadalomour.flowvan.core.data.repository.ErpFinanceRepository
 import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.data.repository.OfferRepository
 import com.jehadalomour.flowvan.core.data.repository.PriceListRepository
@@ -104,6 +105,7 @@ fun sharedModule(): Module = module {
     single { get<FlowVanDatabase>().offerDao() }
     single { get<FlowVanDatabase>().priceListItemDao() }
     single { get<FlowVanDatabase>().tobaccoTaxProfileDao() }
+    single { get<FlowVanDatabase>().erpFinanceDao() }
 
     single { UserRepository(get()) }
     single { CustomerRepository(get()) }
@@ -118,6 +120,7 @@ fun sharedModule(): Module = module {
     single { OfferRepository(get(), get(), get()) }
     single { PriceListRepository(get(), get()) }
     single { TobaccoTaxProfileRepository(get(), get()) }
+    single { ErpFinanceRepository(get()) }
     single { LocationRepository(get()) }
     single { StopDetector() }
     single { LocationTrackingCoordinator(get(), get(), get()) }

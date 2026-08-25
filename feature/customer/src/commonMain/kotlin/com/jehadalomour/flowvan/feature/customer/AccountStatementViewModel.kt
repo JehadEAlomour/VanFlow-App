@@ -7,9 +7,12 @@ import com.jehadalomour.flowvan.core.database.dao.PaymentDao
 import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
 import com.jehadalomour.flowvan.core.database.entity.PaymentEntity
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
+import com.jehadalomour.flowvan.core.data.repository.ErpFinanceRepository
 import com.jehadalomour.flowvan.core.domain.ledger.CustomerStatement
+import com.jehadalomour.flowvan.core.network.dto.ErpStatementDto
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
@@ -17,6 +20,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -25,7 +29,11 @@ class AccountStatementViewModel(
     private val customerRepository: CustomerRepository,
     private val invoiceDao: InvoiceDao,
     private val paymentDao: PaymentDao,
+    private val erpFinance: ErpFinanceRepository,
+    private val erpSync: ErpCustomerSync,
 ) : ViewModel() {
+
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     private val _state = MutableStateFlow(
         AccountStatementState(
@@ -38,6 +46,48 @@ class AccountStatementViewModel(
     init {
         observeCustomer()
         observeEntries()
+        observeErpStatement()
+        refreshErpForRange()
+    }
+
+    /**
+     * The ERP's own statement (book of record) parsed from the offline cache and
+     * shown as the authoritative view; the locally-computed ledger stays as the
+     * offline fallback. Amounts are already JOD major units on the wire.
+     */
+    private fun observeErpStatement() {
+        erpFinance.observeCustomer(customerId)
+            .onEach { row ->
+                val dto = row?.statementJson
+                    ?.let { runCatching { json.decodeFromString(ErpStatementDto.serializer(), it) }.getOrNull() }
+                _state.update {
+                    if (dto != null && dto.isAvailable) {
+                        it.copy(
+                            erpAvailable = true,
+                            erpAsOfMillis = row.asOfMillis,
+                            erpOpeningBalance = dto.openingBalance ?: 0.0,
+                            erpClosingBalance = dto.closingBalance ?: 0.0,
+                            erpLines = dto.lines.map { l ->
+                                ErpStatementUiLine(
+                                    date = l.date, type = l.type, reference = l.reference,
+                                    debit = l.debit, credit = l.credit, balance = l.balance,
+                                )
+                            },
+                        )
+                    } else {
+                        it.copy(erpAvailable = false, erpAsOfMillis = row?.asOfMillis ?: 0L, erpLines = emptyList())
+                    }
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    /** Pull the ERP statement for the range on screen (best-effort; keeps cache offline). */
+    private fun refreshErpForRange() {
+        val s = _state.value
+        viewModelScope.launch {
+            erpSync.refresh(customerId, from = s.fromMillis.toYmd(), to = s.toMillis.toYmd())
+        }
     }
 
     private fun observeCustomer() {
@@ -114,10 +164,22 @@ class AccountStatementViewModel(
 
     fun onEvent(event: AccountStatementEvent) {
         when (event) {
-            is AccountStatementEvent.DateRangeChanged ->
+            is AccountStatementEvent.DateRangeChanged -> {
                 _state.update { it.copy(fromMillis = event.fromMillis, toMillis = event.toMillis, isLoading = true) }
+                refreshErpForRange()
+            }
         }
     }
+}
+
+/** Epoch-ms → "YYYY-MM-DD" in the device timezone, for the ERP statement window. */
+@OptIn(ExperimentalTime::class)
+private fun Long.toYmd(): String {
+    val d = Instant.fromEpochMilliseconds(this)
+        .toLocalDateTime(TimeZone.currentSystemDefault()).date
+    val mm = if (d.monthNumber < 10) "0${d.monthNumber}" else d.monthNumber.toString()
+    val dd = if (d.dayOfMonth < 10) "0${d.dayOfMonth}" else d.dayOfMonth.toString()
+    return "${d.year}-$mm-$dd"
 }
 
 @OptIn(ExperimentalTime::class)

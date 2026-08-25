@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.core.common.format.formatAmount
+import com.jehadalomour.flowvan.core.common.format.formatAsOf
 import com.jehadalomour.flowvan.core.common.format.formatJod
 import com.jehadalomour.flowvan.core.common.i18n.AppLanguage
 import com.jehadalomour.flowvan.core.designsystem.components.*
@@ -82,6 +83,13 @@ fun AccountStatementScreen(
                                 viewModel.onEvent(AccountStatementEvent.DateRangeChanged(from, to))
                             },
                         )
+                        Spacer(Modifier.height(10.dp))
+                        // Says plainly which numbers these are: the ERP's own (with the
+                        // time they were read) or the offline local ledger.
+                        StatementSourceChip(
+                            fromErp = state.erpAvailable,
+                            asOfMillis = state.erpAsOfMillis,
+                        )
                         Spacer(Modifier.height(12.dp))
                     }
                 }
@@ -89,23 +97,28 @@ fun AccountStatementScreen(
                 // Above the list, not below it: this block is the reason the
                 // screen is opened, and a rep should never scroll to reach it.
                 item {
-                    val inCredit = state.closingBalance < 0
+                    // ERP figures when we have them; otherwise the local ledger's.
+                    val opening = if (state.erpAvailable) state.erpOpeningBalance else state.openingBalance
+                    val debits = if (state.erpAvailable) state.erpLines.sumOf { it.debit } else state.totalDebits
+                    val credits = if (state.erpAvailable) state.erpLines.sumOf { it.credit } else state.totalCredits
+                    val closing = if (state.erpAvailable) state.erpClosingBalance else state.closingBalance
+                    val inCredit = closing < 0
                     ReportTotals(
                         modifier = Modifier.padding(horizontal = 16.dp),
                         figures = listOf(
                             ReportFigure(
                                 stringResource(Res.string.statement_opening_balance),
-                                state.openingBalance.formatJod(AppLanguage.AR),
+                                opening.formatJod(AppLanguage.AR),
                                 Fv.TextHigh,
                             ),
                             ReportFigure(
                                 stringResource(Res.string.statement_debits),
-                                state.totalDebits.formatJod(AppLanguage.AR),
+                                debits.formatJod(AppLanguage.AR),
                                 Fv.Red,
                             ),
                             ReportFigure(
                                 stringResource(Res.string.statement_credits),
-                                state.totalCredits.formatJod(AppLanguage.AR),
+                                credits.formatJod(AppLanguage.AR),
                                 Fv.Green,
                             ),
                             ReportFigure(
@@ -117,7 +130,7 @@ fun AccountStatementScreen(
                                 } else {
                                     stringResource(Res.string.statement_closing_balance)
                                 },
-                                value = state.closingBalance.formatJod(AppLanguage.AR),
+                                value = closing.formatJod(AppLanguage.AR),
                                 accent = if (inCredit) Fv.Green else Fv.Red,
                                 emphasis = true,
                             ),
@@ -127,6 +140,21 @@ fun AccountStatementScreen(
                 }
 
                 when {
+                    // ERP-authoritative lines take precedence, newest first.
+                    state.erpAvailable -> {
+                        if (state.erpLines.isEmpty()) {
+                            item {
+                                Box(Modifier.fillMaxWidth().height(140.dp)) {
+                                    ReportEmpty(stringResource(Res.string.statement_period_empty))
+                                }
+                            }
+                        } else {
+                            items(state.erpLines.asReversed()) { line ->
+                                ErpStatementRow(line)
+                            }
+                        }
+                    }
+
                     state.isLoading -> item {
                         Box(Modifier.fillMaxWidth().height(160.dp)) { ReportLoading() }
                     }
@@ -224,5 +252,53 @@ private fun StatementRow(line: StatementLine, onClick: () -> Unit) {
         badge = badge,
         badgeColor = color,
         onClick = onClick,
+    )
+}
+
+/** A small label saying whether the figures are the ERP's own or the offline local ledger. */
+@Composable
+private fun StatementSourceChip(fromErp: Boolean, asOfMillis: Long) {
+    val text = if (fromErp) {
+        val src = stringResource(Res.string.statement_source_erp)
+        if (asOfMillis > 0L) "$src · " + stringResource(Res.string.erp_as_of, formatAsOf(asOfMillis)) else src
+    } else {
+        stringResource(Res.string.statement_source_local)
+    }
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = if (fromErp) Fv.Blue.copy(alpha = 0.12f) else Fv.Surface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (fromErp) Fv.Blue else Fv.Border),
+    ) {
+        Text(
+            text,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            color = if (fromErp) Fv.Blue else Fv.TextLow,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+/** One ERP statement line — a charge (debit) or a receipt (credit), with the running balance. */
+@Composable
+private fun ErpStatementRow(line: ErpStatementUiLine) {
+    val isCredit = line.credit > 0.0
+    val color = if (isCredit) Fv.Green else Fv.Red
+    val badge = if (line.type == "PAYMENT") {
+        stringResource(Res.string.receipt_voucher_title)
+    } else {
+        stringResource(Res.string.voucher_type_sale)
+    }
+    val signed = if (isCredit) -line.credit else line.debit
+    ReportRow(
+        title = line.reference,
+        subtitle = line.date?.take(10) ?: "",
+        value = signed.formatJod(AppLanguage.AR),
+        valueCaption = stringResource(Res.string.statement_col_balance) + " " + line.balance.formatAmount(),
+        edgeColor = color,
+        valueColor = color,
+        badge = badge,
+        badgeColor = color,
+        onClick = {},
     )
 }

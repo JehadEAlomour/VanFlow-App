@@ -32,6 +32,12 @@ data class CustomerDashboardState(
     val locationLocked: Boolean = false,
     /** When location-locked, why the customer actions are blocked (NONE = allowed). */
     val proximityBlock: ProximityBlock = ProximityBlock.NONE,
+    /** Balance straight from the ERP (book of record), JOD major units — null until known/unavailable. */
+    val erpBalance: Double? = null,
+    /** True when [erpBalance] is a real ERP figure; false = unlinked/erp_off/not_found. */
+    val erpAvailable: Boolean = false,
+    /** Epoch-ms the ERP figure was last fetched — the "as of" time shown when offline. 0 = never. */
+    val erpAsOfMillis: Long = 0L,
 ) {
     val salesTotal: Double get() = sales.sumOf { it.total }
     val returnsTotal: Double get() = returns.sumOf { it.total }
