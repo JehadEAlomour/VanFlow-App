@@ -2,6 +2,7 @@ package com.jehadalomour.flowvan.feature.customer
 
 import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
 import com.jehadalomour.flowvan.core.database.entity.PaymentEntity
+import com.jehadalomour.flowvan.core.domain.ledger.CustomerStatement
 import com.jehadalomour.flowvan.core.model.Customer
 
 enum class CustomerTab { SUMMARY, SALES, RETURNS, REQUESTS, COLLECTIONS }
@@ -36,6 +37,18 @@ data class CustomerDashboardState(
     val salesTotal: Double get() = sales.sumOf { it.total }
     val returnsTotal: Double get() = returns.sumOf { it.total }
     val collectionsTotal: Double get() = payments.filter { it.status == "CONFIRMED" }.sumOf { it.amount }
+
+    /**
+     * Balance due computed from the local ledger — the SAME rule the account
+     * statement uses (unsettled sales add, returns subtract, payments subtract),
+     * so the customer-info figure and the statement can never disagree. A
+     * customer whose statement nets to zero reads 0.0 here too, instead of a
+     * stale server balance.
+     */
+    val ledgerBalance: Double get() {
+        val ledger = (sales + returns).filter(CustomerStatement::isLedgerEntry)
+        return ledger.sumOf(CustomerStatement::movement) - payments.sumOf { it.amount }
+    }
 
     /** Customer actions (sale/return/request/collection) are permitted right now. */
     val actionsEnabled: Boolean get() = !locationLocked || proximityBlock == ProximityBlock.NONE

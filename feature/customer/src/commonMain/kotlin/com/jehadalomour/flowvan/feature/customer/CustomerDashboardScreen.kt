@@ -293,7 +293,9 @@ private fun IdentityBlock(state: CustomerDashboardState) {
 @Composable
 private fun BalanceStrip(state: CustomerDashboardState) {
     val c = state.customer
-    val balance = c?.balance ?: 0.0
+    // From the local ledger, identical to the account statement's closing balance
+    // — statement 0 ⇒ balance due 0.0, never a stale server figure.
+    val balance = state.ledgerBalance
     val overLimit = c != null && c.creditLimit > 0 && balance > c.creditLimit
     val accent = when {
         overLimit -> Fv.Amber
