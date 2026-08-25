@@ -195,7 +195,6 @@
     <string name="reports_cash_flow_title">الكشف اليومي</string>
     <string name="reports_cash_flow_subtitle">ملخص كامل للمبيعات والتحصيلات والمرتجعات</string>
     <string name="reports_items_title">مبيعات الأصناف</string>
-    <string name="reports_my_materials_title">موادي حسب المستودع</string>
     <string name="reports_items_subtitle">إجمالي مبيعات كل صنف من تاريخ إلى تاريخ</string>
     <string name="reports_receivables_title">تقرير ذمم العملاء</string>
     <string name="reports_receivables_subtitle">العملاء الذين لديهم أرصدة مستحقة مرتبة تنازلياً</string>

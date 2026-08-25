@@ -24,5 +24,4 @@ fun reportsModule(): Module = module {
     viewModel { ItemsSalesReportViewModel(get()) }
     viewModel { ReceivablesReportViewModel(get()) }
     viewModel { TargetsViewModel(get()) }
-    viewModel { RepMaterialsViewModel(get()) }
 }
