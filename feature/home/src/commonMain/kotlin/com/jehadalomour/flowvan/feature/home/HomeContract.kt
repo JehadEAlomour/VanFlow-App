@@ -19,12 +19,6 @@ data class HomeState(
     val routesOnly: Boolean = false,
     /** Unread notifications, for the home bell badge. */
     val unreadNotifications: Int = 0,
-    /** The rep's own balance from the ERP ("cash with salesman"), JOD major units. Null = unknown/unavailable. */
-    val erpBalance: Double? = null,
-    /** True when [erpBalance] is a real ERP figure (rep is ERP-linked and ERP is on). */
-    val erpBalanceAvailable: Boolean = false,
-    /** Epoch-ms the ERP balance was last fetched — the "as of" time shown when offline. 0 = never. */
-    val erpBalanceAsOfMillis: Long = 0L,
 )
 
 sealed interface HomeEvent {

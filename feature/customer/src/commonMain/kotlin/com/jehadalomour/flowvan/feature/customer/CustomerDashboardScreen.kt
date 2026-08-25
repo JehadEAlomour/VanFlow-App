@@ -55,7 +55,6 @@ import com.jehadalomour.flowvan.core.model.CustomerSegment
 import com.jehadalomour.flowvan.core.model.CustomerTier
 import com.jehadalomour.flowvan.feature.customer.CustomerDashboardState
 import com.jehadalomour.flowvan.feature.customer.CustomerDashboardViewModel
-import com.jehadalomour.flowvan.core.common.format.formatAsOf
 import com.jehadalomour.flowvan.core.common.format.formatJod
 import com.jehadalomour.flowvan.core.common.i18n.AppLanguage
 import org.koin.compose.viewmodel.koinViewModel
@@ -237,6 +236,20 @@ private fun LeaveCustomerDialog(
 
 
 
+// ── Account Summary Card ──────────────────────────────────────────────────────
+
+
+
+// ── Report Cards Grid ─────────────────────────────────────────────────────────
+
+
+
+// ── Statement Card ────────────────────────────────────────────────────────────
+
+
+// ── Bottom Action Bar ─────────────────────────────────────────────────────────
+
+
 
 /** التقرير المفصل للحركات — every voucher in a period with its item lines. */
 
@@ -293,79 +306,33 @@ private fun BalanceStrip(state: CustomerDashboardState) {
         color = Fv.Surface,
         border = BorderStroke(1.dp, if (overLimit) Fv.Amber else Fv.Border),
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(Res.string.customer_balance_label),
+                    color = Fv.TextMid,
+                    fontSize = 11.sp,
+                )
+                if (overLimit) {
+                    Spacer(Modifier.height(2.dp))
                     Text(
-                        stringResource(Res.string.customer_balance_label),
-                        color = Fv.TextMid,
+                        stringResource(Res.string.customer_over_limit),
+                        color = Fv.Amber,
                         fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
                     )
-                    if (overLimit) {
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            stringResource(Res.string.customer_over_limit),
-                            color = Fv.Amber,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
                 }
-                Text(
-                    balance.formatJod(AppLanguage.AR),
-                    color = accent,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                )
             }
-            // The ERP's own figure, right from the book of record — live when online,
-            // last-known (dated) when offline.
-            ErpBalanceLine(
-                balance = state.erpBalance,
-                available = state.erpAvailable,
-                asOfMillis = state.erpAsOfMillis,
-            )
-        }
-    }
-}
-
-/** A subtle second line under the local balance carrying the ERP's own figure. */
-@Composable
-private fun ErpBalanceLine(balance: Double?, available: Boolean, asOfMillis: Long) {
-    // Nothing cached yet and nothing fetched → don't draw an empty row.
-    if (!available && asOfMillis == 0L) return
-    Spacer(Modifier.height(10.dp))
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
             Text(
-                stringResource(Res.string.erp_balance_label),
-                color = Fv.TextMid,
-                fontSize = 11.sp,
+                balance.formatJod(AppLanguage.AR),
+                color = accent,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.ExtraBold,
             )
-            if (asOfMillis > 0L) {
-                Text(
-                    stringResource(Res.string.erp_as_of, formatAsOf(asOfMillis)),
-                    color = Fv.TextLow,
-                    fontSize = 10.sp,
-                )
-            }
         }
-        Text(
-            if (available && balance != null) {
-                balance.formatJod(AppLanguage.AR)
-            } else {
-                stringResource(Res.string.erp_unavailable)
-            },
-            color = if (available) Fv.Blue else Fv.TextLow,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
-        )
     }
 }
 

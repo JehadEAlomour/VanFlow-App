@@ -46,20 +46,6 @@ data class StatementLine(
     }
 }
 
-/**
- * One ERP statement line as the ERP itself renders it — kept separate from the
- * locally-computed [StatementLine] so the authoritative figures are never mixed
- * with the offline ledger. All amounts are JOD major units.
- */
-data class ErpStatementUiLine(
-    val date: String?,
-    val type: String, // "INVOICE" | "PAYMENT"
-    val reference: String,
-    val debit: Double,
-    val credit: Double,
-    val balance: Double,
-)
-
 data class AccountStatementState(
     val customer: Customer? = null,
     /** Newest first, as the list renders them. */
@@ -69,15 +55,6 @@ data class AccountStatementState(
     val fromMillis: Long = 0L,
     val toMillis: Long = 0L,
     val isLoading: Boolean = true,
-    // ── ERP-authoritative statement (the book of record), when we have it ──────
-    /** True once a real ERP statement is cached; false = fall back to the local ledger below. */
-    val erpAvailable: Boolean = false,
-    /** Epoch-ms the ERP statement was fetched — its "as of" time. 0 = never. */
-    val erpAsOfMillis: Long = 0L,
-    /** ERP lines oldest→newest as served; the screen reverses for display. */
-    val erpLines: List<ErpStatementUiLine> = emptyList(),
-    val erpOpeningBalance: Double = 0.0,
-    val erpClosingBalance: Double = 0.0,
 ) {
     private val entries: List<StatementEntry> get() = lines.map { it.entry }
 

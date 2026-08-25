@@ -850,12 +850,6 @@
 
     <!-- Customer page (grid redesign) -->
     <string name="customer_balance_label">Balance due</string>
-    <string name="erp_balance_label">Balance (ERP)</string>
-    <string name="erp_unavailable">Unavailable from ERP</string>
-    <string name="erp_as_of">as of %1$s</string>
-    <string name="statement_source_erp">From ERP</string>
-    <string name="statement_source_local">Local data (offline)</string>
-    <string name="home_erp_balance_label">My balance with company (ERP)</string>
     <string name="customer_over_limit">Over credit limit</string>
     <string name="customer_totals_label">Lifetime totals</string>
     <string name="customer_vouchers_count">Vouchers</string>

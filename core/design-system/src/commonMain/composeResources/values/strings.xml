@@ -851,13 +851,6 @@
     <!-- Customer page (grid redesign) -->
     <string name="customer_balance_label">الرصيد المستحق</string>
     <string name="customer_over_limit">تجاوز الحد الائتماني</string>
-    <!-- ERP money (live from the book of record, cached when offline) -->
-    <string name="erp_balance_label">الرصيد (ERP)</string>
-    <string name="erp_unavailable">غير متوفر من ERP</string>
-    <string name="erp_as_of">كما في %1$s</string>
-    <string name="statement_source_erp">من ERP</string>
-    <string name="statement_source_local">بيانات محلية (دون اتصال)</string>
-    <string name="home_erp_balance_label">رصيدي لدى الشركة (ERP)</string>
     <string name="customer_totals_label">إجمالي التعامل</string>
     <string name="customer_vouchers_count">عدد السندات</string>
     <string name="action_sale">بيع</string>

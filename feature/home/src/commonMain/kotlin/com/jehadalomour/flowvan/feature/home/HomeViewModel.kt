@@ -5,12 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.jehadalomour.flowvan.core.database.dao.LocationPointDao
 import com.jehadalomour.flowvan.core.database.dao.ShiftDao
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
-import com.jehadalomour.flowvan.core.data.repository.ErpFinanceRepository
-import com.jehadalomour.flowvan.core.database.entity.ErpRepCacheEntity
 import com.jehadalomour.flowvan.core.datastore.SessionStore
-import com.jehadalomour.flowvan.core.network.api.RepApi
-import kotlin.time.Clock
-import kotlin.time.ExperimentalTime
 import com.jehadalomour.flowvan.core.domain.sync.SyncScheduler
 import com.jehadalomour.flowvan.core.domain.tracking.LocationTrackingCoordinator
 import com.jehadalomour.flowvan.core.domain.usecase.GetCurrentUserUseCase
@@ -39,8 +34,6 @@ class HomeViewModel(
     private val realtimeSync: RealtimeSyncCoordinator,
     private val locationPointDao: LocationPointDao,
     private val notificationApi: com.jehadalomour.flowvan.core.network.api.NotificationApi,
-    private val repApi: RepApi,
-    private val erpFinance: ErpFinanceRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeState())
@@ -60,46 +53,7 @@ class HomeViewModel(
         observeRoute()
         observeActiveShift()
         observeSyncStatus()
-        observeErpBalance()
         load()
-    }
-
-    /**
-     * The rep's own balance from the ERP ("cash with salesman"): observe the
-     * offline cache for display. A background refresh is kicked off in [load];
-     * offline, the cached row (with its "as of" time) simply stays.
-     */
-    private fun observeErpBalance() {
-        val repId = sessionStore.currentRepId ?: return
-        erpFinance.observeRep(repId)
-            .onEach { row ->
-                _state.update {
-                    it.copy(
-                        erpBalance = row?.balance,
-                        erpBalanceAvailable = row?.available == true,
-                        erpBalanceAsOfMillis = row?.asOfMillis ?: 0L,
-                    )
-                }
-            }
-            .launchIn(viewModelScope)
-    }
-
-    @OptIn(ExperimentalTime::class)
-    private fun refreshErpBalance() {
-        val repId = sessionStore.currentRepId ?: return
-        viewModelScope.launch {
-            val dto = runCatching { repApi.myErpBalance() }.getOrNull() ?: return@launch
-            erpFinance.cacheRep(
-                ErpRepCacheEntity(
-                    repId = repId,
-                    available = dto.source == "erp",
-                    reason = dto.reason,
-                    balance = dto.balance,
-                    accountName = dto.accountName,
-                    asOfMillis = Clock.System.now().toEpochMilliseconds(),
-                ),
-            )
-        }
     }
 
     private fun observeSyncStatus() {
@@ -185,7 +139,5 @@ class HomeViewModel(
             runCatching { notificationApi.list(unreadOnly = true, limit = 1).unread }
                 .onSuccess { u -> _state.update { it.copy(unreadNotifications = u) } }
         }
-        // The rep's own ERP balance, refreshed in the background (best-effort).
-        refreshErpBalance()
     }
 }

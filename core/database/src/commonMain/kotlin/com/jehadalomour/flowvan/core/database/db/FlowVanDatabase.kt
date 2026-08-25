@@ -8,7 +8,6 @@ import androidx.room.RoomDatabaseConstructor
 import com.jehadalomour.flowvan.core.database.dao.AiMessageDao
 import com.jehadalomour.flowvan.core.database.dao.AppSettingsDao
 import com.jehadalomour.flowvan.core.database.dao.CustomerDao
-import com.jehadalomour.flowvan.core.database.dao.ErpFinanceDao
 import com.jehadalomour.flowvan.core.database.dao.InvoiceDao
 import com.jehadalomour.flowvan.core.database.dao.LocationPointDao
 import com.jehadalomour.flowvan.core.database.dao.OfferDao
@@ -23,8 +22,6 @@ import com.jehadalomour.flowvan.core.database.dao.UserDao
 import com.jehadalomour.flowvan.core.database.entity.AiMessageEntity
 import com.jehadalomour.flowvan.core.database.entity.AppSettingsEntity
 import com.jehadalomour.flowvan.core.database.entity.CustomerEntity
-import com.jehadalomour.flowvan.core.database.entity.ErpCustomerCacheEntity
-import com.jehadalomour.flowvan.core.database.entity.ErpRepCacheEntity
 import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
 import com.jehadalomour.flowvan.core.database.entity.LocationPointEntity
 import com.jehadalomour.flowvan.core.database.entity.OfferEntity
@@ -53,10 +50,8 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         OfferEntity::class,
         PriceListItemEntity::class,
         TobaccoTaxProfileEntity::class,
-        ErpCustomerCacheEntity::class,
-        ErpRepCacheEntity::class,
     ],
-    version = 19,
+    version = 18,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -101,11 +96,6 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         // v18: customers tax-exemption columns (isTaxExempt + type/number/reason
         // + validity window), so an offline cart knows the sale will be exempt.
         AutoMigration(from = 17, to = 18),
-        // v19: erp_customer_cache + erp_rep_cache — last-known ERP balance/statement
-        // per customer and the rep's own balance, each with an "as of" timestamp, so
-        // ERP money shows live when online and from cache (dated) when offline. New
-        // tables only, so the auto-migration needs no column defaults.
-        AutoMigration(from = 18, to = 19),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)
@@ -124,7 +114,6 @@ abstract class FlowVanDatabase : RoomDatabase() {
     abstract fun offerDao(): OfferDao
     abstract fun priceListItemDao(): PriceListItemDao
     abstract fun tobaccoTaxProfileDao(): TobaccoTaxProfileDao
-    abstract fun erpFinanceDao(): ErpFinanceDao
 }
 
 @Suppress("KotlinNoActualForExpect", "NO_ACTUAL_FOR_EXPECT")

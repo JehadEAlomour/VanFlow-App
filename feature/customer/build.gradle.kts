@@ -18,8 +18,6 @@ dependencies {
     "commonMainImplementation"(libs.kermit)
     "commonMainImplementation"(libs.kotlinx.coroutines.core)
     "commonMainImplementation"(libs.kotlinx.datetime)
-    // Parse/serialize the cached ERP statement JSON (ErpStatementDto lives in core/network).
-    "commonMainImplementation"(libs.kotlinx.serialization.json)
 
     // AppBackHandler.android uses androidx.activity.compose.BackHandler
     "androidMainImplementation"(libs.androidx.activity.compose)

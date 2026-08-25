@@ -2,8 +2,6 @@ package com.jehadalomour.flowvan.core.network.api
 
 import com.jehadalomour.flowvan.core.network.dto.CreateCustomerRequest
 import com.jehadalomour.flowvan.core.network.dto.CustomerDto
-import com.jehadalomour.flowvan.core.network.dto.ErpBalanceDto
-import com.jehadalomour.flowvan.core.network.dto.ErpStatementDto
 import com.jehadalomour.flowvan.core.network.dto.StagedPhotoDto
 import com.jehadalomour.flowvan.core.network.http.ApiEnvelope
 import com.jehadalomour.flowvan.core.network.dto.LogVisitRequest
@@ -47,22 +45,6 @@ class CustomerApi(private val client: FlowVanApiClient) {
     )
 
     suspend fun getById(id: String): CustomerDto = client.getData("customers/$id")
-
-    /** Live balance + credit limit straight from the ERP (book of record). */
-    suspend fun erpBalance(id: String): ErpBalanceDto = client.getData("customers/$id/erp-balance")
-
-    /**
-     * Live account statement from the ERP, like the ERP renders it. Optional
-     * from/to (YYYY-MM-DD) bound the window inclusively.
-     */
-    suspend fun erpStatement(
-        id: String,
-        from: String? = null,
-        to: String? = null,
-    ): ErpStatementDto = client.getData(
-        path = "customers/$id/erp-statement",
-        query = mapOf("from" to from, "to" to to),
-    )
 
     suspend fun create(body: CreateCustomerRequest): CustomerDto = client.postData("customers", body)
 

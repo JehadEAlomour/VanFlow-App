@@ -7,7 +7,6 @@ import com.jehadalomour.flowvan.core.data.location.LatLng
 import com.jehadalomour.flowvan.core.data.location.LocationProvider
 import com.jehadalomour.flowvan.core.data.location.isWithinProximity
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
-import com.jehadalomour.flowvan.core.data.repository.ErpFinanceRepository
 import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.data.repository.PaymentRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
@@ -32,8 +31,6 @@ class CustomerDashboardViewModel(
     private val customerApi: CustomerApi,
     private val session: SessionStore,
     private val location: LocationProvider,
-    private val erpFinance: ErpFinanceRepository,
-    private val erpSync: ErpCustomerSync,
 ) : ViewModel() {
 
     /** This rep may only act on a customer while at its location (~1 km). */
@@ -84,22 +81,6 @@ class CustomerDashboardViewModel(
         payments.observeByCustomer(customerId)
             .onEach { list -> _state.update { it.copy(payments = list) } }
             .launchIn(viewModelScope)
-
-        // ERP balance (book of record): observe the offline cache for display, then
-        // pull a fresh figure in the background. Offline → the cached row (with its
-        // "as of" time) simply stays.
-        erpFinance.observeCustomer(customerId)
-            .onEach { row ->
-                _state.update {
-                    it.copy(
-                        erpBalance = row?.balance,
-                        erpAvailable = row?.available == true,
-                        erpAsOfMillis = row?.asOfMillis ?: 0L,
-                    )
-                }
-            }
-            .launchIn(viewModelScope)
-        viewModelScope.launch { erpSync.refresh(customerId) }
     }
 
     /**
@@ -115,8 +96,6 @@ class CustomerDashboardViewModel(
             } catch (e: Exception) {
                 log.w("customer refresh failed: ${e.message}")
             }
-            // Refresh the ERP balance/statement too (best-effort; keeps cache on failure).
-            erpSync.refresh(customerId)
         }
     }
 

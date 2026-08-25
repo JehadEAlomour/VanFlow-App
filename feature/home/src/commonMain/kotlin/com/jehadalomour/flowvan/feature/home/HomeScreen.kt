@@ -56,7 +56,6 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import com.jehadalomour.flowvan.core.model.Customer
 import com.jehadalomour.flowvan.core.model.CustomerTier
-import com.jehadalomour.flowvan.core.common.format.formatAsOf
 import com.jehadalomour.flowvan.core.common.format.formatJod
 import com.jehadalomour.flowvan.core.common.format.formatLevantine
 import com.jehadalomour.flowvan.core.common.i18n.AppLanguage
@@ -154,17 +153,6 @@ fun HomeScreen(
                     modifier = Modifier.padding(horizontal = 14.dp).padding(top = 18.dp),
                 )
             }
-            // ── The rep's own balance with the company, straight from the ERP ─
-            if (state.erpBalanceAvailable || state.erpBalanceAsOfMillis > 0L) {
-                item {
-                    RepErpBalanceCard(
-                        balance = state.erpBalance,
-                        available = state.erpBalanceAvailable,
-                        asOfMillis = state.erpBalanceAsOfMillis,
-                        modifier = Modifier.padding(horizontal = 14.dp).padding(top = 12.dp),
-                    )
-                }
-            }
             item{ Spacer(modifier = Modifier.height(12.dp)) }
             // ── Actions, first and without scrolling ──────────────────────────
             item {
@@ -191,57 +179,6 @@ fun HomeScreen(
 
         }
         } // PullToRefreshBox
-    }
-}
-
-/**
- * The salesman's own balance with the company, read from the ERP (book of
- * record) — the "cash with salesman" account. Live when online, last-known
- * (dated) when offline; says plainly when the ERP has no figure to give.
- */
-@Composable
-private fun RepErpBalanceCard(
-    balance: Double?,
-    available: Boolean,
-    asOfMillis: Long,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        color = Fv.Surface,
-        border = BorderStroke(1.dp, if (available) Fv.Blue else Fv.Border),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(Res.string.home_erp_balance_label),
-                    color = Fv.TextMid,
-                    fontSize = 12.sp,
-                )
-                if (asOfMillis > 0L) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        stringResource(Res.string.erp_as_of, formatAsOf(asOfMillis)),
-                        color = Fv.TextLow,
-                        fontSize = 10.sp,
-                    )
-                }
-            }
-            Text(
-                if (available && balance != null) {
-                    balance.formatJod(AppLanguage.AR)
-                } else {
-                    stringResource(Res.string.erp_unavailable)
-                },
-                color = if (available) Fv.Blue else Fv.TextLow,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold,
-            )
-        }
     }
 }
 
