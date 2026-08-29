@@ -85,7 +85,7 @@
     <string name="customer_action_collection">Collection</string>
     <string name="customer_action_ai">Ask AI</string>
     <string name="proximity_blocked_gps">Enable location (GPS) to act on this customer</string>
-    <string name="proximity_blocked_far">You must be at the customer\'s location (within 30 m) to act</string>
+    <string name="proximity_blocked_far">You must be at the customer\'s location (within 100 m) to act</string>
 
     <!-- Sale Voucher -->
     <string name="sale_title">Sale Invoice</string>
