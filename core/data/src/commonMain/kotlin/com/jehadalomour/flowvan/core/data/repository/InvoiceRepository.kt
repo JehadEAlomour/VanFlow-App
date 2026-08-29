@@ -23,8 +23,23 @@ class InvoiceRepository(private val dao: InvoiceDao) {
             .filter { it.type == "SALE" && it.paymentMethod == "CREDIT" }
             .sumOf { it.total }
 
+    /** SALE vouchers paid in cash only — the cash that actually entered the drawer. */
+    suspend fun cashOnlySalesTotalSince(sinceMillis: Long): Double =
+        dao.listSince(sinceMillis)
+            .filter { it.type == "SALE" && it.paymentMethod == "CASH" }
+            .sumOf { it.total }
+
     suspend fun returnsTotalSince(sinceMillis: Long): Double =
         dao.listSince(sinceMillis).filter { it.type == "RETURN" }.sumOf { it.total }
+
+    /**
+     * Returns refunded in cash — cash that left the drawer. A CREDIT return is a credit note
+     * (no cash moves); anything else, including older returns saved without a method, is cash.
+     */
+    suspend fun cashReturnsTotalSince(sinceMillis: Long): Double =
+        dao.listSince(sinceMillis)
+            .filter { it.type == "RETURN" && it.paymentMethod != "CREDIT" }
+            .sumOf { it.total }
 
     suspend fun distinctCustomersSince(sinceMillis: Long): Int =
         dao.listSince(sinceMillis).map { it.customerId }.toSet().size
