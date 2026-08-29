@@ -172,6 +172,9 @@ fun CustomerDashboardScreen(
             item {
                 CustomerGrid(
                     actionsEnabled = state.actionsEnabled,
+                    canSell = state.canSell,
+                    canReturn = state.canReturn,
+                    canCollect = state.canCollect,
                     onSale = { startedTxn = true; onOpenSale(customerId) },
                     onReturn = { startedTxn = true; onOpenReturn(customerId) },
                     onRequest = { startedTxn = true; onOpenRequest(customerId) },
@@ -367,6 +370,9 @@ private fun ProximityNotice(message: String) {
 @Composable
 private fun CustomerGrid(
     actionsEnabled: Boolean,
+    canSell: Boolean,
+    canReturn: Boolean,
+    canCollect: Boolean,
     onSale: () -> Unit,
     onReturn: () -> Unit,
     onRequest: () -> Unit,
@@ -383,18 +389,20 @@ private fun CustomerGrid(
         val tint: Color,
         val onClick: () -> Unit,
         val gated: Boolean = false,
+        /** Off → the office withdrew this permission, so the tile is not shown. */
+        val visible: Boolean = true,
     )
     val tiles = listOf(
-        Tile(Res.drawable.ic_cart, Res.string.action_sale, Fv.Green, onSale, gated = true),
-        Tile(Res.drawable.ic_return_arrow, Res.string.action_return, Fv.Red, onReturn, gated = true),
+        Tile(Res.drawable.ic_cart, Res.string.action_sale, Fv.Green, onSale, gated = true, visible = canSell),
+        Tile(Res.drawable.ic_return_arrow, Res.string.action_return, Fv.Red, onReturn, gated = true, visible = canReturn),
         Tile(Res.drawable.ic_inventory, Res.string.action_request, Fv.Teal, onRequest, gated = true),
-        Tile(Res.drawable.ic_payment, Res.string.action_collection, Fv.Green, onCollection, gated = true),
+        Tile(Res.drawable.ic_payment, Res.string.action_collection, Fv.Green, onCollection, gated = true, visible = canCollect),
         Tile(Res.drawable.ic_bar_chart, Res.string.statement_title, Fv.Blue, onStatement),
         Tile(Res.drawable.ic_receipt, Res.string.txn_report_title, Fv.Blue, onTxnReport),
         Tile(Res.drawable.ic_receipt, Res.string.detailed_txn_title, Fv.Blue, onDetailedReport),
         Tile(Res.drawable.ic_receipt, Res.string.customer_report_vouchers, Fv.TextHigh, onVoucherReport),
         Tile(Res.drawable.ic_payment, Res.string.customer_payments_report, Fv.TextHigh, onPaymentReport),
-    )
+    ).filter { it.visible }
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         tiles.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

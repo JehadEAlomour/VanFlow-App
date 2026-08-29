@@ -96,6 +96,25 @@ class SessionStore(private val settings: Settings) {
         get() = settings.getBoolean(SettingsKeys.ROUTES_ONLY, false)
         set(value) = settings.putBoolean(SettingsKeys.ROUTES_ONLY, value)
 
+    /**
+     * The three customer-dashboard action gates (permissions.canCreateSale /
+     * canCreateReturn / canMakeCollection). Selling, returning and collecting were
+     * always allowed, so these DEFAULT TRUE (opt-out): the tile hides only when the
+     * office has explicitly switched the permission off. Login writes each from the
+     * server's permissions map, treating a missing key as allowed.
+     */
+    var canCreateSale: Boolean
+        get() = settings.getBoolean(SettingsKeys.CAN_CREATE_SALE, true)
+        set(value) = settings.putBoolean(SettingsKeys.CAN_CREATE_SALE, value)
+
+    var canCreateReturn: Boolean
+        get() = settings.getBoolean(SettingsKeys.CAN_CREATE_RETURN, true)
+        set(value) = settings.putBoolean(SettingsKeys.CAN_CREATE_RETURN, value)
+
+    var canMakeCollection: Boolean
+        get() = settings.getBoolean(SettingsKeys.CAN_MAKE_COLLECTION, true)
+        set(value) = settings.putBoolean(SettingsKeys.CAN_MAKE_COLLECTION, value)
+
     /** Max direct-discount % encoded as "vouchers.discount.max:<n>", or null = uncapped. */
     fun discountMaxPct(): Double? =
         currentPermKeys.orEmpty().split(',')

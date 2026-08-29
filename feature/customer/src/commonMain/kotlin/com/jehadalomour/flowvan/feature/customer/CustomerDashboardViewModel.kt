@@ -40,6 +40,9 @@ class CustomerDashboardViewModel(
         CustomerDashboardState(
             requireVisitReason = session.can("customers.visitReason"),
             locationLocked = locationLocked,
+            canSell = session.canCreateSale,
+            canReturn = session.canCreateReturn,
+            canCollect = session.canMakeCollection,
         ),
     )
     val state: StateFlow<CustomerDashboardState> = _state.asStateFlow()

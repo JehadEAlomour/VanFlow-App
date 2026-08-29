@@ -69,6 +69,11 @@ class BackendLoginUseCase(
             session.canPrintLineDiscount = resp.user.permissions["canPrintLineDiscount"] == true
             session.canFindCustomers = resp.user.permissions["canFindCustomers"] == true
             session.routesOnly = resp.user.permissions["routesOnly"] == true
+            // Opt-out: sale/return/collection were always allowed, so a missing key
+            // (older server) stays allowed and only an explicit false hides the tile.
+            session.canCreateSale = resp.user.permissions["canCreateSale"] != false
+            session.canCreateReturn = resp.user.permissions["canCreateReturn"] != false
+            session.canMakeCollection = resp.user.permissions["canMakeCollection"] != false
             session.boundDeviceId = device.deviceId
             // Kept outside the session on purpose: this is what keeps the phone
             // reporting once the rep signs out.

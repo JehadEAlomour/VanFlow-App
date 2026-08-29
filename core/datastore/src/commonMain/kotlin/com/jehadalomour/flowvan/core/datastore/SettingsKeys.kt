@@ -47,6 +47,15 @@ object SettingsKeys {
     /** Hide the Customers list; reach customers via the route only (permissions.routesOnly). */
     const val ROUTES_ONLY = "routes_only"
 
+    /** Show the Sale action on the customer dashboard (permissions.canCreateSale). */
+    const val CAN_CREATE_SALE = "can_create_sale"
+
+    /** Show the Return action on the customer dashboard (permissions.canCreateReturn). */
+    const val CAN_CREATE_RETURN = "can_create_return"
+
+    /** Show the Collection action on the customer dashboard (permissions.canMakeCollection). */
+    const val CAN_MAKE_COLLECTION = "can_make_collection"
+
     // ── Device binding (survives sign-out on purpose) ───────────────
     /** Long-lived, location-only credential. NOT cleared by SessionStore.clear(). */
     const val TRACKING_TOKEN = "tracking_token"

@@ -33,6 +33,14 @@ data class CustomerDashboardState(
     val locationLocked: Boolean = false,
     /** When location-locked, why the customer actions are blocked (NONE = allowed). */
     val proximityBlock: ProximityBlock = ProximityBlock.NONE,
+    /**
+     * Per-action permissions (permissions.canCreateSale / canCreateReturn /
+     * canMakeCollection). The matching tile is HIDDEN when its flag is off. Default
+     * true — these actions were always allowed, so only an explicit off hides them.
+     */
+    val canSell: Boolean = true,
+    val canReturn: Boolean = true,
+    val canCollect: Boolean = true,
 ) {
     val salesTotal: Double get() = sales.sumOf { it.total }
     val returnsTotal: Double get() = returns.sumOf { it.total }

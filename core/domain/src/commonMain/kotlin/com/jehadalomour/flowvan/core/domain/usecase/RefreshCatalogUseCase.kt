@@ -216,6 +216,10 @@ class RefreshCatalogUseCase(
             session.canFindCustomers = me.permissions["canFindCustomers"] == true
             session.routesOnly = me.permissions["routesOnly"] == true
             session.canPrintLineDiscount = me.permissions["canPrintLineDiscount"] == true
+            // Opt-out like login: absent key stays allowed, explicit false hides the tile.
+            session.canCreateSale = me.permissions["canCreateSale"] != false
+            session.canCreateReturn = me.permissions["canCreateReturn"] != false
+            session.canMakeCollection = me.permissions["canMakeCollection"] != false
         } catch (e: Exception) {
             log.w("permissions sync failed: ${e.message}")
         }
