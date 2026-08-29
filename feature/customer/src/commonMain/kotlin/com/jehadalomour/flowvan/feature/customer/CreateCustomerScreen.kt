@@ -122,7 +122,12 @@ fun CreateCustomerScreen(
             }
 
             // ── Who ─────────────────────────────────────────────────────────────
-            FormSection(title = "بيانات العميل") {
+            FormSection(
+                title = "بيانات العميل",
+                trailing = {
+                    Text("إلزامي", color = Fv.Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                },
+            ) {
                 FieldLabel("اسم العميل")
                 Spacer(Modifier.height(6.dp))
                 Field(
@@ -225,7 +230,12 @@ private fun FormSection(
 
 @Composable
 private fun LocationSection(state: CreateCustomerState, viewModel: CreateCustomerViewModel) {
-    FormSection(title = "الموقع") {
+    FormSection(
+        title = "الموقع",
+        trailing = {
+            Text("إلزامي", color = Fv.Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        },
+    ) {
         if (state.hasLocation) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -278,60 +288,27 @@ private fun DocumentSection(state: CreateCustomerState, viewModel: CreateCustome
     val scope = rememberCoroutineScope()
 
     FormSection(
-        title = "وثيقة العميل",
-        // The one field that decides whether the save is accepted at all, so it
-        // is marked on the heading rather than in a sentence below it.
+        title = "صور العميل",
+        // At least one photo decides whether the save is accepted at all, so the
+        // requirement is marked on the heading rather than in a sentence below it.
         trailing = {
             Text("إلزامي", color = Fv.Red, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         },
     ) {
-        when {
-            state.isUploadingDocument -> Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                CircularProgressIndicator(
-                    color = Fv.Blue,
-                    strokeWidth = 2.dp,
-                    modifier = Modifier.size(16.dp),
-                )
-                Text("جارٍ رفع الصورة…", color = Fv.TextMid, fontSize = 13.sp)
-            }
+        Text(
+            "صوّر المحل ووثيقته — صورة واحدة على الأقل، ويمكنك إضافة المزيد.",
+            color = Fv.TextMid,
+            fontSize = 13.sp,
+        )
 
-            state.hasDocument -> Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    painterResource(Res.drawable.ic_check_circle),
-                    contentDescription = null,
-                    tint = Fv.Green,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "تم إرفاق الوثيقة",
-                    color = Fv.Green,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    "مسح",
-                    color = Fv.Red,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .clickable { viewModel.onEvent(CreateCustomerEvent.ClearDocument) }
-                        .padding(6.dp),
-                )
+        if (state.photos.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            state.photos.forEach { photo ->
+                PhotoRow(photo) {
+                    viewModel.onEvent(CreateCustomerEvent.RemovePhoto(photo.localId))
+                }
+                Spacer(Modifier.height(6.dp))
             }
-
-            else -> Text(
-                "صوّر السجل التجاري أو هوية صاحب المحل — لا يمكن حفظ العميل بدونها.",
-                color = Fv.TextMid,
-                fontSize = 13.sp,
-            )
         }
 
         state.documentErrorAr?.let {
@@ -344,7 +321,7 @@ private fun DocumentSection(state: CreateCustomerState, viewModel: CreateCustome
         Spacer(Modifier.height(10.dp))
 
         // Both sources offered side by side: the rep either photographs the
-        // paper now, or picks the shot they already took on the way in.
+        // shop now, or picks a shot already taken. Each pick adds another image.
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -358,7 +335,6 @@ private fun DocumentSection(state: CreateCustomerState, viewModel: CreateCustome
                         }
                     }
                 },
-                enabled = !state.isUploadingDocument,
                 primary = false,
                 modifier = Modifier.weight(1f),
             )
@@ -371,11 +347,62 @@ private fun DocumentSection(state: CreateCustomerState, viewModel: CreateCustome
                         }
                     }
                 },
-                enabled = !state.isUploadingDocument,
                 primary = false,
                 modifier = Modifier.weight(1f),
             )
         }
+    }
+}
+
+/** One picked image: a status icon, its label, and a remove action. */
+@Composable
+private fun PhotoRow(photo: CustomerPhoto, onRemove: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        when {
+            photo.uploading -> CircularProgressIndicator(
+                color = Fv.Blue,
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(16.dp),
+            )
+            photo.failed -> Icon(
+                painterResource(Res.drawable.ic_warning),
+                contentDescription = null,
+                tint = Fv.Red,
+                modifier = Modifier.size(18.dp),
+            )
+            else -> Icon(
+                painterResource(Res.drawable.ic_check_circle),
+                contentDescription = null,
+                tint = Fv.Green,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            when {
+                photo.uploading -> "جارٍ رفع ${photo.label}…"
+                photo.failed -> "فشل رفع ${photo.label}"
+                else -> "تم إرفاق ${photo.label}"
+            },
+            color = when {
+                photo.failed -> Fv.Red
+                photo.uploading -> Fv.TextMid
+                else -> Fv.Green
+            },
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            "مسح",
+            color = Fv.Red,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.clickable { onRemove() }.padding(6.dp),
+        )
     }
 }
 

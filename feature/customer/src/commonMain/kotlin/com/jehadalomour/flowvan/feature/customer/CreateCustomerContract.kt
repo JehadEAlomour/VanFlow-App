@@ -1,5 +1,18 @@
 package com.jehadalomour.flowvan.feature.customer
 
+/**
+ * One picked image, tracked from the moment the rep chooses it through its
+ * upload. The server [uploadedId] (from POST /customers/photo) is what travels on
+ * save; [failed] marks an upload the rep can remove and retake.
+ */
+data class CustomerPhoto(
+    val localId: Long,
+    val label: String,
+    val uploading: Boolean = false,
+    val uploadedId: String? = null,
+    val failed: Boolean = false,
+)
+
 data class CreateCustomerState(
     val name: String = "",
     val phone: String = "",
@@ -11,12 +24,9 @@ data class CreateCustomerState(
     val savedCustomerId: String? = null,
     val errorAr: String? = null,
 
-    // ── Document photo ────────────────────────────────────────────────────────
-    /** Bytes of the chosen photo, held only until it is uploaded. */
-    val document: PickedDocument? = null,
-    val isUploadingDocument: Boolean = false,
-    /** Server id from POST /customers/photo — what actually travels on save. */
-    val documentPhotoId: String? = null,
+    // ── Photos ────────────────────────────────────────────────────────────────
+    /** At least one is required; the rep may add more images of the shop. */
+    val photos: List<CustomerPhoto> = emptyList(),
     val documentErrorAr: String? = null,
 
     /**
@@ -37,19 +47,30 @@ data class CreateCustomerState(
     /** Set once the office decides; null while still waiting. */
     val approvalDecision: ApprovalDecision? = null,
 ) {
+    /** Uploaded photo ids ready to travel on save (primary first, then extras). */
+    val uploadedPhotoIds: List<String> get() = photos.mapNotNull { it.uploadedId }
+    val isUploadingAnyPhoto: Boolean get() = photos.any { it.uploading }
+    val hasLocation: Boolean get() = lat != null && lng != null
+    val hasDocument: Boolean get() = uploadedPhotoIds.isNotEmpty()
+    /** A shop phone is a real number, not one stray digit. */
+    val phoneValid: Boolean get() = phone.trim().length >= 7
+
     /**
-     * The photo is part of "can I save", not a nicety: the backend rejects a
-     * salesman create without one (400 "A customer document photo is required"),
-     * so letting the button through would only produce a failed round trip.
+     * All four are required for a field customer, by request: name, a phone
+     * number, a captured GPS location, and at least one uploaded photo. The
+     * backend also rejects a salesman create without a photo, so letting the
+     * button through on any of these would only produce a failed round trip.
      */
     val canSave: Boolean
-        get() = name.trim().length >= 2 && !isSaving && !isUploadingDocument &&
-            documentPhotoId != null &&
+        get() = name.trim().length >= 2 &&
+            phoneValid &&
+            hasLocation &&
+            hasDocument &&
+            !isUploadingAnyPhoto &&
+            !isSaving &&
             // Already submitted: pressing save again would file a SECOND request
             // for the same shop, and the office would approve both.
             !awaitingApproval && approvalDecision == null
-    val hasLocation: Boolean get() = lat != null && lng != null
-    val hasDocument: Boolean get() = documentPhotoId != null
 }
 
 enum class ApprovalDecision { Approved, Rejected }
@@ -64,7 +85,8 @@ sealed interface CreateCustomerEvent {
 
     /** The rep picked a photo (camera or gallery); upload starts immediately. */
     data class DocumentPicked(val doc: PickedDocument) : CreateCustomerEvent
-    data object ClearDocument : CreateCustomerEvent
+    /** Remove one photo (uploaded, uploading, or failed) by its local id. */
+    data class RemovePhoto(val localId: Long) : CreateCustomerEvent
 }
 
 /**

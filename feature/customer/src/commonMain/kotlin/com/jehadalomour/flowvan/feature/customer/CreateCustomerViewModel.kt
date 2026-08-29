@@ -63,10 +63,21 @@ class CreateCustomerViewModel(
             CreateCustomerEvent.DismissError ->
                 _state.update { it.copy(errorAr = null, locationErrorAr = null, documentErrorAr = null) }
             is CreateCustomerEvent.DocumentPicked -> uploadDocument(event.doc)
-            CreateCustomerEvent.ClearDocument ->
-                _state.update {
-                    it.copy(document = null, documentPhotoId = null, documentErrorAr = null)
-                }
+            is CreateCustomerEvent.RemovePhoto -> removePhoto(event.localId)
+        }
+    }
+
+    private var nextPhotoId = 0L
+
+    private fun updatePhoto(localId: Long, transform: (CustomerPhoto) -> CustomerPhoto) {
+        _state.update { s ->
+            s.copy(photos = s.photos.map { if (it.localId == localId) transform(it) else it })
+        }
+    }
+
+    private fun removePhoto(localId: Long) {
+        _state.update { s ->
+            s.copy(photos = s.photos.filterNot { it.localId == localId }, documentErrorAr = null)
         }
     }
 
@@ -90,25 +101,24 @@ class CreateCustomerViewModel(
      * field and pressed save.
      */
     private fun uploadDocument(doc: PickedDocument) {
+        val localId = nextPhotoId++
+        val label = "صورة ${_state.value.photos.size + 1}"
         _state.update {
-            it.copy(document = doc, isUploadingDocument = true, documentErrorAr = null)
+            it.copy(
+                photos = it.photos + CustomerPhoto(localId = localId, label = label, uploading = true),
+                documentErrorAr = null,
+            )
         }
         viewModelScope.launch {
             runCatching {
                 customerApi.uploadDocumentPhoto(doc.fileName, doc.mimeType, doc.bytes).id
             }.fold(
-                onSuccess = { id ->
-                    _state.update { it.copy(isUploadingDocument = false, documentPhotoId = id) }
-                },
+                onSuccess = { id -> updatePhoto(localId) { it.copy(uploading = false, uploadedId = id) } },
                 onFailure = {
-                    _state.update {
-                        it.copy(
-                            isUploadingDocument = false,
-                            document = null,
-                            documentPhotoId = null,
-                            documentErrorAr = ERR_DOCUMENT,
-                        )
-                    }
+                    // Keep the row so the rep sees which shot failed and can remove
+                    // + retake it, rather than the picture silently vanishing.
+                    updatePhoto(localId) { it.copy(uploading = false, failed = true) }
+                    _state.update { it.copy(documentErrorAr = ERR_DOCUMENT) }
                 },
             )
         }
@@ -171,8 +181,22 @@ class CreateCustomerViewModel(
     private fun save() {
         val s = _state.value
         val name = s.name.trim()
+        // All four are required for a field customer: name, phone, location, photo.
         if (name.length < 2) {
             _state.update { it.copy(errorAr = ERR_NAME) }
+            return
+        }
+        if (!s.phoneValid) {
+            _state.update { it.copy(errorAr = ERR_PHONE) }
+            return
+        }
+        if (!s.hasLocation) {
+            _state.update { it.copy(errorAr = ERR_LOCATION) }
+            return
+        }
+        val photoIds = s.uploadedPhotoIds
+        if (photoIds.isEmpty()) {
+            _state.update { it.copy(errorAr = ERR_PHOTO) }
             return
         }
         _state.update { it.copy(isSaving = true, errorAr = null) }
@@ -182,11 +206,14 @@ class CreateCustomerViewModel(
                     CreateCustomerRequest(
                         customerName = name,
                         nameAr = name,
-                        phone = s.phone.trim().takeIf { it.isNotBlank() },
+                        phone = s.phone.trim(),
                         latitude = s.lat?.toString(),
                         longitude = s.lng?.toString(),
                         repId = session.currentRepId?.takeIf { it.isNotBlank() },
-                        photoId = s.documentPhotoId,
+                        // First image is the primary document; the rest ride along
+                        // and become attachments on the new customer.
+                        photoId = photoIds.first(),
+                        extraPhotoIds = photoIds.drop(1).takeIf { it.isNotEmpty() },
                         sourceProspectId = prefill?.prospectId,
                     ),
                 )
@@ -222,6 +249,9 @@ class CreateCustomerViewModel(
 
     private companion object {
         const val ERR_NAME = "أدخل اسم العميل (حرفان على الأقل)"
+        const val ERR_PHONE = "أدخل رقم هاتف صحيح."
+        const val ERR_LOCATION = "التقط موقع العميل عبر GPS."
+        const val ERR_PHOTO = "أضف صورة واحدة على الأقل للعميل."
         const val ERR_SAVE = "تعذّر حفظ العميل. تحقق من الاتصال وحاول مرة أخرى."
         const val ERR_DOCUMENT = "تعذّر رفع صورة الوثيقة. حاول مرة أخرى."
         const val ERR_REJECTED = "تم رفض طلب إضافة العميل."

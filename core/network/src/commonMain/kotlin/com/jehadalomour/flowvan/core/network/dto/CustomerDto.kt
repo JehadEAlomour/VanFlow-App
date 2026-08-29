@@ -58,6 +58,12 @@ data class CreateCustomerRequest(
      * is required..."), because the photo is staged before the customer exists.
      */
     val photoId: String? = null,
+    /**
+     * Additional staged photo ids beyond [photoId] — the salesman can attach more
+     * than one image of the shop. Each is claimed as a customer attachment on
+     * create (or on approval). Omit or empty for a single-photo create.
+     */
+    val extraPhotoIds: List<String>? = null,
     val creditLimit: String? = null,
     val customerType: String? = null,
     val regionId: String? = null,
