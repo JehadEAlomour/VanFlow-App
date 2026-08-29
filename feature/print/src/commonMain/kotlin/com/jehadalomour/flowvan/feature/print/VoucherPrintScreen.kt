@@ -472,14 +472,14 @@ private fun ReceiptBody(
             SepSolid()
 
             // Column headers
-            ItemColHeader(showLineDiscount = state.canPrintLineDiscount)
+            ItemColHeader(showLineDiscount = state.canPrintLineDiscount, showTax = !state.isTaxExempt)
 
             // Items (purchased, then gift lines — each a normal item at 100% discount)
             shownLines.forEach { line ->
-                ReceiptItemRow(line, t.amountDecimals, state.canPrintLineDiscount)
+                ReceiptItemRow(line, t.amountDecimals, state.canPrintLineDiscount, showTax = !state.isTaxExempt)
             }
             state.freeLines.forEach { line ->
-                ReceiptItemRow(line, t.amountDecimals, state.canPrintLineDiscount, isGift = true)
+                ReceiptItemRow(line, t.amountDecimals, state.canPrintLineDiscount, isGift = true, showTax = !state.isTaxExempt)
             }
 
             SepDash()
@@ -628,7 +628,7 @@ private fun ReceiptBody(
 // ── Item row ──────────────────────────────────────────────────────────────────
 
 @Composable
-private fun ItemColHeader(showLineDiscount: Boolean = false) {
+private fun ItemColHeader(showLineDiscount: Boolean = false, showTax: Boolean = true) {
     val c = LocalRc.current
     Row(
         modifier = Modifier
@@ -638,7 +638,8 @@ private fun ItemColHeader(showLineDiscount: Boolean = false) {
         buildList {
             add(stringResource(Res.string.print_col_qty))
             add(stringResource(Res.string.print_col_unit))
-            add(stringResource(Res.string.print_col_tax))
+            // Tax-exempt voucher: no per-line tax column at all.
+            if (showTax) add(stringResource(Res.string.print_col_tax))
             add(stringResource(Res.string.print_col_price))
             // Sits BEFORE the total, so the eye reads price -> discount -> total.
             if (showLineDiscount) add("خصم")
@@ -670,6 +671,8 @@ private fun ReceiptItemRow(
     showLineDiscount: Boolean = false,
     /** A line the customer is not paying for; labelled so nobody reads it as sold. */
     isGift: Boolean = false,
+    /** False on a tax-exempt voucher — the per-line tax column is dropped. */
+    showTax: Boolean = true,
 ) {
     val c = LocalRc.current
     Column(
@@ -715,7 +718,9 @@ private fun ReceiptItemRow(
             val total = formatAmount(if (isGift) 0.0 else gross, amountDecimals)
 
             buildList {
-                add(qty); add(unit); add(taxPct); add(price)
+                add(qty); add(unit)
+                if (showTax) add(taxPct)
+                add(price)
                 if (showLineDiscount) add(discount)
                 add(total)
             }.let { cells ->
