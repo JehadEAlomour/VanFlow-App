@@ -33,7 +33,7 @@ class CustomerDashboardViewModel(
     private val location: LocationProvider,
 ) : ViewModel() {
 
-    /** This rep may only act on a customer while at its location (~1 km). */
+    /** This rep may only act on a customer while at its location (~20 m). */
     private val locationLocked = session.can("customers.requireProximity")
 
     private val _state = MutableStateFlow(
@@ -48,7 +48,7 @@ class CustomerDashboardViewModel(
     init {
         // On every visit-open, seed a missing store pin from the rep's current GPS — the
         // rep is physically at the customer. Runs for ALL reps (not just proximity-locked
-        // ones); locked reps additionally get the ~1 km proximity check.
+        // ones); locked reps additionally get the ~20 m proximity check.
         viewModelScope.launch {
             if (locationLocked) setUpProximity() else seedMissingLocation()
         }

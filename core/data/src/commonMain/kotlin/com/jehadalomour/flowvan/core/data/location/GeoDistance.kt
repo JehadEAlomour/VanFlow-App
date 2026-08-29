@@ -13,7 +13,7 @@ import kotlin.math.sqrt
  * default `CUSTOMER_PROXIMITY_RADIUS_M` — keep the two in sync. The lock is an
  * area, not an exact point: a rep counts as "at" the customer within this radius.
  */
-const val CUSTOMER_PROXIMITY_RADIUS_M: Double = 1000.0
+const val CUSTOMER_PROXIMITY_RADIUS_M: Double = 20.0
 
 /** Great-circle distance in metres between two points (haversine). */
 fun haversineMeters(a: LatLng, b: LatLng): Double {
