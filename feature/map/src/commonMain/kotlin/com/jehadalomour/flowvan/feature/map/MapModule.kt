@@ -5,12 +5,17 @@ import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
 fun mapModule(): Module = module {
-    // Two factories, one per destination kind. Koin picks by the parameter type:
-    // a String is a customer id; a Point is a bare prospect location.
-    viewModel { (customerId: String) ->
-        MapNavigationViewModel(customerId, get(), get())
-    }
-    viewModel { (point: MapNavigationViewModel.Point) ->
-        MapNavigationViewModel(point, get(), get())
+    // ONE definition — Koin keys viewModel by the produced TYPE, so a second
+    // factory for the same type silently replaces the first (that bug made the
+    // customer-location screen pass a String id into the Point factory and
+    // crash with ClassCastException). Dispatch on the param instead: a Point is
+    // a bare prospect location; anything else is a customer id String.
+    viewModel { params ->
+        val point = params.getOrNull<MapNavigationViewModel.Point>()
+        if (point != null) {
+            MapNavigationViewModel(point, get(), get())
+        } else {
+            MapNavigationViewModel(params.get<String>(), get(), get())
+        }
     }
 }
