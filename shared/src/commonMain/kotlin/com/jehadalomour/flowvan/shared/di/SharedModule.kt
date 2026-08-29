@@ -185,7 +185,7 @@ fun sharedModule(): Module = module {
     // Its own HttpClient: the shared one has a 15s request timeout that would cut
     // a long-lived socket every 15 seconds (see createWebSocketClient).
     single { SyncSocketClient(createWebSocketClient(), get(), get()) }
-    single { RealtimeSyncCoordinator(get(), get()) }
+    single { RealtimeSyncCoordinator(get(), get(), get()) }
     factory { SubmitInvoiceUseCase(get()) }
     factory { SubmitCollectionUseCase(get()) }
 }

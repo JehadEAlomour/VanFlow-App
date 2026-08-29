@@ -22,5 +22,5 @@ fun voucherModule(): Module = module {
     }
     viewModel { VanStockViewModel(get()) }
     viewModel { ReturnByItemViewModel(get(), get(), get()) }
-    viewModel { StockRequestViewModel(get(), get(), get()) }
+    viewModel { StockRequestViewModel(get(), get(), get(), get()) }
 }

@@ -1,7 +1,9 @@
 package com.jehadalomour.flowvan.core.domain.sync
 
 import co.touchlab.kermit.Logger
+import com.jehadalomour.flowvan.core.domain.notify.AlertNotifier
 import com.jehadalomour.flowvan.core.domain.usecase.RefreshCatalogUseCase
+import com.jehadalomour.flowvan.core.network.realtime.StockRequestDecision
 import com.jehadalomour.flowvan.core.network.realtime.SyncResource
 import com.jehadalomour.flowvan.core.network.realtime.SyncSocketClient
 import kotlinx.coroutines.CoroutineScope
@@ -32,6 +34,7 @@ import kotlinx.coroutines.sync.withLock
 class RealtimeSyncCoordinator(
     private val socket: SyncSocketClient,
     private val refreshCatalog: RefreshCatalogUseCase,
+    private val alerts: AlertNotifier,
 ) {
     private val log = Logger.withTag("RealtimeSync")
     private val lock = Mutex()
@@ -50,8 +53,16 @@ class RealtimeSyncCoordinator(
         if (job?.isActive == true) return
         socket.start(scope)
         job = scope.launch {
-            socket.signals.collect { resource ->
-                launch { handle(resource) }
+            // Data-staleness signals → refresh the affected catalog slice.
+            launch {
+                socket.signals.collect { resource ->
+                    launch { handle(resource) }
+                }
+            }
+            // Stock-request decisions pushed to this rep → a loud, can't-miss alert.
+            // The office just answered a salesman who may be standing in a shop.
+            launch {
+                socket.decisions.collect { decision -> onDecision(decision) }
             }
         }
     }
@@ -60,6 +71,18 @@ class RealtimeSyncCoordinator(
         job?.cancel()
         job = null
         socket.stop()
+    }
+
+    private fun onDecision(decision: StockRequestDecision) {
+        val ref = decision.requestNumber?.takeIf { it.isNotBlank() }?.let { " $it" } ?: ""
+        val title = "طلب البضاعة$ref"
+        val body = if (decision.isApproved) {
+            "تمت الموافقة على طلبك. افتح «طلباتي» لمراجعة الكميات واستلام البضاعة."
+        } else {
+            "تم رفض طلبك. افتح «طلباتي» للتفاصيل."
+        }
+        log.d { "alerting decision ${decision.requestNumber} (${decision.status})" }
+        alerts.alert(title, body)
     }
 
     private suspend fun handle(resource: SyncResource) {

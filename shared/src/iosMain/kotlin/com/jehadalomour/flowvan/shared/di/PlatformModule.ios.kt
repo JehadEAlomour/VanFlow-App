@@ -10,6 +10,8 @@ import com.jehadalomour.flowvan.core.data.location.LocationStatusProvider
 import com.jehadalomour.flowvan.core.data.location.LocationTracker
 import com.jehadalomour.flowvan.core.domain.printer.IosReceiptPrinter
 import com.jehadalomour.flowvan.core.domain.printer.ReceiptPrinter
+import com.jehadalomour.flowvan.core.domain.notify.AlertNotifier
+import com.jehadalomour.flowvan.core.domain.notify.IosAlertNotifier
 import org.koin.core.module.Module
 import org.koin.dsl.module
 
@@ -21,6 +23,7 @@ actual fun platformModule(): Module = module {
     single<LocationProvider> { IosLocationProvider() }
     single<LocationTracker> { IosLocationTracker() }
     single<ReceiptPrinter> { IosReceiptPrinter() }
+    single<AlertNotifier> { IosAlertNotifier() }
 }
 
 fun initKoinIos() = initKoin {}

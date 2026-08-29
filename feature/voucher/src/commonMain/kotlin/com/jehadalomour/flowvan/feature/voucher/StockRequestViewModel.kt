@@ -13,6 +13,7 @@ import com.jehadalomour.flowvan.core.model.isServerUnitId
 import com.jehadalomour.flowvan.core.network.api.StockRequestApi
 import com.jehadalomour.flowvan.core.network.dto.CreateStockRequestBody
 import com.jehadalomour.flowvan.core.network.dto.StockRequestLineRequest
+import com.jehadalomour.flowvan.core.network.realtime.SyncSocketClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +31,7 @@ class StockRequestViewModel(
     private val api: StockRequestApi,
     private val products: ProductRepository,
     private val units: ProductUnitRepository,
+    private val socket: SyncSocketClient,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(StockRequestState())
@@ -50,6 +52,12 @@ class StockRequestViewModel(
         }
         refreshMine()
         loadMainStock()
+        // The office decided on a request pushed to this rep — pull the list so the
+        // new status and granted quantities appear live, even while this screen is
+        // open (the loud alert itself is fired app-wide by RealtimeSyncCoordinator).
+        viewModelScope.launch {
+            socket.decisions.collect { refreshMine() }
+        }
     }
 
     /**

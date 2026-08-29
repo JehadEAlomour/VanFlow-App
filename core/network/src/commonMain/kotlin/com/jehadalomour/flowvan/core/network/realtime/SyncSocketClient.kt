@@ -23,6 +23,21 @@ import kotlin.math.min
 enum class SyncResource { OFFERS, CUSTOMERS, STOCK }
 
 /**
+ * A stock-request decision (approve/reject) the server pushed to THIS rep's
+ * device — the salesman is waiting on this specific answer. Carries just enough
+ * to alert + deep-link; the full request (with per-line granted quantities) is
+ * re-pulled from `stock-requests/mine`.
+ */
+data class StockRequestDecision(
+    val id: String,
+    val requestNumber: String?,
+    /** "approved" | "rejected". */
+    val status: String,
+) {
+    val isApproved: Boolean get() = status.equals("approved", ignoreCase = true)
+}
+
+/**
  * Listens for the backend's "your data changed" signals and republishes them.
  *
  * Deliberately does NOT refresh anything itself — it has no business knowing how
@@ -49,6 +64,10 @@ class SyncSocketClient(
     private val _signals = MutableSharedFlow<SyncResource>(extraBufferCapacity = 16)
     /** Resources the server has told us to re-pull. */
     val signals: SharedFlow<SyncResource> = _signals.asSharedFlow()
+
+    private val _decisions = MutableSharedFlow<StockRequestDecision>(extraBufferCapacity = 16)
+    /** Stock-request decisions pushed to this rep — the app alerts + refreshes on these. */
+    val decisions: SharedFlow<StockRequestDecision> = _decisions.asSharedFlow()
 
     private var job: Job? = null
 
@@ -116,15 +135,51 @@ class SyncSocketClient(
     }
 
     private suspend fun onEvent(event: SocketIoIn.Event) {
-        if (event.name != SYNC_EVENT) return
-        val resource = resourceOf(event.payloadJson) ?: run {
-            // A resource this build does not know about — a newer server. Ignore it
-            // rather than guessing; a wrong guess would refresh the wrong thing.
-            log.d { "unknown sync resource in ${event.payloadJson}" }
-            return
+        when (event.name) {
+            SYNC_EVENT -> {
+                val resource = resourceOf(event.payloadJson) ?: run {
+                    // A resource this build does not know about — a newer server.
+                    // Ignore rather than guess; a wrong guess refreshes the wrong thing.
+                    log.d { "unknown sync resource in ${event.payloadJson}" }
+                    return
+                }
+                log.d { "sync signal: $resource" }
+                _signals.emit(resource)
+            }
+            DECIDED_EVENT -> {
+                val decision = decisionOf(event.payloadJson) ?: run {
+                    log.d { "could not parse decision from ${event.payloadJson}" }
+                    return
+                }
+                log.d { "stock-request decided: ${decision.requestNumber} -> ${decision.status}" }
+                _decisions.emit(decision)
+            }
+            else -> Unit
         }
-        log.d { "sync signal: $resource" }
-        _signals.emit(resource)
+    }
+
+    /** Pull { id, requestNumber, status } out of the decided-event payload. */
+    private fun decisionOf(json: String): StockRequestDecision? {
+        val id = stringField(json, "id") ?: return null
+        return StockRequestDecision(
+            id = id,
+            requestNumber = stringField(json, "requestNumber"),
+            status = stringField(json, "status") ?: "",
+        )
+    }
+
+    /** First string value of `"field":"…"` in a small, fixed JSON payload. */
+    private fun stringField(json: String, field: String): String? {
+        val key = "\"$field\""
+        val at = json.indexOf(key)
+        if (at < 0) return null
+        val colon = json.indexOf(':', at + key.length)
+        if (colon < 0) return null
+        val open = json.indexOf('"', colon)
+        if (open < 0) return null
+        val close = json.indexOf('"', open + 1)
+        if (close < 0) return null
+        return json.substring(open + 1, close)
     }
 
     /**
@@ -173,6 +228,7 @@ class SyncSocketClient(
     private companion object {
         const val NAMESPACE = "/ws/ops"
         const val SYNC_EVENT = "sync.required"
+        const val DECIDED_EVENT = "stock-request.decided"
         const val BASE_BACKOFF_MS = 2_000L
         const val MAX_BACKOFF_MS = 60_000L
         const val MAX_BACKOFF_STEPS = 5
