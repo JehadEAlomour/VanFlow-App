@@ -20,7 +20,16 @@ import kotlinx.coroutines.launch
 import kotlin.math.min
 
 /** Which slice of local data the server says has gone stale. */
-enum class SyncResource { OFFERS, CUSTOMERS, STOCK }
+/**
+ * Which slice of local data the server says went stale.
+ *
+ * ITEMS is the CATALOGUE — a product's price, name, barcode or units, or a
+ * product appearing or disappearing. It is separate from STOCK on purpose: STOCK
+ * only overlays quantities onto rows this device already holds, so an ERP price
+ * change used to reach the backend and stop there, and the rep kept quoting the
+ * old price until they left and re-entered the home screen.
+ */
+enum class SyncResource { OFFERS, CUSTOMERS, STOCK, ITEMS }
 
 /**
  * A stock-request decision (approve/reject) the server pushed to THIS rep's
@@ -201,6 +210,7 @@ class SyncSocketClient(
             "offers" -> SyncResource.OFFERS
             "customers" -> SyncResource.CUSTOMERS
             "stock" -> SyncResource.STOCK
+            "items" -> SyncResource.ITEMS
             else -> null
         }
     }

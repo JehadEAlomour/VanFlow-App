@@ -64,53 +64,7 @@ class RefreshCatalogUseCase(
             coroutineScope {
                 val customersJob = async { refreshCustomers() }
                 // Products first (upsert replaces the row, zeroing stock)…
-                val productCount = run {
-                    // Page through ALL products so large catalogs (e.g. 1000 items)
-                    // import fully, not just the first page.
-                    val allItems = fetchAllPages { limit, offset -> productApi.list(limit = limit, offset = offset) }
-                    // REPLACE, not upsert: an item deleted in the ERP used to linger on the
-                    // device with its last-known stock, and since the catalog list filters on
-                    // vanStock > 0, those dead rows were the only ones a rep could see.
-                    products.replaceAll(allItems.map { it.toEntity() })
-                    // …then refill each item's REAL units (base + larger) so the app
-                    // shows the item's own units, not a hardcoded list.
-                    val units = allItems.flatMap { p ->
-                        p.units.map { u ->
-                            // Trust the server's `isBase` flag. This used to also treat
-                            // "smallest conversionQty" as the base, which broke the moment a
-                            // product had SAME-SIZE units: a colour or flavour variant has
-                            // conversionQty 1 like the base does, so every one of them matched
-                            // and got renamed "حبة" — six colours showing as six identical
-                            // pieces, with no way for the rep to tell them apart. The backend
-                            // already marks exactly one unit isBase=true, so infer nothing.
-                            //
-                            // The rename still applies to a base whose ERP name is meaningless
-                            // in the field ("PCS", "Each"), but never overwrites a real name.
-                            ProductUnit(
-                                // The server's item_units.id is the only stable identity: the old
-                                // barcode-or-"$id:$code:$qty" expression collapsed every
-                                // blank-barcode colour of an item onto ONE id, so six colours
-                                // became one row. Kept only as the fallback for a backend that
-                                // doesn't send itemUnitId yet.
-                                id = u.itemUnitId.ifBlank {
-                                    u.barcode.ifBlank { "${p.id}:${u.code}:${u.conversionQty}" }
-                                },
-                                productId = p.id,
-                                name = if (u.isBase) BASE_UNIT_NAME else u.name.ifBlank { BASE_UNIT_NAME },
-                                price = u.priceFils / 1000.0,
-                                conversionQty = u.conversionQty,
-                                code = u.code,
-                                isBase = u.isBase,
-                                isStockUnit = u.isStockUnit,
-                            )
-                        }
-                    }
-                    // MERGE, never wipe: this refresh runs on login and on every home pull, and
-                    // the products endpoint carries no stock — a delete-then-insert zeroed every
-                    // variant pool each time. mergeAll keeps each surviving unit's vanStock.
-                    productUnits.mergeAll(units)
-                    allItems.size
-                }
+                val productCount = refreshProducts()
                 // …then overlay the real per-rep van stock.
                 val stockCount = refreshVanStock()
                 Result.success(CatalogRefresh(customersJob.await(), productCount, stockCount))
@@ -119,6 +73,62 @@ class RefreshCatalogUseCase(
             log.e("Catalog refresh failed: ${e.message}")
             Result.failure(e)
         }
+    }
+
+    /**
+     * Re-pull the product catalogue and each item's units.
+     *
+     * Extracted so a targeted ITEMS refresh and a full one leave identical local
+     * state — the same reason [refreshCustomers] exists.
+     *
+     * Returns the number of products imported.
+     */
+    private suspend fun refreshProducts(): Int {
+        // Page through ALL products so large catalogs (e.g. 1000 items)
+        // import fully, not just the first page.
+        val allItems = fetchAllPages { limit, offset -> productApi.list(limit = limit, offset = offset) }
+        // REPLACE, not upsert: an item deleted in the ERP used to linger on the
+        // device with its last-known stock, and since the catalog list filters on
+        // vanStock > 0, those dead rows were the only ones a rep could see.
+        products.replaceAll(allItems.map { it.toEntity() })
+        // …then refill each item's REAL units (base + larger) so the app
+        // shows the item's own units, not a hardcoded list.
+        val units = allItems.flatMap { p ->
+            p.units.map { u ->
+                // Trust the server's `isBase` flag. This used to also treat
+                // "smallest conversionQty" as the base, which broke the moment a
+                // product had SAME-SIZE units: a colour or flavour variant has
+                // conversionQty 1 like the base does, so every one of them matched
+                // and got renamed "حبة" — six colours showing as six identical
+                // pieces, with no way for the rep to tell them apart. The backend
+                // already marks exactly one unit isBase=true, so infer nothing.
+                //
+                // The rename still applies to a base whose ERP name is meaningless
+                // in the field ("PCS", "Each"), but never overwrites a real name.
+                ProductUnit(
+                    // The server's item_units.id is the only stable identity: the old
+                    // barcode-or-"$id:$code:$qty" expression collapsed every
+                    // blank-barcode colour of an item onto ONE id, so six colours
+                    // became one row. Kept only as the fallback for a backend that
+                    // doesn't send itemUnitId yet.
+                    id = u.itemUnitId.ifBlank {
+                        u.barcode.ifBlank { "${p.id}:${u.code}:${u.conversionQty}" }
+                    },
+                    productId = p.id,
+                    name = if (u.isBase) BASE_UNIT_NAME else u.name.ifBlank { BASE_UNIT_NAME },
+                    price = u.priceFils / 1000.0,
+                    conversionQty = u.conversionQty,
+                    code = u.code,
+                    isBase = u.isBase,
+                    isStockUnit = u.isStockUnit,
+                )
+            }
+        }
+        // MERGE, never wipe: this refresh runs on login and on every home pull, and
+        // the products endpoint carries no stock — a delete-then-insert zeroed every
+        // variant pool each time. mergeAll keeps each surviving unit's vanStock.
+        productUnits.mergeAll(units)
+        return allItems.size
     }
 
     private suspend fun refreshCustomers(): Int {
@@ -149,6 +159,18 @@ class RefreshCatalogUseCase(
                 SyncResource.OFFERS -> offers.refresh().getOrThrow()
                 SyncResource.CUSTOMERS -> refreshCustomers()
                 SyncResource.STOCK -> refreshVanStock()
+                // Products, then units, then van stock — in that order, and the
+                // stock overlay is NOT optional. replaceAll() rewrites each product
+                // row and zeroes its quantity, so an items-only refresh without the
+                // overlay would leave every product at 0 on the device and the
+                // catalog screen (which filters on vanStock > 0) would go empty.
+                // Price lists come too: an ERP price change lands there, not on the
+                // product row, and it is what the rep actually quotes.
+                SyncResource.ITEMS -> {
+                    refreshProducts()
+                    refreshVanStock()
+                    priceLists.refresh().getOrThrow()
+                }
             }
             Unit
         }.onFailure { log.w("targeted refresh ($resource) failed: ${it.message}") }
