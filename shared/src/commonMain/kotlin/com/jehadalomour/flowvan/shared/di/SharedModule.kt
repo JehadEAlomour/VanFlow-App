@@ -30,6 +30,7 @@ import com.jehadalomour.flowvan.core.network.api.NotificationApi
 import com.jehadalomour.flowvan.core.network.api.OfferApi
 import com.jehadalomour.flowvan.core.network.api.TobaccoTaxProfileApi
 import com.jehadalomour.flowvan.core.network.api.PriceListApi
+import com.jehadalomour.flowvan.core.network.api.OrderApi
 import com.jehadalomour.flowvan.core.network.api.ProductApi
 import com.jehadalomour.flowvan.core.network.api.RepApi
 import com.jehadalomour.flowvan.core.network.api.VoucherApi
@@ -148,6 +149,7 @@ fun sharedModule(): Module = module {
     single { ReturnByItemApi(get()) }
     single { StockRequestApi(get()) }
     single { ProductApi(get()) }
+    single { OrderApi(get()) }
     single { InvoiceApi(get()) }
     single { CollectionApi(get()) }
     single { RepApi(get()) }

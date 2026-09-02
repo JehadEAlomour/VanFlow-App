@@ -13,6 +13,7 @@ import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.OfferRepository
 import com.jehadalomour.flowvan.core.data.repository.PriceListRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
+import com.jehadalomour.flowvan.core.network.api.OrderApi
 import com.jehadalomour.flowvan.core.data.repository.TobaccoTaxProfileRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
@@ -89,6 +90,7 @@ class VoucherViewModel(
     private val priceLists: PriceListRepository,
     private val tobaccoProfiles: TobaccoTaxProfileRepository,
     private val location: LocationProvider,
+    private val orderApi: OrderApi,
 ) : ViewModel() {
 
     /** Which pending approval is in flight, so the poll commits the right voucher. */
@@ -102,6 +104,18 @@ class VoucherViewModel(
         VoucherState(type = type, showSourcePicker = type == VoucherType.RETURN),
     )
     val state: StateFlow<VoucherState> = _state.asStateFlow()
+
+    /** ORDER only: main-store quantity per item number (base pool). Empty for sale/return. */
+    private var mainStoreQty: Map<String, Int> = emptyMap()
+
+    /**
+     * For ORDER, show each product's MAIN-STORE quantity in place of its van stock, so
+     * the picker reflects the central depot the order draws from. Sale and return are
+     * returned unchanged (they keep the van stock the catalogue already carries).
+     */
+    private fun overlayStock(list: List<Product>): List<Product> =
+        if (type != VoucherType.ORDER) list
+        else list.map { it.copy(vanStock = mainStoreQty[it.sku] ?: 0) }
 
     init {
         _state.update {
@@ -147,8 +161,25 @@ class VoucherViewModel(
         }
 
         products.observeAll()
-            .onEach { list -> _state.update { it.copy(products = list) }; applySearch() }
+            .onEach { list -> _state.update { it.copy(products = overlayStock(list)) }; applySearch() }
             .launchIn(viewModelScope)
+
+        // ORDER draws from the MAIN STORE (central depot, code "1"), not the van, so
+        // the picker must show the main store's items and quantities — never the van's.
+        // Fetch the main-store stock and overlay it onto each product's quantity; sale
+        // and return keep the van stock. Best-effort: if it fails the catalogue still
+        // shows (quantities read 0) rather than going blank.
+        if (type == VoucherType.ORDER) {
+            viewModelScope.launch {
+                runCatching { orderApi.orderStock() }.onSuccess { rows ->
+                    mainStoreQty = rows
+                        .filter { it.stockUnitCode.isEmpty() } // base pool — ORDER lines are base units
+                        .associate { it.itemNumber to (it.itemQty.toDoubleOrNull()?.toInt() ?: 0) }
+                    _state.update { it.copy(products = overlayStock(it.products)) }
+                    applySearch()
+                }
+            }
+        }
 
         productUnits.observeAll()
             .onEach { units ->
