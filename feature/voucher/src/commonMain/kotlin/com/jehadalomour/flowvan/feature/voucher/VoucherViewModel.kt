@@ -108,6 +108,9 @@ class VoucherViewModel(
     /** ORDER only: main-store quantity per item number (base pool). Empty for sale/return. */
     private var mainStoreQty: Map<String, Int> = emptyMap()
 
+    /** True once the main-store list has been fetched, so the ORDER filter may apply. */
+    private var mainStoreLoaded: Boolean = false
+
     /**
      * For ORDER, show each product's MAIN-STORE quantity in place of its van stock, so
      * the picker reflects the central depot the order draws from. Sale and return are
@@ -175,6 +178,7 @@ class VoucherViewModel(
                     mainStoreQty = rows
                         .filter { it.stockUnitCode.isEmpty() } // base pool — ORDER lines are base units
                         .associate { it.itemNumber to (it.itemQty.toDoubleOrNull()?.toInt() ?: 0) }
+                    mainStoreLoaded = true
                     _state.update { it.copy(products = overlayStock(it.products)) }
                     applySearch()
                 }
@@ -518,10 +522,23 @@ class VoucherViewModel(
     }
 
     private fun applySearch() {
-        val filtered = _state.value.products.filter {
-            matchesTokenSearch(_state.value.searchQuery, it.nameAr, it.nameEn, it.sku, it.category)
+        val s = _state.value
+        val bySearch = s.products.filter {
+            matchesTokenSearch(s.searchQuery, it.nameAr, it.nameEn, it.sku, it.category)
         }
-        _state.update { it.copy(visibleProducts = filtered) }
+        // Restrict each flow to ITS warehouse's items — the catalogue is company-wide,
+        // but a rep may only sell/return what is in HIS van, and may only order what the
+        // MAIN store carries.
+        val byWarehouse = when (type) {
+            // ORDER → only the items the main store carries (with its quantities). Until
+            // the main-store list has loaded, don't filter — better to show the catalogue
+            // for a moment than to flash an empty picker on a slow/failed load.
+            VoucherType.ORDER ->
+                if (mainStoreLoaded) bySearch.filter { mainStoreQty.containsKey(it.sku) } else bySearch
+            // SALE / RETURN → only items in the salesman's own (van) warehouse.
+            else -> bySearch.filter { it.vanStock > 0 }
+        }
+        _state.update { it.copy(visibleProducts = byWarehouse) }
     }
 
     private fun stepItem(product: Product, delta: Int) {
