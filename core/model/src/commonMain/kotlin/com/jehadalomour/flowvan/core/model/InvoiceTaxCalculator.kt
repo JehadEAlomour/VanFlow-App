@@ -106,6 +106,27 @@ object InvoiceTaxCalculator {
      *   zeroed — the exempt customer pays less, which is the backend's
      *   REMOVE_INCLUDED_TAX behaviour and the ERP's default.
      */
+    /**
+     * Re-price a cart for a TAX-EXEMPT document: strip the contained tax out of any
+     * INCLUSIVE price (an EXCLUSIVE price never held tax), zero the rate, and mark
+     * each line EXEMPT — so `lineTax` becomes 0 and `lineTotal` is tax-free (both
+     * are derived on [CartLine]). The exempt summary already applies this; exposing
+     * it lets the SAVED/PRINTED invoice lines carry the same tax-free material price
+     * and total, instead of the tax-inclusive price the raw cart holds.
+     */
+    fun exemptCartLines(cart: List<CartLine>): List<CartLine> {
+        val inclusive = cart.any { it.lineTaxType == LineTaxType.INCLUSIVE }
+        return cart.map { line ->
+            val rate = line.taxRate
+            line.copy(
+                unitPrice = if (inclusive && rate > 0.0) line.unitPrice / (1.0 + rate)
+                            else line.unitPrice,
+                taxRate = 0.0,
+                lineTaxType = LineTaxType.EXEMPT,
+            )
+        }
+    }
+
     fun calculateInvoice(
         cart: List<CartLine>,
         invoiceDiscount: InvoiceDiscountInput = InvoiceDiscountInput.None,
@@ -114,19 +135,7 @@ object InvoiceTaxCalculator {
         if (cart.isEmpty()) return VoucherSummary.ZERO
 
         if (taxExempt) {
-            val inclusive = cart.any { it.lineTaxType == LineTaxType.INCLUSIVE }
-            val exemptCart = cart.map { line ->
-                val rate = line.taxRate
-                line.copy(
-                    // Strip the contained tax out of an INCLUSIVE price; an EXCLUSIVE
-                    // price never held any, so it is left alone.
-                    unitPrice = if (inclusive && rate > 0.0) line.unitPrice / (1.0 + rate)
-                                else line.unitPrice,
-                    taxRate = 0.0,
-                    lineTaxType = LineTaxType.EXEMPT,
-                )
-            }
-            return calculateInvoice(exemptCart, invoiceDiscount, taxExempt = false)
+            return calculateInvoice(exemptCartLines(cart), invoiceDiscount, taxExempt = false)
         }
 
         val mode =

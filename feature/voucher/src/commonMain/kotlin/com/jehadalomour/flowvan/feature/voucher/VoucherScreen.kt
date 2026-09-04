@@ -1639,7 +1639,7 @@ private fun CartTotals(
         // Tax-exempt notice at the very top — the rep sees WHY there is no tax line
         // before taking the money, not after the receipt prints. Same rule the server
         // applies (flag AND validity window), so this total is the total that posts.
-        if (state.isTaxExemptSale) {
+        if (state.isTaxExemptDoc) {
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .background(Fv.Amber.copy(alpha = 0.10f))
@@ -1652,7 +1652,8 @@ private fun CartTotals(
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                 )
-                state.customer?.taxExemptionNumber?.takeIf { it.isNotBlank() }?.let { n ->
+                (state.referenceTaxExemptionNumber ?: state.customer?.taxExemptionNumber)
+                    ?.takeIf { it.isNotBlank() }?.let { n ->
                     Spacer(Modifier.width(8.dp))
                     Text(n, color = Fv.TextMid, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                 }

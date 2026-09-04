@@ -42,14 +42,19 @@ private fun buildReturnEntity(
     referenceNumber: String?,
     status: String,
     syncedAt: Long?,
+    taxExempt: Boolean,
+    taxExemptionNumber: String?,
     json: Json,
 ): InvoiceEntity {
+    // Return "as it was": an exempt source sale is returned tax-free, so the stored
+    // total/lines carry no tax and reports reading them show none.
+    val storedCart = if (taxExempt) InvoiceTaxCalculator.exemptCartLines(cart) else cart
     val summary = InvoiceTaxCalculator.calculateInvoice(
-        cart = cart,
+        cart = storedCart,
         invoiceDiscount = InvoiceDiscountInput.None,
     )
     val now = Clock.System.now().toEpochMilliseconds()
-    val invoiceLines = cart.map {
+    val invoiceLines = storedCart.map {
         InvoiceLine(
             productId = it.productId,
             sku = it.sku,
@@ -75,6 +80,8 @@ private fun buildReturnEntity(
         salesmanId = salesmanId,
         createdAt = now,
         linesJson = json.encodeToString(invoiceLines),
+        isTaxExempt = taxExempt,
+        taxExemptionNumber = if (taxExempt) taxExemptionNumber else null,
         subtotal = summary.displaySubtotal,
         discountAmount = summary.totalLineDiscounts,
         taxAmount = summary.totalTax,
@@ -105,6 +112,8 @@ class RequestReturnApprovalUseCase(
         extraNotes: String?,
         referenceInvoiceId: String?,
         referenceNumber: String?,
+        taxExempt: Boolean = false,
+        taxExemptionNumber: String? = null,
     ): Result<String> = runCatching {
         if (cart.isEmpty()) throw EmptyCartException()
         require(reason.isNotBlank()) { "reason required" }
@@ -129,6 +138,8 @@ class RequestReturnApprovalUseCase(
             referenceNumber = referenceNumber,
             status = "PENDING_APPROVAL",
             syncedAt = null,
+            taxExempt = taxExempt,
+            taxExemptionNumber = taxExemptionNumber,
             json = json,
         )
         val payload = entity.toVoucherRequest(userCode, customerNumber, json).copy(
@@ -202,6 +213,8 @@ class CommitApprovedReturnUseCase(
         extraNotes: String?,
         referenceInvoiceId: String?,
         referenceNumber: String?,
+        taxExempt: Boolean = false,
+        taxExemptionNumber: String? = null,
     ): Result<InvoiceEntity> = runCatching {
         val now = Clock.System.now().toEpochMilliseconds()
         val entity = buildReturnEntity(
@@ -216,6 +229,8 @@ class CommitApprovedReturnUseCase(
             referenceNumber = referenceNumber,
             status = "CONFIRMED",
             syncedAt = now,                 // server already has it — never re-push
+            taxExempt = taxExempt,
+            taxExemptionNumber = taxExemptionNumber,
             json = json,
         )
         invoices.save(entity)

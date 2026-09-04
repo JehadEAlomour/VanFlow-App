@@ -168,6 +168,13 @@ class CreateSaleVoucherUseCase(
             )
         }
 
+        // The lines we STORE for local display + PRINT. For a tax-exempt customer the
+        // material price must print without tax and the lines must sum to the tax-free
+        // total, so re-price them the same way the exempt summary does (strip inclusive
+        // tax, zero the rate). The server upload below keeps the un-stripped lines, so
+        // the backend still applies the exemption exactly once — sync is unchanged.
+        val storedCart = if (taxExempt) InvoiceTaxCalculator.exemptCartLines(displayCart) else displayCart
+
         val entity = InvoiceEntity(
             id            = newVoucherClientRef(),   // unique clientRef; server assigns the real number
             number        = number,
@@ -176,8 +183,9 @@ class CreateSaleVoucherUseCase(
             customerId    = customerId,
             salesmanId    = salesmanId,
             createdAt     = now,
-            // Primary/display fields carry the OFFER-APPLIED result (matches the cart).
-            linesJson     = json.encodeToString(displayCart.toInvoiceLines()),
+            // Primary/display fields carry the OFFER-APPLIED result (matches the cart),
+            // tax-stripped when the customer is exempt so the print reads tax-free.
+            linesJson     = json.encodeToString(storedCart.toInvoiceLines()),
             isTaxExempt   = taxExempt,
             taxExemptionNumber = if (taxExempt) saleCustomer?.taxExemptionNumber else null,
             subtotal      = displaySummary.displaySubtotal,
@@ -193,10 +201,15 @@ class CreateSaleVoucherUseCase(
                 ?.joinToString(","),
             repLat = loc?.lat,
             repLng = loc?.lng,
-            // Upload snapshot: the RAW cart (manual discounts only) so the backend applies
-            // offers exactly once. Null when no offers → upload uses the primary fields.
-            uploadLinesJson =
-                if (offersApplied) json.encodeToString(cart.toInvoiceLines()) else null,
+            // Upload snapshot: the un-stripped lines so the backend applies offers AND the
+            // tax exemption exactly once. With offers → the RAW pre-offer cart. Exempt (no
+            // offers) → the display cart un-stripped, so the server receives the same data
+            // it did before the print-side stripping above (sync behaviour is unchanged).
+            uploadLinesJson = when {
+                offersApplied -> json.encodeToString(cart.toInvoiceLines())
+                taxExempt     -> json.encodeToString(displayCart.toInvoiceLines())
+                else          -> null
+            },
             uploadDiscountAmount =
                 if (offersApplied) rawSummary.totalLineDiscounts + rawSummary.invoiceDiscountAmount else null,
             // Frozen per-offer breakdown for the printed footer (null when no offers applied).

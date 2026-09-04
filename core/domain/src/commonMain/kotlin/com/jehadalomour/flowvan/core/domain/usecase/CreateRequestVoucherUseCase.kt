@@ -27,19 +27,26 @@ class CreateRequestVoucherUseCase(
         cart: List<CartLine>,
         expectedDeliveryAt: Long?,
         notes: String?,
+        /** The customer is tax-exempt — the order carries no tax, like the sale it becomes. */
+        taxExempt: Boolean = false,
+        taxExemptionNumber: String? = null,
     ): Result<InvoiceEntity> = runCatching {
         if (cart.isEmpty()) throw EmptyCartException()
 
+        // A tax-exempt customer's order is stored tax-free (material price + total),
+        // so the sales/voucher reports that read this document's stored total show no tax.
+        val storedCart = if (taxExempt) InvoiceTaxCalculator.exemptCartLines(cart) else cart
+
         // lineTaxType already stamped on each CartLine from settings at add-time.
         val summary = InvoiceTaxCalculator.calculateInvoice(
-            cart = cart,
+            cart = storedCart,
             invoiceDiscount = InvoiceDiscountInput.None,
         )
 
         val number = voucherNumbers.next("ORD", "REQUEST")
         val now = Clock.System.now().toEpochMilliseconds()
         val loc = location.lastLocation()
-        val invoiceLines = cart.map {
+        val invoiceLines = storedCart.map {
             InvoiceLine(
                 productId   = it.productId,
                 sku         = it.sku,
@@ -71,6 +78,8 @@ class CreateRequestVoucherUseCase(
             salesmanId     = salesmanId,
             createdAt      = now,
             linesJson      = json.encodeToString(invoiceLines),
+            isTaxExempt    = taxExempt,
+            taxExemptionNumber = if (taxExempt) taxExemptionNumber else null,
             subtotal       = summary.displaySubtotal,
             discountAmount = summary.totalLineDiscounts,
             taxAmount      = summary.totalTax,

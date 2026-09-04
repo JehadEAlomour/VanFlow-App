@@ -37,15 +37,20 @@ private fun buildSaleEntity(
     notes: String?,
     status: String,
     syncedAt: Long?,
+    taxExempt: Boolean,
+    taxExemptionNumber: String?,
     json: Json,
 ): InvoiceEntity {
+    // Exempt customer → store the SALE tax-free (material price + total) so the
+    // sales/voucher reports reading this document's total show no tax.
+    val storedCart = if (taxExempt) InvoiceTaxCalculator.exemptCartLines(cart) else cart
     val summary = InvoiceTaxCalculator.calculateInvoice(
-        cart = cart,
+        cart = storedCart,
         invoiceDiscount = if (discountAmount > 0.0) InvoiceDiscountInput.Fixed(discountAmount)
         else InvoiceDiscountInput.None,
     )
     val now = Clock.System.now().toEpochMilliseconds()
-    val invoiceLines = cart.map {
+    val invoiceLines = storedCart.map {
         InvoiceLine(
             productId = it.productId,
             sku = it.sku,
@@ -71,6 +76,8 @@ private fun buildSaleEntity(
         salesmanId = salesmanId,
         createdAt = now,
         linesJson = json.encodeToString(invoiceLines),
+        isTaxExempt = taxExempt,
+        taxExemptionNumber = if (taxExempt) taxExemptionNumber else null,
         subtotal = summary.displaySubtotal,
         discountAmount = summary.totalLineDiscounts + summary.invoiceDiscountAmount,
         taxAmount = summary.totalTax,
@@ -97,6 +104,8 @@ class RequestDiscountApprovalUseCase(
         discountAmount: Double,
         paymentMethod: PaymentMethod,
         notes: String?,
+        taxExempt: Boolean = false,
+        taxExemptionNumber: String? = null,
     ): Result<String> = runCatching {
         if (cart.isEmpty()) throw EmptyCartException()
         val number = voucherNumbers.next("INV", "SALE")
@@ -110,6 +119,8 @@ class RequestDiscountApprovalUseCase(
             notes = notes,
             status = "PENDING_APPROVAL",
             syncedAt = null,
+            taxExempt = taxExempt,
+            taxExemptionNumber = taxExemptionNumber,
             json = json,
         )
         // Empty voucherNumber → server assigns a unique serial on approve; unique clientRef.
@@ -148,6 +159,8 @@ class CommitApprovedSaleUseCase(
         discountAmount: Double,
         paymentMethod: PaymentMethod,
         notes: String?,
+        taxExempt: Boolean = false,
+        taxExemptionNumber: String? = null,
     ): Result<InvoiceEntity> = runCatching {
         val now = Clock.System.now().toEpochMilliseconds()
         val entity = buildSaleEntity(
@@ -160,6 +173,8 @@ class CommitApprovedSaleUseCase(
             notes = notes,
             status = "CONFIRMED",
             syncedAt = now, // server already has it — never re-push
+            taxExempt = taxExempt,
+            taxExemptionNumber = taxExemptionNumber,
             json = json,
         )
         invoices.save(entity)

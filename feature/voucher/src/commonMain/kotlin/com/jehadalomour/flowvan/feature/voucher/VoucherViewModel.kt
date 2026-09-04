@@ -20,6 +20,7 @@ import com.jehadalomour.flowvan.core.datastore.SessionStore
 import com.jehadalomour.flowvan.core.model.CartLine
 import kotlin.math.floor
 import com.jehadalomour.flowvan.core.model.InvoiceLine
+import com.jehadalomour.flowvan.core.model.InvoiceTaxCalculator
 import com.jehadalomour.flowvan.core.model.LineTaxType
 import com.jehadalomour.flowvan.core.model.OfferEvaluation
 import com.jehadalomour.flowvan.core.model.OfferTotals
@@ -105,20 +106,15 @@ class VoucherViewModel(
     )
     val state: StateFlow<VoucherState> = _state.asStateFlow()
 
-    /** ORDER only: main-store quantity per item number (base pool). Empty for sale/return. */
-    private var mainStoreQty: Map<String, Int> = emptyMap()
-
-    /** True once the main-store list has been fetched, so the ORDER filter may apply. */
-    private var mainStoreLoaded: Boolean = false
-
     /**
-     * For ORDER, show each product's MAIN-STORE quantity in place of its van stock, so
-     * the picker reflects the central depot the order draws from. Sale and return are
-     * returned unchanged (they keep the van stock the catalogue already carries).
+     * For ORDER, show each product's MAIN-STORE quantity (product.mainStock, cached from
+     * the ERP so it works offline) in place of its van stock, so the picker reflects the
+     * central depot the order draws from. Sale and return are returned unchanged (they
+     * keep the van stock the catalogue already carries).
      */
     private fun overlayStock(list: List<Product>): List<Product> =
         if (type != VoucherType.ORDER) list
-        else list.map { it.copy(vanStock = mainStoreQty[it.sku] ?: 0) }
+        else list.map { it.copy(vanStock = it.mainStock) }
 
     init {
         _state.update {
@@ -167,20 +163,18 @@ class VoucherViewModel(
             .onEach { list -> _state.update { it.copy(products = overlayStock(list)) }; applySearch() }
             .launchIn(viewModelScope)
 
-        // ORDER draws from the MAIN STORE (central depot, code "1"), not the van, so
-        // the picker must show the main store's items and quantities — never the van's.
-        // Fetch the main-store stock and overlay it onto each product's quantity; sale
-        // and return keep the van stock. Best-effort: if it fails the catalogue still
-        // shows (quantities read 0) rather than going blank.
+        // ORDER draws from the MAIN STORE (central depot), not the van. Refresh the
+        // cached main-store stock on open so quantities are current when online; the
+        // products flow then re-emits with the updated mainStock and overlay/filter pick
+        // it up. Offline, the fetch fails and the LAST cache (persisted by the catalogue
+        // refresh) is what the picker shows — orders keep working without a connection.
         if (type == VoucherType.ORDER) {
             viewModelScope.launch {
                 runCatching { orderApi.orderStock() }.onSuccess { rows ->
-                    mainStoreQty = rows
-                        .filter { it.stockUnitCode.isEmpty() } // base pool — ORDER lines are base units
-                        .associate { it.itemNumber to (it.itemQty.toDoubleOrNull()?.toInt() ?: 0) }
-                    mainStoreLoaded = true
-                    _state.update { it.copy(products = overlayStock(it.products)) }
-                    applySearch()
+                    products.cacheMainStock(
+                        rows.filter { it.stockUnitCode.isEmpty() } // base pool — ORDER lines are base units
+                            .associate { it.itemNumber to (it.itemQty.toDoubleOrNull()?.toInt() ?: 0) },
+                    )
                 }
             }
         }
@@ -406,7 +400,7 @@ class VoucherViewModel(
             fun conversionFor(line: InvoiceLine): Double =
                 unitFor(line)?.conversionQty ?: line.unitConversionQty
 
-            val cart = lines.map { line ->
+            val rawCart = lines.map { line ->
                 CartLine(
                     productId = line.productId,
                     sku = line.sku,
@@ -422,6 +416,10 @@ class VoucherViewModel(
                     imageUrl = s.products.firstOrNull { it.id == line.productId }?.imageUrl,
                 )
             }
+            // A return is issued "as it was": if the source sale was tax-exempt, re-price
+            // the lines tax-free so the return document (screen, save, print) carries no
+            // tax — even for an older sale whose lines predate exempt line-typing.
+            val cart = if (invoice.isTaxExempt) InvoiceTaxCalculator.exemptCartLines(rawCart) else rawCart
             // Per (product, unit): a sale of 3 red + 2 blue caps each colour on its own,
             // where a productId-keyed map would have kept only the last line's quantity.
             val sold = lines.associate {
@@ -432,6 +430,8 @@ class VoucherViewModel(
                 cart = cart,
                 referenceInvoiceId = invoice.id,
                 referenceNumber = invoice.number,
+                referenceIsTaxExempt = invoice.isTaxExempt,
+                referenceTaxExemptionNumber = invoice.taxExemptionNumber,
                 paymentMethod = returnPaymentMethodOf(invoice.paymentMethod),
                 soldQtyByProduct = sold,
                 showSourcePicker = false,
@@ -464,7 +464,7 @@ class VoucherViewModel(
             val source = runCatching { getCustomerSales.detail(sale.id) }.getOrNull()
             val lines = source?.lines ?: emptyList()
             _state.update { s ->
-                val cart = lines.map { sl ->
+                val rawCart = lines.map { sl ->
                     val product = s.products.firstOrNull { it.sku == sl.sku }
                     val productId = product?.id ?: sl.sku
                     // Resolve the unit by the id the server sent; the name is only a fallback
@@ -488,6 +488,11 @@ class VoucherViewModel(
                         imageUrl = product?.imageUrl,
                     )
                 }
+                // The server sale-lookup DTO doesn't carry the exemption snapshot, so fall
+                // back to the customer's current exemption for this (rarely-hit) path — an
+                // exempt customer's return is still issued tax-free.
+                val exempt = s.isTaxExemptSale
+                val cart = if (exempt) InvoiceTaxCalculator.exemptCartLines(rawCart) else rawCart
                 val sold = cart.associate {
                     lineKey(it.productId, it.unitId) to it.qty * it.unitConversionQty
                 }
@@ -495,6 +500,8 @@ class VoucherViewModel(
                     cart = cart,
                     referenceInvoiceId = sale.id,
                     referenceNumber = sale.number,
+                    referenceIsTaxExempt = exempt,
+                    referenceTaxExemptionNumber = s.customer?.taxExemptionNumber,
                     // Inherit the original sale's payment type (credit → credit, cash → cash).
                     paymentMethod = returnPaymentMethodOf(source?.paymentType),
                     soldQtyByProduct = sold,
@@ -530,11 +537,9 @@ class VoucherViewModel(
         // but a rep may only sell/return what is in HIS van, and may only order what the
         // MAIN store carries.
         val byWarehouse = when (type) {
-            // ORDER → only the items the main store carries (with its quantities). Until
-            // the main-store list has loaded, don't filter — better to show the catalogue
-            // for a moment than to flash an empty picker on a slow/failed load.
-            VoucherType.ORDER ->
-                if (mainStoreLoaded) bySearch.filter { mainStoreQty.containsKey(it.sku) } else bySearch
+            // ORDER → only the items the main store carries, with its quantities
+            // (product.mainStock, cached from the ERP — works offline).
+            VoucherType.ORDER -> bySearch.filter { it.mainStock > 0 }
             // SALE / RETURN → only items in the salesman's own (van) warehouse.
             else -> bySearch.filter { it.vanStock > 0 }
         }
@@ -708,6 +713,9 @@ class VoucherViewModel(
                     extraNotes = s.notes.takeIf { it.isNotBlank() },
                     referenceInvoiceId = s.referenceInvoiceId,
                     referenceNumber = s.referenceNumber,
+                    // Return "as it was": inherit the source sale's exemption snapshot.
+                    taxExempt = s.referenceIsTaxExempt,
+                    taxExemptionNumber = s.referenceTaxExemptionNumber,
                 )
                 VoucherType.ORDER -> createRequest(
                     customerId = customerId,
@@ -715,6 +723,9 @@ class VoucherViewModel(
                     cart = s.cart,
                     expectedDeliveryAt = s.deliveryDate,
                     notes = s.notes.takeIf { it.isNotBlank() },
+                    // An exempt customer's order is tax-free, like the sale it becomes.
+                    taxExempt = s.isTaxExemptDoc,
+                    taxExemptionNumber = s.customer?.taxExemptionNumber,
                 )
             }
             result.fold(
@@ -776,6 +787,8 @@ class VoucherViewModel(
                 extraNotes = s.notes.takeIf { it.isNotBlank() },
                 referenceInvoiceId = s.referenceInvoiceId,
                 referenceNumber = s.referenceNumber,
+                taxExempt = s.referenceIsTaxExempt,
+                taxExemptionNumber = s.referenceTaxExemptionNumber,
             )
             result.fold(
                 onSuccess = { id ->
@@ -806,6 +819,8 @@ class VoucherViewModel(
                 discountAmount = s.voucherDiscountAmount,
                 paymentMethod = s.paymentMethod,
                 notes = s.notes.takeIf { it.isNotBlank() },
+                taxExempt = s.isTaxExemptSale,
+                taxExemptionNumber = s.customer?.taxExemptionNumber,
             )
             result.fold(
                 onSuccess = { id ->
@@ -844,6 +859,8 @@ class VoucherViewModel(
                                 extraNotes = s.notes.takeIf { it.isNotBlank() },
                                 referenceInvoiceId = s.referenceInvoiceId,
                                 referenceNumber = s.referenceNumber,
+                                taxExempt = s.referenceIsTaxExempt,
+                                taxExemptionNumber = s.referenceTaxExemptionNumber,
                             )
                             PendingKind.SALE_DISCOUNT -> commitApprovedSale(
                                 approvedNumber = number,
@@ -853,6 +870,8 @@ class VoucherViewModel(
                                 discountAmount = s.voucherDiscountAmount,
                                 paymentMethod = s.paymentMethod,
                                 notes = s.notes.takeIf { it.isNotBlank() },
+                                taxExempt = s.isTaxExemptSale,
+                                taxExemptionNumber = s.customer?.taxExemptionNumber,
                             )
                         }
                         commit.fold(

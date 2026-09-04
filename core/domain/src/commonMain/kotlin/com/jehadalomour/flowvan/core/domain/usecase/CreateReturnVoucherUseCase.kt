@@ -37,20 +37,29 @@ class CreateReturnVoucherUseCase(
         extraNotes: String?,
         referenceInvoiceId: String? = null,
         referenceNumber: String? = null,
+        /** The source sale was tax-exempt — return it tax-free, "as it was". */
+        taxExempt: Boolean = false,
+        taxExemptionNumber: String? = null,
     ): Result<InvoiceEntity> = runCatching {
         if (cart.isEmpty()) throw EmptyCartException()
         require(reason.isNotBlank()) { "reason required" }
 
+        // A tax-exempt return carries no tax: strip the lines the same way the sale did
+        // so the stored/printed material price and total match the exempt total. (The
+        // caller already re-prices, but re-applying is idempotent and keeps this correct
+        // even if a future caller forgets.)
+        val storedCart = if (taxExempt) InvoiceTaxCalculator.exemptCartLines(cart) else cart
+
         // lineTaxType already stamped on each CartLine from settings at add-time.
         val summary = InvoiceTaxCalculator.calculateInvoice(
-            cart = cart,
+            cart = storedCart,
             invoiceDiscount = InvoiceDiscountInput.None,
         )
 
         val number = voucherNumbers.next("RET", "RETURN")
         val now = Clock.System.now().toEpochMilliseconds()
         val loc = location.lastLocation()
-        val invoiceLines = cart.map {
+        val invoiceLines = storedCart.map {
             InvoiceLine(
                 productId   = it.productId,
                 sku         = it.sku,
@@ -77,6 +86,8 @@ class CreateReturnVoucherUseCase(
             salesmanId     = salesmanId,
             createdAt      = now,
             linesJson      = json.encodeToString(invoiceLines),
+            isTaxExempt    = taxExempt,
+            taxExemptionNumber = if (taxExempt) taxExemptionNumber else null,
             subtotal       = summary.displaySubtotal,
             discountAmount = summary.totalLineDiscounts,
             taxAmount      = summary.totalTax,
