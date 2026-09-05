@@ -6,17 +6,27 @@ import kotlinx.coroutines.flow.StateFlow
 enum class PrinterType { USB, BLUETOOTH, SERIAL, NETWORK }
 
 /**
+ * The command language the printer speaks. ESC/POS is the default (the XPrinter/POS
+ * thermal printers); CPCL is for Zebra mobile printers, which the ESC/POS SDK cannot
+ * drive — the admin picks it when the connected printer is a Zebra/CPCL model, and
+ * the app routes printing through the Zebra SDK instead.
+ */
+enum class PrinterLanguage { ESCPOS, CPCL }
+
+/**
  * A connectable printer.
  *
  * - [address] meaning depends on [type]: USB device path, Bluetooth MAC, serial port path,
  *   or `host[:port]` for network.
  * - [baudRate] only applies to [PrinterType.SERIAL].
+ * - [language] selects the command set / SDK; Zebra CPCL printers connect over Bluetooth.
  */
 data class PrinterTarget(
     val type: PrinterType,
     val address: String,
     val name: String = address,
     val baudRate: Int = 115200,
+    val language: PrinterLanguage = PrinterLanguage.ESCPOS,
 )
 
 /** Live connection state, observable from a ViewModel. */
@@ -49,6 +59,14 @@ interface ReceiptPrinter {
 
     /** The last target we attempted to connect to, restored across app launches. */
     val lastTarget: PrinterTarget?
+
+    /**
+     * The command language this device's printer speaks — a persistent, device-wide
+     * setting the admin chooses once (ESC/POS vs a Zebra CPCL printer). Applied to
+     * every [connect] so all print screens route to the right SDK without each having
+     * to ask again. Persisted across launches.
+     */
+    var language: PrinterLanguage
 
     /** Open a connection. Safe to call when already connected to the same target. */
     suspend fun connect(target: PrinterTarget): PrintResult

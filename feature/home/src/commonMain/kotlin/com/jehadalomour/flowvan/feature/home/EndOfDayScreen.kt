@@ -373,6 +373,8 @@ private fun EodPrintPreviewDialog(
                 onConnect = { onEvent(EndOfDayEvent.Connect) },
                 onDisconnect = { onEvent(EndOfDayEvent.Disconnect) },
                 onDismiss = { onEvent(EndOfDayEvent.DismissConnectDialog) },
+                connectLanguage = state.printerLanguage,
+                onLanguageSelected = { onEvent(EndOfDayEvent.PrinterLanguageSelected(it)) },
             )
         }
     }

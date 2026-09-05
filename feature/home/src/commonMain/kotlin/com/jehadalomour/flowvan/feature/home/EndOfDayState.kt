@@ -4,6 +4,7 @@ import com.jehadalomour.flowvan.core.model.DailyKpi
 import com.jehadalomour.flowvan.core.model.Shift
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
 import com.jehadalomour.flowvan.core.domain.printer.PrinterTarget
+import com.jehadalomour.flowvan.core.domain.printer.PrinterLanguage
 import com.jehadalomour.flowvan.core.domain.printer.PrinterType
 
 data class EndOfDayState(
@@ -35,6 +36,7 @@ data class EndOfDayState(
     /** Print the summary automatically once a connection is established. */
     val pendingPrint: Boolean = false,
     val connectType: PrinterType = PrinterType.BLUETOOTH,
+    val printerLanguage: PrinterLanguage = PrinterLanguage.ESCPOS,
     val connectAddress: String = "",
     val discoveredDevices: List<PrinterTarget> = emptyList(),
 )

@@ -50,6 +50,7 @@ class EndOfDayViewModel(
         EndOfDayState(
             connectType = printer.lastTarget?.type ?: PrinterType.BLUETOOTH,
             connectAddress = printer.lastTarget?.address.orEmpty(),
+            printerLanguage = printer.language,
         ),
     )
     val state: StateFlow<EndOfDayState> = _state.asStateFlow()
@@ -82,6 +83,13 @@ class EndOfDayViewModel(
             is EndOfDayEvent.ConnectTypeSelected -> {
                 _state.update { it.copy(connectType = event.type) }
                 refreshDevices()
+            }
+
+            is EndOfDayEvent.PrinterLanguageSelected -> {
+                // Device-wide setting: persist it on the printer so every print screen
+                // routes to the right SDK (ESC/POS vs Zebra CPCL) from now on.
+                printer.language = event.language
+                _state.update { it.copy(printerLanguage = event.language) }
             }
 
             is EndOfDayEvent.ConnectAddressChanged -> _state.update {

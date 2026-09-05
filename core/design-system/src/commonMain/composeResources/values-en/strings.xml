@@ -667,6 +667,9 @@
     <string name="printer_type_bluetooth">Bluetooth</string>
     <string name="printer_type_serial">Serial</string>
     <string name="printer_type_network">Network</string>
+    <string name="printer_language">Printer language</string>
+    <string name="printer_language_escpos">ESC/POS</string>
+    <string name="printer_language_cpcl">CPCL (Zebra)</string>
     <string name="printer_address_bluetooth_hint">Bluetooth address (MAC)</string>
     <string name="printer_address_network_hint">IP address</string>
     <string name="printer_status_connected">Connected: %1$s</string>

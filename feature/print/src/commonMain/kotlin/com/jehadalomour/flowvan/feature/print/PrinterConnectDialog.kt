@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jehadalomour.flowvan.core.domain.printer.PrinterLanguage
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
 import com.jehadalomour.flowvan.core.domain.printer.PrinterTarget
 import com.jehadalomour.flowvan.core.domain.printer.PrinterType
@@ -50,6 +51,10 @@ fun PrinterConnectDialog(
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     onDismiss: () -> Unit,
+    // The command language (ESC/POS vs Zebra CPCL). Optional so only the printer
+    // SETUP screen shows the choice; the per-print screens inherit the saved setting.
+    connectLanguage: PrinterLanguage? = null,
+    onLanguageSelected: ((PrinterLanguage) -> Unit)? = null,
 ) {
     val connecting = printerState is PrinterState.Connecting
 
@@ -81,6 +86,25 @@ fun PrinterConnectDialog(
                     TypeChip(PrinterType.BLUETOOTH, connectType, stringResource(Res.string.printer_type_bluetooth), onTypeSelected)
                     TypeChip(PrinterType.USB, connectType, stringResource(Res.string.printer_type_usb), onTypeSelected)
                     TypeChip(PrinterType.NETWORK, connectType, stringResource(Res.string.printer_type_network), onTypeSelected)
+                }
+
+                // Printer language (ESC/POS vs Zebra CPCL) — shown only where wired.
+                if (connectLanguage != null && onLanguageSelected != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(stringResource(Res.string.printer_language), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(
+                            selected = connectLanguage == PrinterLanguage.ESCPOS,
+                            onClick = { onLanguageSelected(PrinterLanguage.ESCPOS) },
+                            label = { Text(stringResource(Res.string.printer_language_escpos), fontSize = 12.sp) },
+                        )
+                        FilterChip(
+                            selected = connectLanguage == PrinterLanguage.CPCL,
+                            onClick = { onLanguageSelected(PrinterLanguage.CPCL) },
+                            label = { Text(stringResource(Res.string.printer_language_cpcl), fontSize = 12.sp) },
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(10.dp))

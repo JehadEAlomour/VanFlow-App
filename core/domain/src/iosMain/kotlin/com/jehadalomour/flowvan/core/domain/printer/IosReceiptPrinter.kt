@@ -11,6 +11,7 @@ class IosReceiptPrinter : ReceiptPrinter {
     private val _state = MutableStateFlow<PrinterState>(PrinterState.Disconnected)
     override val state: StateFlow<PrinterState> = _state
     override val lastTarget: PrinterTarget? = null
+    override var language: PrinterLanguage = PrinterLanguage.ESCPOS
 
     private val unsupported = PrintResult.Failure("الطباعة غير مدعومة على iOS بعد")
 

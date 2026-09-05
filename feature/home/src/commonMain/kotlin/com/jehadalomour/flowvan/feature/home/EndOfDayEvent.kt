@@ -1,6 +1,7 @@
 package com.jehadalomour.flowvan.feature.home
 
 import com.jehadalomour.flowvan.core.domain.printer.PrinterTarget
+import com.jehadalomour.flowvan.core.domain.printer.PrinterLanguage
 import com.jehadalomour.flowvan.core.domain.printer.PrinterType
 
 sealed class EndOfDayEvent {
@@ -13,6 +14,7 @@ sealed class EndOfDayEvent {
     data object RequestConnectThenPrint : EndOfDayEvent()
     data object DismissConnectDialog : EndOfDayEvent()
     data class ConnectTypeSelected(val type: PrinterType) : EndOfDayEvent()
+    data class PrinterLanguageSelected(val language: PrinterLanguage) : EndOfDayEvent()
     data class ConnectAddressChanged(val address: String) : EndOfDayEvent()
     data class DeviceSelected(val target: PrinterTarget) : EndOfDayEvent()
     data object RefreshDevices : EndOfDayEvent()

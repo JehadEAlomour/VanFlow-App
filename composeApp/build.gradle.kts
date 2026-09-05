@@ -33,8 +33,10 @@ kotlin {
             implementation(libs.maps.compose)
             implementation(libs.play.services.maps)
             implementation(libs.play.services.location)
-            // XPrinter / POS thermal printer SDK (USB / Bluetooth / Serial / Network)
+            // XPrinter / POS thermal printer SDK (USB / Bluetooth / Serial / Network) — ESC/POS
             implementation(files("libs/printer-sdk.aar"))
+            // Zebra Link-OS SDK — CPCL mobile Bluetooth printers (the ESC/POS SDK can't drive them)
+            implementation(files("libs/ZSDK_ANDROID_API.jar"))
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)

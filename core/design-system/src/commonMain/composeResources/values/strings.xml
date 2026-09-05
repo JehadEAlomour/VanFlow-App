@@ -667,6 +667,9 @@
     <string name="printer_type_bluetooth">بلوتوث</string>
     <string name="printer_type_serial">منفذ تسلسلي</string>
     <string name="printer_type_network">شبكة</string>
+    <string name="printer_language">لغة الطابعة</string>
+    <string name="printer_language_escpos">ESC/POS</string>
+    <string name="printer_language_cpcl">CPCL (زيبرا)</string>
     <string name="printer_address_bluetooth_hint">عنوان البلوتوث (MAC)</string>
     <string name="printer_address_network_hint">عنوان الـ IP</string>
     <string name="printer_status_connected">متصلة: %1$s</string>
