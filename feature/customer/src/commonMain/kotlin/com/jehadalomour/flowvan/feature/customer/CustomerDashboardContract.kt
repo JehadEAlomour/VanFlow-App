@@ -16,6 +16,9 @@ enum class LeaveDialog { NONE, REASON, CONFIRM }
  */
 enum class ProximityBlock { NONE, NO_GPS, TOO_FAR }
 
+/** Status of the rep's "update customer location" action, for top-bar UI feedback. */
+enum class LocationUpdate { IDLE, UPDATING, SUCCESS, NO_GPS, ERROR }
+
 data class CustomerDashboardState(
     val customer: Customer? = null,
     val sales: List<InvoiceEntity> = emptyList(),
@@ -41,6 +44,8 @@ data class CustomerDashboardState(
     val canSell: Boolean = true,
     val canReturn: Boolean = true,
     val canCollect: Boolean = true,
+    /** Status of the "update customer location" button (pin icon in the top bar). */
+    val locationUpdate: LocationUpdate = LocationUpdate.IDLE,
 ) {
     val salesTotal: Double get() = sales.sumOf { it.total }
     val returnsTotal: Double get() = returns.sumOf { it.total }
@@ -68,4 +73,8 @@ sealed interface CustomerDashboardEvent {
     data class LeaveRequested(val hadTransaction: Boolean) : CustomerDashboardEvent
     data class ConfirmLeave(val reason: String?) : CustomerDashboardEvent
     data object DismissLeave : CustomerDashboardEvent
+    /** Rep tapped the top-bar pin: capture GPS and MOVE this customer's location. */
+    data object UpdateLocationRequested : CustomerDashboardEvent
+    /** Clear the location-update status once the feedback has been shown. */
+    data object DismissLocationUpdate : CustomerDashboardEvent
 }

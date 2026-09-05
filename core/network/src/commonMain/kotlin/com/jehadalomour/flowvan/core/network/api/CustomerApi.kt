@@ -91,6 +91,16 @@ class CustomerApi(private val client: FlowVanApiClient) {
     suspend fun seedLocation(customerId: String, lat: Double, lng: Double): CustomerDto =
         client.postData("customers/$customerId/location", SeedLocationRequest(lat, lng))
 
+    /**
+     * MOVE the customer's pin to these coordinates (overwrite) — the rep's "update
+     * customer location" button. Unlike [seedLocation], this replaces an existing pin.
+     */
+    suspend fun updateLocation(customerId: String, lat: Double, lng: Double): CustomerDto =
+        client.postData(
+            "customers/$customerId/location",
+            SeedLocationRequest(lat, lng, overwrite = true),
+        )
+
     suspend fun logVisit(customerId: String, body: LogVisitRequest) {
         client.execute(
             method = HttpMethod.Post,

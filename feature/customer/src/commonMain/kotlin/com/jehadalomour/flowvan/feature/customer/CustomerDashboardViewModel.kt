@@ -179,6 +179,37 @@ class CustomerDashboardViewModel(
 
             CustomerDashboardEvent.DismissLeave ->
                 _state.update { it.copy(leaveDialog = LeaveDialog.NONE) }
+
+            CustomerDashboardEvent.UpdateLocationRequested -> updateLocation()
+
+            CustomerDashboardEvent.DismissLocationUpdate ->
+                _state.update { it.copy(locationUpdate = LocationUpdate.IDLE) }
+        }
+    }
+
+    /**
+     * Rep tapped the top-bar pin: capture the current GPS fix and MOVE this
+     * customer's stored location to it (overwrite). The rep is standing at the
+     * store, so this point IS the store — unlike the seed-once bootstrap, this
+     * deliberately replaces an existing pin.
+     */
+    private fun updateLocation() {
+        _state.update { it.copy(locationUpdate = LocationUpdate.UPDATING) }
+        viewModelScope.launch {
+            val fix = location.lastLocation()
+            if (fix == null) {
+                _state.update { it.copy(locationUpdate = LocationUpdate.NO_GPS) }
+                return@launch
+            }
+            runCatching { customerApi.updateLocation(customerId, fix.lat, fix.lng) }
+                .onSuccess { dto ->
+                    customers.cacheAll(listOf(dto.toEntity()))
+                    _state.update { it.copy(locationUpdate = LocationUpdate.SUCCESS) }
+                }
+                .onFailure {
+                    log.w("updateLocation failed: ${it.message}")
+                    _state.update { it.copy(locationUpdate = LocationUpdate.ERROR) }
+                }
         }
     }
 

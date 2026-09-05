@@ -293,7 +293,6 @@ fun FlowVanNavHost(
                 onOpenReturn = { cid -> navController.navigate(Routes.returns(cid)) },
                 onOpenRequest = { cid -> navController.navigate(Routes.request(cid)) },
                 onOpenCollection = { cid -> navController.navigate(Routes.collection(cid)) },
-                onOpenAi = { cid -> navController.navigate(Routes.ai(cid)) },
                 onOpenVoucherReport = { cid -> navController.navigate(Routes.voucherReport(cid)) },
                 onOpenPaymentReport = { cid -> navController.navigate(Routes.payReport(cid)) },
                 onOpenAccountStatement = { cid -> navController.navigate(Routes.statement(cid)) },

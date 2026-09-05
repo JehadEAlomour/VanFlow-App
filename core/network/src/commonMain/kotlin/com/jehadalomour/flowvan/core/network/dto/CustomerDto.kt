@@ -81,11 +81,15 @@ data class CreateCustomerRequest(
     val sourceProspectId: String? = null,
 )
 
-/** Body for `POST /customers/:id/location` — a rep seeding a missing store pin. */
+/**
+ * Body for `POST /customers/:id/location`. Seeds a missing store pin by default;
+ * `overwrite = true` MOVES an existing pin (the "update customer location" button).
+ */
 @Serializable
 data class SeedLocationRequest(
     val lat: Double,
     val lng: Double,
+    val overwrite: Boolean = false,
 )
 
 @Serializable

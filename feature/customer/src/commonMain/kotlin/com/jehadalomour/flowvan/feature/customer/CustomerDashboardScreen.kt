@@ -62,7 +62,9 @@ import org.koin.core.parameter.parametersOf
 import org.jetbrains.compose.resources.StringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.foundation.layout.aspectRatio
+import kotlinx.coroutines.delay
 
 @Composable
 fun CustomerDashboardScreen(
@@ -72,7 +74,6 @@ fun CustomerDashboardScreen(
     onOpenReturn: (String) -> Unit,
     onOpenRequest: (String) -> Unit,
     onOpenCollection: (String) -> Unit,
-    onOpenAi: (String) -> Unit,
     onOpenVoucherReport: (String) -> Unit,
     onOpenPaymentReport: (String) -> Unit,
     onOpenAccountStatement: (String) -> Unit,
@@ -84,6 +85,16 @@ fun CustomerDashboardScreen(
     var startedTxn by remember { mutableStateOf(false) }
     LaunchedEffect(state.navigateBack) { if (state.navigateBack) onBack() }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
+    // Clear the location-update feedback (the green/red flash) shortly after it shows.
+    LaunchedEffect(state.locationUpdate) {
+        if (state.locationUpdate == LocationUpdate.SUCCESS ||
+            state.locationUpdate == LocationUpdate.NO_GPS ||
+            state.locationUpdate == LocationUpdate.ERROR
+        ) {
+            delay(2500)
+            viewModel.onEvent(CustomerDashboardEvent.DismissLocationUpdate)
+        }
+    }
     val requestLeave = { viewModel.onEvent(CustomerDashboardEvent.LeaveRequested(startedTxn)) }
     AppBackHandler {
         if (state.leaveDialog != LeaveDialog.NONE) {
@@ -128,20 +139,38 @@ fun CustomerDashboardScreen(
                     fontWeight = FontWeight.ExtraBold,
                     modifier = Modifier.weight(1f),
                 )
+                // Update customer location: capture the rep's current GPS and MOVE
+                // this customer's pin to it. Flashes green on success, red on
+                // no-GPS/error; a spinner while it runs.
+                val locTint = when (state.locationUpdate) {
+                    LocationUpdate.SUCCESS -> Fv.Teal
+                    LocationUpdate.NO_GPS, LocationUpdate.ERROR -> Fv.Red
+                    else -> Fv.Blue
+                }
                 Box(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(RoundedCornerShape(11.dp))
-                        .background(Fv.Blue.copy(alpha = 0.10f))
-                        .clickable { onOpenAi(customerId) },
+                        .background(locTint.copy(alpha = 0.10f))
+                        .clickable(enabled = state.locationUpdate != LocationUpdate.UPDATING) {
+                            viewModel.onEvent(CustomerDashboardEvent.UpdateLocationRequested)
+                        },
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        painterResource(Res.drawable.ic_ai_sparkle),
-                        contentDescription = null,
-                        tint = Fv.Blue,
-                        modifier = Modifier.size(18.dp),
-                    )
+                    if (state.locationUpdate == LocationUpdate.UPDATING) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = Fv.Blue,
+                        )
+                    } else {
+                        Icon(
+                            painterResource(Res.drawable.ic_map),
+                            contentDescription = "Update customer location",
+                            tint = locTint,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
             }
         }
