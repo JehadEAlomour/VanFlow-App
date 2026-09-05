@@ -13,6 +13,7 @@ fun ProductEntity.toDomain(): Product = Product(
     salePrice = salePrice,
     costPrice = costPrice,
     vanStock = vanStock,
+    mainStock = mainStock,
     minStock = minStock,
     expiryDate = expiryDate,
     brand = brand,

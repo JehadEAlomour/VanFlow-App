@@ -115,6 +115,7 @@ internal fun OfferEntity.toDefinition(json: Json): OfferDefinition? {
             regionIds = e?.regionIds,
             repIds = e?.repIds,
             storeNumbers = e?.storeNumbers,
+            segmentCustomerNumbers = e?.segmentCustomerNumbers,
         ),
         validFromMs = validFrom.toEpochMsOrNull(),
         validToMs = validTo.toEpochMsOrNull(),
@@ -179,4 +180,5 @@ private data class EligibilityJson(
     val regionIds: List<String>? = null,
     val repIds: List<String>? = null,
     val storeNumbers: List<String>? = null,
+    val segmentCustomerNumbers: List<String>? = null,
 )

@@ -10,6 +10,8 @@ data class Product(
     val salePrice: Double,
     val costPrice: Double,
     val vanStock: Int,
+    /** Main-store (central depot) on-hand, cached from the ERP for the ORDER flow — works offline. */
+    val mainStock: Int = 0,
     val minStock: Int,
     val expiryDate: Long?,
     val brand: String?,

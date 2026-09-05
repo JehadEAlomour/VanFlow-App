@@ -183,7 +183,7 @@ fun sharedModule(): Module = module {
     factory { StartShiftUseCase(get(), get()) }
     factory { BackendLoginUseCase(get(), get(), get(), get()) }
     factory { BackupDatabaseUseCase(get()) }
-    factory { RefreshCatalogUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    factory { RefreshCatalogUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     // Its own HttpClient: the shared one has a 15s request timeout that would cut
     // a long-lived socket every 15 seconds (see createWebSocketClient).
     single { SyncSocketClient(createWebSocketClient(), get(), get()) }

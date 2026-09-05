@@ -96,8 +96,6 @@ object Routes {
     const val RECEIVABLES_REPORT = "receivables"
     const val TARGETS_REPORT = "targets"
     const val VOUCHER_PRINT = "voucherprint/{invoiceId}"
-    // The date range travels in the route: the printed statement must be the
-    // same period the rep was looking at, not a default recomputed downstream.
     const val STATEMENT_PRINT = "statementprint/{customerId}/{from}/{to}"
     const val TXN_REPORT_PRINT = "txnreportprint/{customerId}/{from}/{to}"
     const val SALES_REPORT_PRINT = "salesreportprint/{from}/{to}"

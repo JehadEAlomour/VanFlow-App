@@ -3,6 +3,7 @@ package com.jehadalomour.flowvan.core.domain.usecase
 import co.touchlab.kermit.Logger
 import com.jehadalomour.flowvan.core.network.api.AuthApi
 import com.jehadalomour.flowvan.core.network.api.CustomerApi
+import com.jehadalomour.flowvan.core.network.api.OrderApi
 import com.jehadalomour.flowvan.core.network.api.ProductApi
 import com.jehadalomour.flowvan.core.network.api.RepApi
 import com.jehadalomour.flowvan.core.network.realtime.SyncResource
@@ -31,6 +32,7 @@ class RefreshCatalogUseCase(
     private val apiConfig: ApiConfig,
     private val customerApi: CustomerApi,
     private val productApi: ProductApi,
+    private val orderApi: OrderApi,
     private val repApi: RepApi,
     private val customers: CustomerRepository,
     private val products: ProductRepository,
@@ -91,6 +93,17 @@ class RefreshCatalogUseCase(
         // device with its last-known stock, and since the catalog list filters on
         // vanStock > 0, those dead rows were the only ones a rep could see.
         products.replaceAll(allItems.map { it.toEntity() })
+        // Cache the MAIN-STORE on-hand for the ORDER picker so it works offline.
+        // Best-effort — a failure must not fail the catalogue refresh; the last cache
+        // (or zero) stays. Base pool only; ORDER lines are base units.
+        runCatching { orderApi.orderStock() }
+            .onSuccess { rows ->
+                products.cacheMainStock(
+                    rows.filter { it.stockUnitCode.isEmpty() }
+                        .associate { it.itemNumber to (it.itemQty.toDoubleOrNull()?.toInt() ?: 0) },
+                )
+            }
+            .onFailure { log.w("main-store stock cache skipped: ${it.message}") }
         // …then refill each item's REAL units (base + larger) so the app
         // shows the item's own units, not a hardcoded list.
         val units = allItems.flatMap { p ->

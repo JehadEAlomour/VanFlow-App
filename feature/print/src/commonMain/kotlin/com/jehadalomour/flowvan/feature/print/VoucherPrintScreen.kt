@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -47,7 +48,9 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.Locale
@@ -156,7 +159,10 @@ fun VoucherPrintScreen(
     viewModel: VoucherPrintViewModel = koinViewModel { parametersOf(invoiceId) },
 ) {
     val state by viewModel.state.collectAsState()
+    // The A4 document is rendered off-screen; this layer captures it for "Share as PDF".
     val graphicsLayer = rememberGraphicsLayer()
+    // The visible voucher view IS the thermal receipt (old style); this layer captures it for printing.
+    val thermalLayer = rememberGraphicsLayer()
     val scope = rememberCoroutineScope()
     val pdfHelper = rememberPdfShareHelper()
 
@@ -174,7 +180,8 @@ fun VoucherPrintScreen(
     // Capture the on-screen receipt and send it to the ViewModel as PNG bytes.
     // Bitmap capture is the one piece that must live in the UI; all logic stays in the VM.
     suspend fun captureAndPrint() {
-        val bitmap = graphicsLayer.toImageBitmap()
+        // Thermal print uses the on-screen receipt (the old receipt style), NOT the A4 document.
+        val bitmap = thermalLayer.toImageBitmap()
         val png = withContext(Dispatchers.Default) { bitmap.toPngBytes() }
         viewModel.onEvent(VoucherPrintEvent.Print(png))
     }
@@ -235,8 +242,9 @@ fun VoucherPrintScreen(
                 filled = false,
                 onClick = {
                     scope.launch {
+                        // Share captures the off-screen A4 document and shares it as an A4 PDF.
                         val bmp = graphicsLayer.toImageBitmap()
-                        pdfHelper.shareAsPdf(bmp, state.number)
+                        pdfHelper.shareAsPdf(bmp, state.number, a4 = true)
                     }
                 },
             )
@@ -283,7 +291,8 @@ fun VoucherPrintScreen(
             )
         }
 
-        // Scrollable receipt
+        // Scrollable receipt — the visible view IS the thermal receipt (old style), and its
+        // layer is what thermal printing captures. Sharing uses the off-screen A4 below.
         Column(
             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -295,8 +304,8 @@ fun VoucherPrintScreen(
                     .shadow(8.dp, RoundedCornerShape(4.dp))
                     .background(RcBg, RoundedCornerShape(4.dp))
                     .drawWithContent {
-                        graphicsLayer.record { this@drawWithContent.drawContent() }
-                        drawLayer(graphicsLayer)
+                        thermalLayer.record { this@drawWithContent.drawContent() }
+                        drawLayer(thermalLayer)
                     },
             ) {
                 Column {
@@ -306,6 +315,30 @@ fun VoucherPrintScreen(
                 }
             }
             Spacer(Modifier.height(32.dp))
+        }
+
+        // Off-screen A4 document — captured for "Share as PDF" only, never painted to screen.
+        //
+        // The outer layout measures the A4 at its natural size (fixed width, UNBOUNDED height)
+        // but then reports zero size to the parent, so the document occupies no space on screen
+        // while still being drawn at full size into graphicsLayer. A plain size(0) wrapper would
+        // instead clamp the child's height to 0, and toImageBitmap() would crash on a 0×0 layer.
+        Box(
+            modifier = Modifier.layout { measurable, _ ->
+                val placeable = measurable.measure(Constraints())
+                layout(0, 0) { placeable.place(0, 0) }
+            },
+        ) {
+            Box(
+                modifier = Modifier
+                    .requiredWidth(794.dp)
+                    .background(Color.White)
+                    .drawWithContent {
+                        graphicsLayer.record { this@drawWithContent.drawContent() }
+                    },
+            ) {
+                VoucherA4Document(state)
+            }
         }
     }
 }

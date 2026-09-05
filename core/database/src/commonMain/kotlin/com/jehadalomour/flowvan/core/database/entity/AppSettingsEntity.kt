@@ -25,4 +25,6 @@ data class AppSettingsEntity(
     // v13: company logo cached from GET /company-info (a `data:<mime>;base64,...` URI),
     // stored so the printed voucher header shows the company's own logo, even offline.
     @ColumnInfo(defaultValue = "''") val companyLogo: String = "",
+    // v20: company phone cached from GET /company-info, shown on the A4 document header.
+    @ColumnInfo(defaultValue = "''") val companyPhone: String = "",
 )

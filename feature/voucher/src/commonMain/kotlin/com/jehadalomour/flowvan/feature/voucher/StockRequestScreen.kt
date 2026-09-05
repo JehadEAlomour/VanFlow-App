@@ -197,7 +197,7 @@ fun StockRequestScreen(
             cartLines = state.cart.filter { it.productId == product.id },
             initialUnitId = sheetUnitId,
             dbUnits = state.unitsFor(product.id),
-            availableFor = { unit -> state.availableBase(product.sku, unit) },
+            availableFor = { unit -> state.availableBase(product.sku, unit, product.mainStock.toDouble()) },
             onConfirm = { qty, unit ->
                 viewModel.onEvent(StockRequestEvent.ConfirmItem(product, qty, unit))
                 sheetProduct = null

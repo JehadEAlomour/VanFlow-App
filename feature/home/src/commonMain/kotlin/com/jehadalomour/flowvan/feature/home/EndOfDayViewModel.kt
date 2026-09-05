@@ -124,6 +124,8 @@ class EndOfDayViewModel(
             val cash = payments.totalByMethodSince("CASH", startOfTodayMs)
             val cheques = payments.totalByMethodSince("CHEQUE", startOfTodayMs)
             val transfers = payments.totalByMethodSince("TRANSFER", startOfTodayMs)
+            val cashSales = invoices.cashOnlySalesTotalSince(startOfTodayMs)
+            val cashReturns = invoices.cashReturnsTotalSince(startOfTodayMs)
             val unsyncedInv = invoices.countUnsyncedSince(startOfTodayMs)
             val unsyncedPay = payments.countUnsyncedSince(startOfTodayMs)
 
@@ -153,6 +155,8 @@ class EndOfDayViewModel(
                     cashCollectedToday = cash,
                     chequesCollectedToday = cheques,
                     transfersCollectedToday = transfers,
+                    cashSalesToday = cashSales,
+                    cashReturnsToday = cashReturns,
                     unsyncedInvoices = unsyncedInv,
                     unsyncedPayments = unsyncedPay,
                     activeShift = activeShift,

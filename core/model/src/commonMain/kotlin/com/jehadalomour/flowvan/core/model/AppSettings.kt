@@ -23,4 +23,6 @@ data class AppSettings(
     val companyTaxNumber: String = "",
     /** Company logo as a `data:<mime>;base64,...` URI (cached from /company-info) for print. */
     val companyLogo: String = "",
+    /** Company phone cached from /company-info, shown on the A4 document header. */
+    val companyPhone: String = "",
 )

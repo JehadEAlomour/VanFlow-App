@@ -1,5 +1,6 @@
 [versions]
 agp = "8.11.2"
+desugarJdkLibs = "2.1.5"
 android-compileSdk = "36"
 android-minSdk = "24"
 android-targetSdk = "36"
@@ -69,6 +70,7 @@ multiplatform-settings-coroutines = { module = "com.russhwolf:multiplatform-sett
 
 # Kotlinx
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
+desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }

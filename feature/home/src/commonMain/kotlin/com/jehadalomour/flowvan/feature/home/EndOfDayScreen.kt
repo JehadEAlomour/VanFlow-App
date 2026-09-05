@@ -162,6 +162,12 @@ fun EndOfDayScreen(
                     KpiRow(stringResource(Res.string.method_cash_label), state.cashCollectedToday.formatJod(AppLanguage.AR), Fv.Green)
                     KpiRow(stringResource(Res.string.end_of_day_cheques), state.chequesCollectedToday.formatJod(AppLanguage.AR), Fv.Blue)
                     KpiRow(stringResource(Res.string.end_of_day_transfers), state.transfersCollectedToday.formatJod(AppLanguage.AR), Fv.Teal)
+                    HorizontalDivider(color = Fv.SurfaceHigh, modifier = Modifier.padding(vertical = 4.dp))
+                    KpiRow(
+                        stringResource(Res.string.cash_flow_total_cash),
+                        state.cashOnHand.formatJod(AppLanguage.AR),
+                        if (state.cashOnHand >= 0) Fv.Green else Fv.Red,
+                    )
                 }
 
                 SectionCard(title = stringResource(Res.string.end_of_day_sync_status)) {
@@ -536,6 +542,8 @@ private fun EodReceiptBody(state: EndOfDayState) {
         RcKv(stringResource(Res.string.method_cash_label), state.cashCollectedToday.formatJod(AppLanguage.AR))
         RcKv(stringResource(Res.string.end_of_day_cheques), state.chequesCollectedToday.formatJod(AppLanguage.AR))
         RcKv(stringResource(Res.string.end_of_day_transfers), state.transfersCollectedToday.formatJod(AppLanguage.AR))
+        // The cash the rep hands over: cash sales + cash collections − cash refunds.
+        RcKv(stringResource(Res.string.cash_flow_total_cash), state.cashOnHand.formatJod(AppLanguage.AR), bold = true)
 
         RcDash()
 

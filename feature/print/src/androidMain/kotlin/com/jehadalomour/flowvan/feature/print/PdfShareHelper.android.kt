@@ -15,9 +15,9 @@ import java.io.FileOutputStream
 
 private class AndroidPdfShareHelper(private val context: Context) : PdfShareHelper {
 
-    override suspend fun shareAsPdf(imageBitmap: ImageBitmap, invoiceNumber: String) {
+    override suspend fun shareAsPdf(imageBitmap: ImageBitmap, invoiceNumber: String, a4: Boolean) {
         val bitmap = imageBitmap.asAndroidBitmap()
-        val pdfFile = writePdf(bitmap, "invoice_${sanitize(invoiceNumber)}.pdf")
+        val pdfFile = writePdf(bitmap, "invoice_${sanitize(invoiceNumber)}.pdf", a4)
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", pdfFile)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "application/pdf"
@@ -27,7 +27,7 @@ private class AndroidPdfShareHelper(private val context: Context) : PdfShareHelp
         context.startActivity(Intent.createChooser(intent, "مشاركة الفاتورة"))
     }
 
-    private fun writePdf(bitmap: Bitmap, fileName: String): File {
+    private fun writePdf(bitmap: Bitmap, fileName: String, a4: Boolean): File {
         // GraphicsLayer returns a hardware-backed bitmap; PDF canvas needs software rendering.
         val soft = if (bitmap.config == Bitmap.Config.HARDWARE) {
             bitmap.copy(Bitmap.Config.ARGB_8888, false)
@@ -35,10 +35,30 @@ private class AndroidPdfShareHelper(private val context: Context) : PdfShareHelp
             bitmap
         }
         val document = PdfDocument()
-        val pageInfo = PdfDocument.PageInfo.Builder(soft.width, soft.height, 1).create()
-        val page = document.startPage(pageInfo)
-        page.canvas.drawBitmap(soft, 0f, 0f, null)
-        document.finishPage(page)
+        if (a4) {
+            // Portrait A4 in PostScript points (1/72"): 595×842. The captured image is
+            // high-res; drawing it scaled into the A4 rect embeds it crisply. Fit within a
+            // margin, preserving aspect, centred horizontally and top-aligned.
+            val a4w = 595
+            val a4h = 842
+            val margin = 24f
+            val availW = a4w - margin * 2
+            val availH = a4h - margin * 2
+            val scale = minOf(availW / soft.width, availH / soft.height)
+            val drawW = soft.width * scale
+            val drawH = soft.height * scale
+            val left = margin + (availW - drawW) / 2f
+            val dest = android.graphics.RectF(left, margin, left + drawW, margin + drawH)
+            val pageInfo = PdfDocument.PageInfo.Builder(a4w, a4h, 1).create()
+            val page = document.startPage(pageInfo)
+            page.canvas.drawBitmap(soft, null, dest, null)
+            document.finishPage(page)
+        } else {
+            val pageInfo = PdfDocument.PageInfo.Builder(soft.width, soft.height, 1).create()
+            val page = document.startPage(pageInfo)
+            page.canvas.drawBitmap(soft, 0f, 0f, null)
+            document.finishPage(page)
+        }
         val file = File(context.cacheDir, fileName)
         document.writeTo(FileOutputStream(file))
         document.close()

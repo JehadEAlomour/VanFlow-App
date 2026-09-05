@@ -22,6 +22,7 @@ fun AppSettingsEntity.toDomain(): AppSettings = AppSettings(
     companyNameEn = companyNameEn,
     companyTaxNumber = companyTaxNumber,
     companyLogo = companyLogo,
+    companyPhone = companyPhone,
 )
 
 fun AppSettings.toEntity(): AppSettingsEntity = AppSettingsEntity(
@@ -41,4 +42,5 @@ fun AppSettings.toEntity(): AppSettingsEntity = AppSettingsEntity(
     companyNameEn = companyNameEn,
     companyTaxNumber = companyTaxNumber,
     companyLogo = companyLogo,
+    companyPhone = companyPhone,
 )

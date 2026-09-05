@@ -12,6 +12,10 @@ data class EndOfDayState(
     val cashCollectedToday: Double = 0.0,
     val chequesCollectedToday: Double = 0.0,
     val transfersCollectedToday: Double = 0.0,
+    /** SALE vouchers paid in cash today — cash into the drawer. */
+    val cashSalesToday: Double = 0.0,
+    /** Returns refunded in cash today (credit notes excluded) — cash out of the drawer. */
+    val cashReturnsToday: Double = 0.0,
     val unsyncedInvoices: Int = 0,
     val unsyncedPayments: Int = 0,
     val activeShift: Shift? = null,
@@ -39,4 +43,10 @@ data class EndOfDayState(
     val printerLanguage: PrinterLanguage = PrinterLanguage.ESCPOS,
     val connectAddress: String = "",
     val discoveredDevices: List<PrinterTarget> = emptyList(),
-)
+) {
+    /**
+     * The cash the rep is actually holding at the end of the day:
+     * cash sales + cash collections − cash refunds. Same definition the cash-flow report uses.
+     */
+    val cashOnHand: Double get() = cashSalesToday + cashCollectedToday - cashReturnsToday
+}

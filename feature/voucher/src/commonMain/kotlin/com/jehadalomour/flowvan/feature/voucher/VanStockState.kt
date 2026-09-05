@@ -30,7 +30,9 @@ data class VanStockState(
         allProducts.map { it.category }.filter { it.isNotBlank() }.distinct().sorted()
 
     val visibleProducts: List<Product> get() {
-        var list = allProducts
+        // The qty report is the salesman's OWN stock — only items his van carries,
+        // never the whole company catalogue.
+        var list = allProducts.filter { it.vanStock > 0 }
         if (selectedCategory != null) list = list.filter { it.category == selectedCategory }
         if (searchQuery.isNotBlank()) {
             list = list.filter {

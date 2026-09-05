@@ -485,13 +485,30 @@ object LocalOfferEvaluator {
     private fun isEligible(e: OfferEligibilityRule, ctx: Context): Boolean {
         when (e.customerScope) {
             "ALL" -> Unit
-            "SEGMENT" ->
-                if (ctx.customerCategory == null || e.segments?.contains(ctx.customerCategory) != true) return false
+            "SEGMENT" -> {
+                val segs = e.segments
+                if (!segs.isNullOrEmpty()) {
+                    // Legacy free-text category match.
+                    if (ctx.customerCategory == null || !segs.contains(ctx.customerCategory)) return false
+                } else if (e.segmentCustomerNumbers == null) {
+                    // SEGMENT scope with NEITHER a category list nor server-resolved segment
+                    // members targets nobody — never everybody. (A real-segment offer arrives
+                    // with segmentCustomerNumbers set and is enforced by the check below.)
+                    return false
+                }
+            }
             "SPECIFIC" ->
                 if (ctx.customerNumber == null || e.customerNumbers?.contains(ctx.customerNumber) != true) return false
             "NEW_ONLY" ->
                 if (ctx.customerNumber == null || !ctx.isNewCustomer) return false
             else -> Unit
+        }
+        // Real segment membership, pre-resolved server-side to member numbers.
+        // Additive filter, any scope; present means this offer targets a segment,
+        // so a non-member (or an empty member list) does not qualify.
+        val segCustomers = e.segmentCustomerNumbers
+        if (segCustomers != null) {
+            if (ctx.customerNumber == null || ctx.customerNumber !in segCustomers) return false
         }
         val regionIds = e.regionIds
         if (!regionIds.isNullOrEmpty()) {

@@ -131,9 +131,6 @@ fun HomeScreen(
                 )
             }
 
-            // Starting the shift is the one thing that must happen before
-            // anything else works, so it is a bar across the top rather than a
-            // tile in the grid — and it disappears the moment it is done.
             if (state.activeShift == null) {
                 item {
                     StartShiftBar(
@@ -447,13 +444,11 @@ private fun StartShiftBar(onStartShift: () -> Unit, modifier: Modifier = Modifie
  */
 @Composable
 private fun FunctionGrid(
-    // Null hides the tile — a route-only salesman.
     onOpenCustomers: (() -> Unit)?,
     onOpenRoute: () -> Unit,
     onOpenNewCustomer: () -> Unit,
     onOpenVanStock: () -> Unit,
     onOpenStockRequest: () -> Unit,
-    // Null hides the tile — the office has not granted canFindCustomers.
     onOpenFindCustomers: (() -> Unit)?,
     onOpenReturnByItem: () -> Unit,
     onOpenOffers: () -> Unit,

@@ -138,9 +138,10 @@ fun VanStockScreen(
             // Stats Hero
             item {
                 StatsHero(
-                    totalItems = state.allProducts.size,
+                    // Count only what the van actually carries — matches the list below.
+                    totalItems = state.allProducts.count { it.vanStock > 0 },
                     totalValue = state.totalInventoryValue,
-                    lowStockCount = state.allProducts.count { it.vanStock < it.minStock },
+                    lowStockCount = state.allProducts.count { it.vanStock in 1 until it.minStock },
                 )
             }
 

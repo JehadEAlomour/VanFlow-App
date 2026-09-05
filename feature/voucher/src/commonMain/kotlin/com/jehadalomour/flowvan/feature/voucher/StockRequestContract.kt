@@ -81,9 +81,15 @@ data class StockRequestState(
     fun unitsFor(productId: String): List<ProductUnit> =
         (productUnits[productId] ?: emptyList()).sortedBy { it.conversionQty }
 
-    /** Base pieces the main depot holds for this product+unit's pool. */
-    fun availableBase(sku: String, unit: ProductUnit): Double =
-        mainStock["$sku|${if (unit.isStockUnit) unit.code else ""}"] ?: 0.0
+    /**
+     * Base pieces the main depot holds for this product+unit's pool. When the live
+     * per-pool map has not loaded (offline), the base unit falls back to the
+     * product's cached main-store on-hand so the rep still sees a real number.
+     */
+    fun availableBase(sku: String, unit: ProductUnit, baseFallback: Double = 0.0): Double {
+        val pool = if (unit.isStockUnit) unit.code else ""
+        return mainStock["$sku|$pool"] ?: if (pool.isEmpty()) baseFallback else 0.0
+    }
 
     /** Cart quantity per product, for the picker's badge. Summed across units. */
     val cartQtyByProduct: Map<String, Double>

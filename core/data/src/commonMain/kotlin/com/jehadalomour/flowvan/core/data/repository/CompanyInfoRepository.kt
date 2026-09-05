@@ -28,12 +28,13 @@ class CompanyInfoRepository(
                     companyTaxNumber = dto.sellerTin.orEmpty(),
                     // Cache the logo (a data:...;base64 URI) so it prints even offline.
                     companyLogo = dto.logoUrl.orEmpty(),
+                    companyPhone = dto.sellerPhone.orEmpty(),
                 )
                 if (fresh != current) appSettings.save(fresh)
-                return CompanyInfo(fresh.companyNameAr, fresh.companyNameEn, fresh.companyTaxNumber, fresh.companyLogo)
+                return CompanyInfo(nameAr = fresh.companyNameAr, nameEn = fresh.companyNameEn, taxNumber = fresh.companyTaxNumber, phone = fresh.companyPhone, logo = fresh.companyLogo)
             }.onFailure { log.w("company-info fetch failed, using cache: ${it.message}") }
         }
         val cached = appSettings.get()
-        return CompanyInfo(cached.companyNameAr, cached.companyNameEn, cached.companyTaxNumber, cached.companyLogo)
+        return CompanyInfo(nameAr = cached.companyNameAr, nameEn = cached.companyNameEn, taxNumber = cached.companyTaxNumber, phone = cached.companyPhone, logo = cached.companyLogo)
     }
 }

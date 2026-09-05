@@ -115,6 +115,7 @@ class VoucherPrintViewModel(
                     companyNameEn = info.nameEn,
                     companyTaxNumber = info.taxNumber,
                     companyLogo = info.logo,
+                    companyPhone = info.phone,
                 )
             }
         }

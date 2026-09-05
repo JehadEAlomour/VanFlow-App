@@ -33,6 +33,14 @@ interface ProductDao {
     @Query("UPDATE products SET vanStock = :qty WHERE id = :id")
     suspend fun setStock(id: String, qty: Int)
 
+    /** Main-store (ORDER) on-hand, cached from the ERP. Keyed by sku (the ERP item number). */
+    @Query("UPDATE products SET mainStock = :qty WHERE sku = :sku")
+    suspend fun setMainStockBySku(sku: String, qty: Int)
+
+    /** Zero every product's main-store cache before re-applying a fresh snapshot. */
+    @Query("UPDATE products SET mainStock = 0")
+    suspend fun clearMainStock()
+
     @Query("SELECT id FROM products")
     suspend fun allIds(): List<String>
 

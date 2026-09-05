@@ -47,6 +47,8 @@ data class VoucherPrintState(
     val companyTaxNumber: String = "",
     /** Company logo (data:...;base64 URI) cached from /company-info; blank → bundled default. */
     val companyLogo: String = "",
+    /** Company phone cached from /company-info, shown under the logo on the A4 document. */
+    val companyPhone: String = "",
     /** Tax-QR payload. Null → no QR available, so the QR block is omitted entirely. */
     val qrData: String? = null,
     /** Render configuration. Jordan defaults today; server-fed in the next step. */

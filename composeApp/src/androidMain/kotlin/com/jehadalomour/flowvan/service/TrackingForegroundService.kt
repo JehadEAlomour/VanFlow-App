@@ -12,6 +12,7 @@ import android.content.pm.ServiceInfo
 import android.location.LocationManager
 import android.os.Build
 import android.os.IBinder
+import androidx.annotation.RequiresApi
 import com.jehadalomour.flowvan.core.data.heartbeat.HeartbeatReporter
 import com.jehadalomour.flowvan.core.datastore.SessionStore
 import com.jehadalomour.flowvan.core.domain.sync.SyncScheduler
@@ -103,6 +104,7 @@ class TrackingForegroundService : Service() {
         stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,

@@ -106,10 +106,15 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // Required for minSdk 24/25 (e.g. Sunmi T2, Android 7.1): kotlinx-datetime
+        // calls java.time.* which only exists on API 26+. Desugaring backports it;
+        // without it the first date operation after login crashes with NoClassDefFoundError.
+        isCoreLibraryDesugaringEnabled = true
     }
 }
 
 dependencies {
     debugImplementation(libs.compose.uiTooling)
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 }
 

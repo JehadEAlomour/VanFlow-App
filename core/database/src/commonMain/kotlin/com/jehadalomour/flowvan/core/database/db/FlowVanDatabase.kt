@@ -51,7 +51,7 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         PriceListItemEntity::class,
         TobaccoTaxProfileEntity::class,
     ],
-    version = 18,
+    version = 20,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -96,6 +96,13 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         // v18: customers tax-exemption columns (isTaxExempt + type/number/reason
         // + validity window), so an offline cart knows the sale will be exempt.
         AutoMigration(from = 17, to = 18),
+        // v19: products.mainStock — the main-store (central depot) on-hand, cached from the
+        // ERP so the ORDER picker shows main-store items + quantities even offline. Defaults
+        // to 0, so an install that upgrades and never re-syncs simply shows no order stock yet.
+        AutoMigration(from = 18, to = 19),
+        // v20: app_settings.companyPhone — cached from /company-info, shown under the logo on
+        // the shared A4 document. Defaults to '' so an un-synced install just shows no phone.
+        AutoMigration(from = 19, to = 20),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)

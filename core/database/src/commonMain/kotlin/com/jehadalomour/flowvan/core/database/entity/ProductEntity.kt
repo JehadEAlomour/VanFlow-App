@@ -15,6 +15,8 @@ data class ProductEntity(
     val salePrice: Double,
     val costPrice: Double,
     val vanStock: Int,
+    /** Main-store on-hand for the ORDER flow — cached so orders work offline. */
+    @ColumnInfo(defaultValue = "0") val mainStock: Int = 0,
     val minStock: Int,
     val expiryDate: Long?,
     val brand: String?,

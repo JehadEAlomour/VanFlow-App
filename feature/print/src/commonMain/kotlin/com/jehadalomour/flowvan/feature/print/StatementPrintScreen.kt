@@ -255,7 +255,7 @@ fun StatementPrintScreen(
                 label = stringResource(Res.string.print_action_share_pdf),
                 filled = false,
                 onClick = {
-                    scope.launch { pdfHelper.shareAsPdf(graphicsLayer.toImageBitmap(), docName) }
+                    scope.launch { pdfHelper.shareAsPdf(graphicsLayer.toImageBitmap(), docName, a4 = true) }
                 },
             )
         }

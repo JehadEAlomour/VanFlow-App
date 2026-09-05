@@ -156,9 +156,16 @@ data class TableEntry(
 data class OfferEligibilityRule(
     /** ALL | SEGMENT | SPECIFIC | NEW_ONLY. */
     val customerScope: String,
+    /** Legacy free-text category match (customer.category). */
     val segments: List<String>?,
     val customerNumbers: List<String>?,
     val regionIds: List<String>?,
     val repIds: List<String>?,
     val storeNumbers: List<String>?,
+    /**
+     * Real segment targeting, pre-resolved by the server to member customer
+     * numbers at /offers/active time (the app has no membership table). When
+     * present, the customer must be one of these — an additive filter, any scope.
+     */
+    val segmentCustomerNumbers: List<String>? = null,
 )

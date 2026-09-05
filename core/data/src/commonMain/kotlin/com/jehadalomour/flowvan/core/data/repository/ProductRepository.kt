@@ -23,6 +23,17 @@ class ProductRepository(private val dao: ProductDao) {
     /** Set absolute van quantity (used when pulling per-rep stock from the backend). */
     suspend fun setStock(id: String, qty: Int) = dao.setStock(id, qty)
 
+    /**
+     * Cache the main-store (ORDER) on-hand, keyed by sku (ERP item number). Zeroes the
+     * whole column first so an item that dropped out of the main store reads 0 rather
+     * than keeping a stale quantity. Called on each online catalog refresh so the ORDER
+     * picker has the last-known main-store stock available offline.
+     */
+    suspend fun cacheMainStock(qtyBySku: Map<String, Int>) {
+        dao.clearMainStock()
+        qtyBySku.forEach { (sku, qty) -> dao.setMainStockBySku(sku, qty) }
+    }
+
     /** Offline-first cache refill from the backend. */
     suspend fun cacheAll(products: List<ProductEntity>) = dao.upsertAll(products)
 

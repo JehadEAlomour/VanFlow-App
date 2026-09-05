@@ -69,6 +69,16 @@ class StockRequestViewModel(
             runCatching { api.mainStoreStock() }.onSuccess { s ->
                 val map = s.items.associate { "${it.itemNumber}|${it.stockUnitCode}" to it.qty }
                 _state.update { it.copy(mainStock = map, mainStoreName = s.storeName) }
+                // Also refresh the per-item main-store on-hand cached on each product
+                // (Room), so the "main-store items only" picker filter is current when
+                // online AND still works after the rep goes offline — the last cache is
+                // what the observeAll() flow keeps re-emitting. Base pool only, matching
+                // the ORDER picker; a stock request's availability is decided per pool
+                // by the network map above when connected.
+                products.cacheMainStock(
+                    s.items.filter { it.stockUnitCode.isEmpty() }
+                        .associate { it.itemNumber to it.qty.toInt() },
+                )
             }
         }
     }
@@ -115,12 +125,20 @@ class StockRequestViewModel(
         }
     }
 
-    private fun filter(all: List<Product>, q: String): List<Product> =
-        if (q.isBlank()) {
-            all
+    /**
+     * The picker shows ONLY items the main store actually carries — a van can be
+     * loaded only from central-depot stock, so listing items with no main-store
+     * on-hand just invites requests the server will reject. `mainStock` is the
+     * cached per-item depot on-hand (Room), so this filter works offline too.
+     */
+    private fun filter(all: List<Product>, q: String): List<Product> {
+        val inMainStore = all.filter { it.mainStock > 0 }
+        return if (q.isBlank()) {
+            inMainStore
         } else {
-            all.filter { matchesTokenSearch(q, it.nameAr, it.nameEn, it.sku) }
+            inMainStore.filter { matchesTokenSearch(q, it.nameAr, it.nameEn, it.sku) }
         }
+    }
 
     /**
      * Add the line, or replace the one already there for this (product, unit).
