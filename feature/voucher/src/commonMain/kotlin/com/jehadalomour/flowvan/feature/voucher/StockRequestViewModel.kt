@@ -42,7 +42,7 @@ class StockRequestViewModel(
         // van stock shown per row is the number the rep is deciding against.
         viewModelScope.launch {
             products.observeAll().collect { list ->
-                _state.update { it.copy(products = list, visibleProducts = filter(list, it.searchQuery)) }
+                _state.update { it.copy(products = list, visibleProducts = filter(list, it.searchQuery, it.mainStock)) }
             }
         }
         viewModelScope.launch {
@@ -68,7 +68,15 @@ class StockRequestViewModel(
         viewModelScope.launch {
             runCatching { api.mainStoreStock() }.onSuccess { s ->
                 val map = s.items.associate { "${it.itemNumber}|${it.stockUnitCode}" to it.qty }
-                _state.update { it.copy(mainStock = map, mainStoreName = s.storeName) }
+                // Re-run the picker filter with the fresh map: variant-only and
+                // fractional-base items only become visible once it is loaded.
+                _state.update {
+                    it.copy(
+                        mainStock = map,
+                        mainStoreName = s.storeName,
+                        visibleProducts = filter(it.products, it.searchQuery, map),
+                    )
+                }
                 // Also refresh the per-item main-store on-hand cached on each product
                 // (Room), so the "main-store items only" picker filter is current when
                 // online AND still works after the rep goes offline — the last cache is
@@ -103,7 +111,7 @@ class StockRequestViewModel(
             }
 
             is StockRequestEvent.SearchChanged -> _state.update {
-                it.copy(searchQuery = event.v, visibleProducts = filter(it.products, event.v))
+                it.copy(searchQuery = event.v, visibleProducts = filter(it.products, event.v, it.mainStock))
             }
 
             is StockRequestEvent.ConfirmItem -> confirmItem(event.product, event.qty, event.unit)
@@ -131,8 +139,22 @@ class StockRequestViewModel(
      * on-hand just invites requests the server will reject. `mainStock` is the
      * cached per-item depot on-hand (Room), so this filter works offline too.
      */
-    private fun filter(all: List<Product>, q: String): List<Product> {
-        val inMainStore = all.filter { it.mainStock > 0 }
+    private fun filter(all: List<Product>, q: String, mainStock: Map<String, Double>): List<Product> {
+        // Online, the live per-pool map is the truth for "does the depot carry it".
+        // The Room `mainStock` is base-pool only and truncated to an Int, so an item
+        // whose base pool is 0 but a VARIANT pool has stock — or whose base pool is a
+        // fraction (0<qty<1) — would wrongly vanish from the picker, and its real ERP
+        // qty could never be seen or requested. Union the live map (any pool > 0) with
+        // the cached on-hand; offline (map empty) fall back to the cache alone.
+        val inMainStore = if (mainStock.isNotEmpty()) {
+            val skusWithStock = mainStock.asSequence()
+                .filter { it.value > 0.0 }
+                .map { it.key.substringBefore('|') }
+                .toSet()
+            all.filter { it.mainStock > 0 || it.sku in skusWithStock }
+        } else {
+            all.filter { it.mainStock > 0 }
+        }
         return if (q.isBlank()) {
             inMainStore
         } else {
@@ -156,8 +178,11 @@ class StockRequestViewModel(
         }
         // Cannot request more than the main depot holds. Compare in base pieces:
         // the pool balance is base units, and one requested unit is conversionQty
-        // pieces. Only guard when we actually loaded the depot stock.
-        val available = _state.value.availableBase(product.sku, unit)
+        // pieces. Only guard when we actually loaded the depot stock. Use the SAME
+        // base fallback the sheet shows (product.mainStock) so display and this
+        // guard agree — otherwise the rep sees a positive availability, taps Add,
+        // and is rejected with "المتوفر: 0".
+        val available = _state.value.availableBase(product.sku, unit, product.mainStock.toDouble())
         val conv = unit.conversionQty.takeIf { it > 0.0 } ?: 1.0
         val requestedBase = qty * conv
         if (_state.value.mainStock.isNotEmpty() && requestedBase > available + 1e-6) {

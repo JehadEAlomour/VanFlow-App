@@ -78,6 +78,14 @@ fun ProductPickerColumn(
     showPrice: Boolean = true,
     modifier: Modifier = Modifier,
     cartQtyMap: Map<String, Double> = emptyMap(),
+    /**
+     * Main-depot (warehouse) on-hand per sku, for the stock-request flow only. When
+     * supplied, each row shows a second "in depot" chip beside the van-stock one —
+     * on a screen whose whole job is asking the warehouse for stock, that is the
+     * number the rep is actually deciding against. Null (the default) hides it, so
+     * the sale/return/order pickers are unaffected.
+     */
+    warehouseStockBySku: Map<String, Double>? = null,
     onStep: ((Product, Int) -> Unit)? = null,
 ) {
     Column(modifier = modifier) {
@@ -100,6 +108,7 @@ fun ProductPickerColumn(
                     showStockBadge = showStockBadge,
                     showPrice = showPrice,
                     currentQty = cartQtyMap[product.id] ?: 0.0,
+                    warehouseStock = warehouseStockBySku?.get(product.sku),
                     onTap = { onAdd(product) },
                     onStep = onStep?.let { cb -> { delta -> cb(product, delta) } },
                 )
@@ -124,6 +133,7 @@ private fun ProductRow(
     showStockBadge: Boolean,
     showPrice: Boolean,
     currentQty: Double,
+    warehouseStock: Double? = null,
     onTap: () -> Unit,
     onStep: ((Int) -> Unit)?,
 ) {
@@ -163,22 +173,29 @@ private fun ProductRow(
                     color = Fv.TextMid,
                     fontSize = 11.sp,
                 )
-                if (showStockBadge) {
+                if (showStockBadge || warehouseStock != null) {
                     Spacer(Modifier.height(4.dp))
-                    val outOfStock = product.vanStock <= 0
-                    val low = !outOfStock && product.vanStock < product.minStock
-                    val chipColor = if (outOfStock) Fv.Red else if (low) Fv.Amber else Fv.Green
-                    val chipLabel = when {
-                        outOfStock -> stringResource(Res.string.van_stock_out_of_stock)
-                        low -> stringResource(Res.string.cart_stock_low, product.vanStock)
-                        else -> stringResource(Res.string.cart_stock_available, product.vanStock)
-                    }
-                    Box(
-                        modifier = Modifier
-                            .background(chipColor.copy(alpha = 0.14f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                    ) {
-                        Text(chipLabel, color = chipColor, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        if (showStockBadge) {
+                            val outOfStock = product.vanStock <= 0
+                            val low = !outOfStock && product.vanStock < product.minStock
+                            val chipColor = if (outOfStock) Fv.Red else if (low) Fv.Amber else Fv.Green
+                            val chipLabel = when {
+                                outOfStock -> stringResource(Res.string.van_stock_out_of_stock)
+                                low -> stringResource(Res.string.cart_stock_low, product.vanStock)
+                                else -> stringResource(Res.string.cart_stock_available, product.vanStock)
+                            }
+                            StockChip(chipLabel, chipColor)
+                        }
+                        // The warehouse the request draws from — the decisive number
+                        // on this screen. Blue when the depot has it, red at zero.
+                        warehouseStock?.let { w ->
+                            val label = if (w % 1.0 == 0.0) w.toLong().toString() else w.toString()
+                            StockChip(
+                                stringResource(Res.string.cart_stock_main, label),
+                                if (w > 0) Fv.Blue else Fv.Red,
+                            )
+                        }
                     }
                 }
             }
@@ -199,6 +216,18 @@ private fun ProductRow(
                 }
             }
         }
+    }
+}
+
+/** A small pill: stock figure in a tinted, rounded box. */
+@Composable
+private fun StockChip(label: String, color: Color) {
+    Box(
+        modifier = Modifier
+            .background(color.copy(alpha = 0.14f), RoundedCornerShape(6.dp))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+    ) {
+        Text(label, color = color, fontSize = 10.sp, fontWeight = FontWeight.Medium)
     }
 }
 

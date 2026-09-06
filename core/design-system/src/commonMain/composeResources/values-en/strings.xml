@@ -364,6 +364,7 @@
     <string name="cart_no_products">No products in cart</string>
     <string name="cart_stock_available">Available: %1$d</string>
     <string name="cart_stock_low">Low: %1$d</string>
+    <string name="cart_stock_main">In depot: %1$s</string>
     <string name="cart_voucher_discount">Voucher Discount</string>
     <string name="cash_flow_empty">No transactions in this period</string>
     <string name="cash_flow_pill_collections">Collections</string>

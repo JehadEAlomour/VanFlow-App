@@ -364,6 +364,7 @@
     <string name="cart_no_products">لا توجد منتجات في السلة</string>
     <string name="cart_stock_available">متوفر: %1$d</string>
     <string name="cart_stock_low">منخفض: %1$d</string>
+    <string name="cart_stock_main">بالمستودع: %1$s</string>
     <string name="cart_voucher_discount">خصم الفاتورة</string>
     <string name="cash_flow_empty">لا توجد حركات في هذه الفترة</string>
     <string name="cash_flow_pill_collections">التحصيلات</string>

@@ -80,6 +80,14 @@ fun StockRequestScreen(
     var sheetProduct by remember { mutableStateOf<Product?>(null) }
     var sheetUnitId by remember { mutableStateOf<String?>(null) }
 
+    // Main-depot on-hand per sku (summed across pools), for the picker-row chip:
+    // the number that actually matters on a "ask the warehouse" screen.
+    val warehouseBySku = remember(state.mainStock) {
+        state.mainStock.entries
+            .groupBy { it.key.substringBefore('|') }
+            .mapValues { (_, es) -> es.sumOf { it.value } }
+    }
+
     // Back never leaves in one stray gesture from a place with unfinished work:
     // the cart returns to the picker, and "my requests" returns to the new-request
     // tab; only the picker itself leaves the screen.
@@ -117,7 +125,14 @@ fun StockRequestScreen(
                         },
                     )
                     Spacer(Modifier.width(14.dp))
-                    Text("طلب بضاعة", color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Column {
+                        Text("طلب بضاعة", color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        // Name the depot the availability numbers (and the cap) come
+                        // from — otherwise the rep has no context for them.
+                        state.mainStoreName?.takeIf { it.isNotBlank() }?.let {
+                            Text("الرصيد من: $it", color = Fv.TextLow, fontSize = 11.sp)
+                        }
+                    }
                     Spacer(Modifier.weight(1f))
                     // The cart badge belongs to the new-request flow only, and doubles
                     // as the way into the cart — count and action never apart.
@@ -166,6 +181,10 @@ fun StockRequestScreen(
                     showStockBadge = true,
                     showPrice = false,
                     cartQtyMap = state.cartQtyByProduct,
+                    // The warehouse on-hand beside the van figure — the number the
+                    // rep is deciding against, so it belongs on the list, not two
+                    // taps deep in the item sheet.
+                    warehouseStockBySku = warehouseBySku,
                     modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp),
                 )
 
