@@ -1520,6 +1520,14 @@ private fun StepperButton(symbol: String, enabled: Boolean, onClick: () -> Unit)
 
 @Composable
 private fun ReasonRow(selected: ReturnReason?, onSelect: (ReturnReason) -> Unit) {
+    // Program feature: when damaged/expired-returns tracking is on, a return may
+    // ONLY be damaged or expired (see docs/SPEC-damaged-expired-returns.md).
+    val session: com.jehadalomour.flowvan.core.datastore.SessionStore = org.koin.compose.koinInject()
+    val reasons = if (session.damagedReturnsEnabled) {
+        listOf(ReturnReason.DAMAGED, ReturnReason.EXPIRED)
+    } else {
+        ReturnReason.entries
+    }
     // Required, and the label says so. Flat bordered segments rather than pills: the
     // chosen reason is printed on the credit note, so it reads as a field on a
     // document, not a filter chip the rep is browsing with.
@@ -1535,7 +1543,7 @@ private fun ReasonRow(selected: ReturnReason?, onSelect: (ReturnReason) -> Unit)
             modifier = Modifier.horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            ReturnReason.entries.forEach { reason ->
+            reasons.forEach { reason ->
                 val active = reason == selected
                 Surface(
                     onClick = { onSelect(reason) },

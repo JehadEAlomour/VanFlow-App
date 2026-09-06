@@ -273,6 +273,9 @@ class RefreshCatalogUseCase(
                 else TaxType.EXCLUDED_TAX
             val current = appSettings.get()
             if (current.taxType != mode) appSettings.save(current.copy(taxType = mode))
+            // Cache the damaged/expired-returns feature flag so the RETURN screen can
+            // limit its reasons to damaged/expired even offline.
+            session.damagedReturnsEnabled = info.damagedReturnsEnabled
         } catch (e: Exception) {
             log.w("company tax-mode sync failed: ${e.message}")
         }

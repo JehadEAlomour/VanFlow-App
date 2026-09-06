@@ -86,6 +86,14 @@ class SessionStore(private val settings: Settings) {
         get() = settings.getBoolean(SettingsKeys.CAN_PRINT_LINE_DISCOUNT, false)
         set(value) = settings.putBoolean(SettingsKeys.CAN_PRINT_LINE_DISCOUNT, value)
 
+    /**
+     * Program feature: when on, a RETURN offers only DAMAGED/EXPIRED reasons.
+     * Cached from GET /company-info on each catalogue refresh so it holds offline.
+     */
+    var damagedReturnsEnabled: Boolean
+        get() = settings.getBoolean(SettingsKeys.DAMAGED_RETURNS_ENABLED, false)
+        set(value) = settings.putBoolean(SettingsKeys.DAMAGED_RETURNS_ENABLED, value)
+
     /** Whether the Find Customers screen is shown (permissions.canFindCustomers). */
     var canFindCustomers: Boolean
         get() = settings.getBoolean(SettingsKeys.CAN_FIND_CUSTOMERS, false)

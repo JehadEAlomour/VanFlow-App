@@ -70,4 +70,6 @@ data class CompanyInfoDto(
     val taxCalcMethod: String = "EXCLUSIVE",
     val timezone: String = "Asia/Amman",
     val locale: String = "ar",
+    /** Program feature: limit return reasons to damaged/expired when true. */
+    val damagedReturnsEnabled: Boolean = false,
 )

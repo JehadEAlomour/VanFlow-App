@@ -41,6 +41,9 @@ object SettingsKeys {
     /** Print the discount on each receipt row (permissions.canPrintLineDiscount). */
     const val CAN_PRINT_LINE_DISCOUNT = "can_print_line_discount"
 
+    /** Program feature: limit return reasons to damaged/expired (app_settings.damagedReturnsEnabled). */
+    const val DAMAGED_RETURNS_ENABLED = "damaged_returns_enabled"
+
     /** Show the Find Customers screen (permissions.canFindCustomers). */
     const val CAN_FIND_CUSTOMERS = "can_find_customers"
 
