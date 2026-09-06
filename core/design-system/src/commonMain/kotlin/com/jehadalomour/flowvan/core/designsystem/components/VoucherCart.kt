@@ -108,7 +108,9 @@ fun ProductPickerColumn(
                     showStockBadge = showStockBadge,
                     showPrice = showPrice,
                     currentQty = cartQtyMap[product.id] ?: 0.0,
-                    warehouseStock = warehouseStockBySku?.get(product.sku),
+                    // Default to 0 (not null) so an item the main store has no row for
+                    // still shows a "بالمستودع: 0" chip rather than dropping it silently.
+                    warehouseStock = warehouseStockBySku?.let { it[product.sku] ?: 0.0 },
                     onTap = { onAdd(product) },
                     onStep = onStep?.let { cb -> { delta -> cb(product, delta) } },
                 )

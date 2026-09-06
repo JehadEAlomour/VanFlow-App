@@ -44,7 +44,7 @@ class StockRequestViewModel(
         // van stock shown per row is the number the rep is deciding against.
         viewModelScope.launch {
             products.observeAll().collect { list ->
-                _state.update { it.copy(products = list, visibleProducts = filter(list, it.searchQuery, it.mainStock)) }
+                _state.update { it.copy(products = list, visibleProducts = filter(list, it.searchQuery)) }
             }
         }
         viewModelScope.launch {
@@ -76,7 +76,7 @@ class StockRequestViewModel(
                     it.copy(
                         mainStock = map,
                         mainStoreName = s.storeName,
-                        visibleProducts = filter(it.products, it.searchQuery, map),
+                        visibleProducts = filter(it.products, it.searchQuery),
                     )
                 }
                 // Also refresh the per-item main-store on-hand cached on each product
@@ -113,7 +113,7 @@ class StockRequestViewModel(
             }
 
             is StockRequestEvent.SearchChanged -> _state.update {
-                it.copy(searchQuery = event.v, visibleProducts = filter(it.products, event.v, it.mainStock))
+                it.copy(searchQuery = event.v, visibleProducts = filter(it.products, event.v))
             }
 
             is StockRequestEvent.ConfirmItem -> confirmItem(event.product, event.qty, event.unit)
@@ -136,31 +136,17 @@ class StockRequestViewModel(
     }
 
     /**
-     * The picker shows ONLY items the main store actually carries — a van can be
-     * loaded only from central-depot stock, so listing items with no main-store
-     * on-hand just invites requests the server will reject. `mainStock` is the
-     * cached per-item depot on-hand (Room), so this filter works offline too.
+     * The picker shows the WHOLE catalogue. An item the main store is out of is NOT
+     * hidden — it renders with a "بالمستودع: 0" badge (red), so a rep can see the
+     * item exists and is empty and still raise a request for it, rather than the
+     * item silently vanishing from the list. The per-pool availability is shown on
+     * each row and enforced by the server on create; hiding here only lost items.
      */
-    private fun filter(all: List<Product>, q: String, mainStock: Map<String, Double>): List<Product> {
-        // Online, the live per-pool map is the truth for "does the depot carry it".
-        // The Room `mainStock` is base-pool only and truncated to an Int, so an item
-        // whose base pool is 0 but a VARIANT pool has stock — or whose base pool is a
-        // fraction (0<qty<1) — would wrongly vanish from the picker, and its real ERP
-        // qty could never be seen or requested. Union the live map (any pool > 0) with
-        // the cached on-hand; offline (map empty) fall back to the cache alone.
-        val inMainStore = if (mainStock.isNotEmpty()) {
-            val skusWithStock = mainStock.asSequence()
-                .filter { it.value > 0.0 }
-                .map { it.key.substringBefore('|') }
-                .toSet()
-            all.filter { it.mainStock > 0 || it.sku in skusWithStock }
-        } else {
-            all.filter { it.mainStock > 0 }
-        }
+    private fun filter(all: List<Product>, q: String): List<Product> {
         return if (q.isBlank()) {
-            inMainStore
+            all
         } else {
-            inMainStore.filter { matchesTokenSearch(q, it.nameAr, it.nameEn, it.sku) }
+            all.filter { matchesTokenSearch(q, it.nameAr, it.nameEn, it.sku) }
         }
     }
 

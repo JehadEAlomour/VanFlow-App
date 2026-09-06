@@ -533,14 +533,14 @@ class VoucherViewModel(
         val bySearch = s.products.filter {
             matchesTokenSearch(s.searchQuery, it.nameAr, it.nameEn, it.sku, it.category)
         }
-        // Restrict each flow to ITS warehouse's items — the catalogue is company-wide,
-        // but a rep may only sell/return what is in HIS van, and may only order what the
-        // MAIN store carries.
+        // SALE / RETURN stay restricted to the salesman's own (van) warehouse — a rep
+        // can only sell/return what is physically on the van. ORDER shows the WHOLE
+        // catalogue, including items the main store is currently out of: those render
+        // with a "0 / نفد المخزون" badge instead of vanishing, so the rep can still
+        // place an order for an item that needs restocking rather than assuming it
+        // doesn't exist.
         val byWarehouse = when (type) {
-            // ORDER → only the items the main store carries, with its quantities
-            // (product.mainStock, cached from the ERP — works offline).
-            VoucherType.ORDER -> bySearch.filter { it.mainStock > 0 }
-            // SALE / RETURN → only items in the salesman's own (van) warehouse.
+            VoucherType.ORDER -> bySearch
             else -> bySearch.filter { it.vanStock > 0 }
         }
         _state.update { it.copy(visibleProducts = byWarehouse) }
