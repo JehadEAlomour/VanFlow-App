@@ -660,6 +660,14 @@
     <string name="printer_thermal_print">طباعة حرارية</string>
     <string name="printer_connect_title">توصيل الطابعة</string>
     <string name="printer_connect">اتصال</string>
+    <string name="bulk_print_title">طباعة تفاصيل الفواتير (QR ضريبي)</string>
+    <string name="bulk_print_preparing">جارٍ تجهيز الفواتير…</string>
+    <string name="bulk_print_empty">لا توجد فواتير بيع في هذه الفترة.</string>
+    <string name="bulk_print_need_connect">اربط الطابعة لبدء طباعة الفواتير.</string>
+    <string name="bulk_print_progress">طباعة الفاتورة %1$d من %2$d</string>
+    <string name="bulk_print_done">تمت طباعة %1$d فاتورة.</string>
+    <string name="bulk_print_error">تعذّرت الطباعة.</string>
+    <string name="bulk_print_retry">إعادة المحاولة</string>
     <string name="printer_disconnect">قطع الاتصال</string>
     <string name="printer_cancel">إلغاء</string>
     <string name="printer_refresh">تحديث</string>

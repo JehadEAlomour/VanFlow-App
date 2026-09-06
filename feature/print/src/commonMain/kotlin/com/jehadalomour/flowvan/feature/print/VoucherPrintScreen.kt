@@ -86,7 +86,7 @@ import org.koin.core.parameter.parametersOf
 
 // ── Design tokens ────────────────────────────────────────────────────────────
 
-private val RcBg        = Color.White
+internal val RcBg        = Color.White
 private val ScreenBg    = Color(0xFFD1D5DB)
 private val Dark        = Color(0xFF0F1923)
 private val Blue        = Color(0xFF185FA5)
@@ -376,7 +376,7 @@ private fun ActionButton(label: String, filled: Boolean, onClick: () -> Unit) {
 // ── Tear edge ─────────────────────────────────────────────────────────────────
 
 @Composable
-private fun ReceiptTear(flipped: Boolean = false) {
+internal fun ReceiptTear(flipped: Boolean = false) {
     Canvas(modifier = Modifier.fillMaxWidth().height(12.dp)) {
         val toothW = 10.dp.toPx()
         var x = -size.height
@@ -399,7 +399,7 @@ private fun ReceiptTear(flipped: Boolean = false) {
 // ── Receipt body ──────────────────────────────────────────────────────────────
 
 @Composable
-private fun ReceiptBody(
+internal fun ReceiptBody(
     state: VoucherPrintState,
     /** The lines to PRINT — either state.lines verbatim, or the compacted view when the
      *  rep chose to merge same-item/same-factor rows. Never the saved data. */

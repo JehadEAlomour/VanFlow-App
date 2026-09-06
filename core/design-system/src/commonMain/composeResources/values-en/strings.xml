@@ -660,6 +660,14 @@
     <string name="printer_thermal_print">Thermal Print</string>
     <string name="printer_connect_title">Connect Printer</string>
     <string name="printer_connect">Connect</string>
+    <string name="bulk_print_title">Invoice details (tax QR)</string>
+    <string name="bulk_print_preparing">Preparing invoices…</string>
+    <string name="bulk_print_empty">No sale invoices in this period.</string>
+    <string name="bulk_print_need_connect">Connect the printer to start printing invoices.</string>
+    <string name="bulk_print_progress">Printing invoice %1$d of %2$d</string>
+    <string name="bulk_print_done">Printed %1$d invoices.</string>
+    <string name="bulk_print_error">Printing failed.</string>
+    <string name="bulk_print_retry">Retry</string>
     <string name="printer_disconnect">Disconnect</string>
     <string name="printer_cancel">Cancel</string>
     <string name="printer_refresh">Refresh</string>

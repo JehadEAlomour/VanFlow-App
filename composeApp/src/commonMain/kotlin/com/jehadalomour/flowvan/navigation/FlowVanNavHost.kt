@@ -30,6 +30,7 @@ import com.jehadalomour.flowvan.feature.reports.PaymentReportScreen
 import com.jehadalomour.flowvan.feature.print.ReceiptDetailScreen
 import com.jehadalomour.flowvan.feature.print.StatementPrintScreen
 import com.jehadalomour.flowvan.feature.print.SalesReportPrintScreen
+import com.jehadalomour.flowvan.feature.print.SalesBulkPrintScreen
 import com.jehadalomour.flowvan.feature.print.TxnReportPrintScreen
 import com.jehadalomour.flowvan.feature.reports.DetailedTxnReportScreen
 import com.jehadalomour.flowvan.feature.reports.ReceivablesReportScreen
@@ -99,6 +100,7 @@ object Routes {
     const val STATEMENT_PRINT = "statementprint/{customerId}/{from}/{to}"
     const val TXN_REPORT_PRINT = "txnreportprint/{customerId}/{from}/{to}"
     const val SALES_REPORT_PRINT = "salesreportprint/{from}/{to}"
+    const val SALES_BULK_PRINT = "salesbulkprint/{from}/{to}"
     const val DETAILED_TXN_REPORT = "detailedtxn/{customerId}"
     const val VOUCHER_SUMMARY = "vouchersummary"
     const val SETTINGS = "settings"
@@ -124,6 +126,7 @@ object Routes {
     fun txnReportPrint(customerId: String, from: Long, to: Long) =
         "txnreportprint/$customerId/$from/$to"
     fun salesReportPrint(from: Long, to: Long) = "salesreportprint/$from/$to"
+    fun salesBulkPrint(from: Long, to: Long) = "salesbulkprint/$from/$to"
     fun detailedTxn(customerId: String) = "detailedtxn/$customerId"
 
     /** Encode a path segment so a label with spaces or slashes survives the route. */
@@ -560,6 +563,20 @@ fun FlowVanNavHost(
             ),
         ) { entry ->
             SalesReportPrintScreen(
+                fromMillis = entry.arguments?.getLong("from") ?: 0L,
+                toMillis = entry.arguments?.getLong("to") ?: 0L,
+                onBack = { navController.popBackStack() },
+                onOpenBulk = { from, to -> navController.navigate(Routes.salesBulkPrint(from, to)) },
+            )
+        }
+        composable(
+            Routes.SALES_BULK_PRINT,
+            arguments = listOf(
+                navArgument("from") { type = NavType.LongType },
+                navArgument("to") { type = NavType.LongType },
+            ),
+        ) { entry ->
+            SalesBulkPrintScreen(
                 fromMillis = entry.arguments?.getLong("from") ?: 0L,
                 toMillis = entry.arguments?.getLong("to") ?: 0L,
                 onBack = { navController.popBackStack() },

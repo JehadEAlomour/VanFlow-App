@@ -69,6 +69,7 @@ fun SalesReportPrintScreen(
     fromMillis: Long,
     toMillis: Long,
     onBack: () -> Unit,
+    onOpenBulk: (Long, Long) -> Unit = { _, _ -> },
     viewModel: SalesReportPrintViewModel = koinViewModel {
         parametersOf(fromMillis, toMillis)
     },
@@ -151,6 +152,13 @@ fun SalesReportPrintScreen(
                 onClick = {
                     scope.launch { pdfHelper.shareAsPdf(graphicsLayer.toImageBitmap(), docName) }
                 },
+            )
+            Spacer(Modifier.size(10.dp))
+            // Print each SALE invoice's own detail slip with its tax QR.
+            TxnActionChip(
+                label = stringResource(Res.string.bulk_print_title),
+                filled = false,
+                onClick = { onOpenBulk(state.fromMillis, state.toMillis) },
             )
         }
 
