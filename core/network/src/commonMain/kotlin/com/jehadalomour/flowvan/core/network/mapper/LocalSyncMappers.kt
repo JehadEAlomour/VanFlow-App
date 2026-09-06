@@ -66,8 +66,12 @@ fun InvoiceEntity.toVoucherRequest(userCode: String, customerNumber: String?, js
         "RETURN" -> "RETURN"
         else -> "ORDER"
     }
-    val payments = if (type == "SALE" && paymentMethod != null) {
+    val payments = if ((type == "SALE" || type == "RETURN") && paymentMethod != null) {
         // Use the payment type saved with the invoice (CASH | CHEQUE | TRANSFER | CREDIT).
+        // RETURN carries it too: without a payment row the server records no return
+        // payment, so the rep settlement never deducts a cash return, the credit-note
+        // balance never falls, and the rep's cash box is not reduced — all three read
+        // the return's CASH/CREDIT payment by (payment_type, trans_kind=RETURN).
         listOf(VoucherPayment(amount = total.toAmountString(), paymentType = paymentMethod.toString()))
     } else {
         emptyList()
