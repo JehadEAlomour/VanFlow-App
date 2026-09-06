@@ -172,10 +172,16 @@ fun VoucherPrintScreen(
     // single-unit voucher never sees a dialog. null = not answered yet.
     // This screen is the single entry point for both "just saved" and "reprint from reports",
     // so asking here covers both without duplicating the decision.
-    var compact by remember(state.invoiceId) { mutableStateOf<Boolean?>(null) }
-    val mergeable = remember(state.lines) { compactableCount(state.lines) }
+    var compact by remember(state.invoiceId) { mutableStateOf<CompactMode?>(null) }
+    // Two levels: same-item unit merges, and (a superset) same-priced alternative merges.
+    val unitMergeable = remember(state.lines) { compactableCount(state.lines, mergeAlternatives = false) }
+    val altMergeable = remember(state.lines) { compactableCount(state.lines, mergeAlternatives = true) }
     val shownLines = remember(state.lines, compact) {
-        if (compact == true) compactLines(state.lines) else state.lines
+        when (compact) {
+            CompactMode.ALTERNATIVES -> compactLines(state.lines, mergeAlternatives = true)
+            CompactMode.UNITS -> compactLines(state.lines, mergeAlternatives = false)
+            else -> state.lines
+        }
     }
 
     // Capture the on-screen receipt and send it to the ViewModel as PNG bytes.
@@ -268,11 +274,13 @@ fun VoucherPrintScreen(
             color = if (state.printerState is PrinterState.Connected) Green else SubText,
         )
 
-        if (!state.isLoading && mergeable > 0 && compact == null) {
+        if (!state.isLoading && altMergeable > 0 && compact == null) {
             CompactLinesDialog(
-                mergeableCount = mergeable,
-                onMerge = { compact = true },
-                onKeepAll = { compact = false },
+                unitCount = unitMergeable,
+                altCount = altMergeable,
+                onMergeUnits = { compact = CompactMode.UNITS },
+                onMergeAlternatives = { compact = CompactMode.ALTERNATIVES },
+                onKeepAll = { compact = CompactMode.NONE },
             )
         }
 

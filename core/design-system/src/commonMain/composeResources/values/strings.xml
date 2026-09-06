@@ -764,8 +764,9 @@
     <string name="offers_all_days">كل الأيام</string>
     <string name="offers_priority">الأولوية</string>
     <string name="print_compact_title">دمج أصناف الفاتورة؟</string>
-    <string name="print_compact_body">تحتوي الفاتورة على صنف واحد بوحدات مختلفة. يمكن دمج الأسطر التي لها نفس الصنف ونفس معامل الوحدة في سطر واحد عند الطباعة فقط — الفاتورة المحفوظة لا تتغيّر.</string>
-    <string name="print_compact_yes">دمج عند الطباعة</string>
+    <string name="print_compact_body">يمكن دمج الأسطر عند الطباعة فقط — الفاتورة المحفوظة لا تتغيّر. «دمج الوحدات» يجمع أسطر نفس الصنف بنفس الوحدة والسعر، و«دمج الأصناف البديلة» يجمع أصنافًا مختلفة لها نفس السعر والوحدة في سطر واحد.</string>
+    <string name="print_compact_yes">دمج الوحدات</string>
+    <string name="print_compact_alternatives">دمج الأصناف البديلة</string>
     <string name="print_compact_no">طباعة كل الأسطر</string>
     <string name="print_compacted_note">أسطر مدمجة</string>
     <string name="voucher_tax_exempt_banner">فاتورة معفاة من الضريبة</string>

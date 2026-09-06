@@ -764,8 +764,9 @@
     <string name="offers_all_days">Every day</string>
     <string name="offers_priority">Priority</string>
     <string name="print_compact_title">Merge invoice lines?</string>
-    <string name="print_compact_body">This invoice has one item in several units. Lines sharing the same item and the same unit factor can be merged into a single line for printing only — the saved invoice is unchanged.</string>
-    <string name="print_compact_yes">Merge for printing</string>
+    <string name="print_compact_body">Lines can be merged for printing only — the saved invoice is unchanged. "Merge units" folds lines of the same item at the same unit and price; "Merge alternatives" also folds different items that share the same price and unit into one line.</string>
+    <string name="print_compact_yes">Merge units</string>
+    <string name="print_compact_alternatives">Merge alternatives</string>
     <string name="print_compact_no">Print every line</string>
     <string name="print_compacted_note">lines merged</string>
     <string name="voucher_tax_exempt_banner">TAX-EXEMPT INVOICE</string>
