@@ -10,9 +10,11 @@ import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.model.ProductUnit
 import com.jehadalomour.flowvan.core.model.isServerUnitId
+import com.jehadalomour.flowvan.core.common.error.CashFlowError
 import com.jehadalomour.flowvan.core.network.api.StockRequestApi
 import com.jehadalomour.flowvan.core.network.dto.CreateStockRequestBody
 import com.jehadalomour.flowvan.core.network.dto.StockRequestLineRequest
+import com.jehadalomour.flowvan.core.network.http.NetworkException
 import com.jehadalomour.flowvan.core.network.realtime.SyncSocketClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -248,12 +250,27 @@ class StockRequestViewModel(
                         )
                     }
                 },
-                onFailure = {
-                    _state.update { it.copy(isSubmitting = false, errorAr = ERR_SUBMIT) }
+                onFailure = { e ->
+                    // Surface the server's own reason — "الكمية المطلوبة تتجاوز
+                    // المتوفر…: طلب 15 / المتوفر 0" — instead of a generic "couldn't
+                    // send". The rep needs to know WHICH item and by how much, not
+                    // just that it failed. Falls back to the generic line only when
+                    // the failure carried no message (e.g. no connection).
+                    _state.update {
+                        it.copy(isSubmitting = false, errorAr = serverMessage(e, ERR_SUBMIT))
+                    }
                 },
             )
         }
     }
+
+    /** The server's own Arabic message when it sent one, else [fallback]. */
+    private fun serverMessage(e: Throwable, fallback: String): String =
+        when (val err = (e as? NetworkException)?.error) {
+            is CashFlowError.Network.Validation -> err.detail.ifBlank { err.messageAr }
+            null -> fallback
+            else -> err.messageAr
+        }
 
     /**
      * One cart line as the server wants it.
@@ -306,8 +323,10 @@ class StockRequestViewModel(
                     // transfer, and only the server knows the voucher number.
                     refreshMine()
                 },
-                onFailure = {
-                    _state.update { s -> s.copy(busyIds = s.busyIds - id, errorAr = ERR_ACTION) }
+                onFailure = { e ->
+                    _state.update { s ->
+                        s.copy(busyIds = s.busyIds - id, errorAr = serverMessage(e, ERR_ACTION))
+                    }
                 },
             )
         }
