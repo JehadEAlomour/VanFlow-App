@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jehadalomour.flowvan.core.data.repository.CompanyInfoRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
+import com.jehadalomour.flowvan.core.data.repository.CustomerStatementRepository
 import com.jehadalomour.flowvan.core.data.repository.UserRepository
 import com.jehadalomour.flowvan.core.database.dao.InvoiceDao
 import com.jehadalomour.flowvan.core.database.dao.PaymentDao
@@ -11,6 +12,9 @@ import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
 import com.jehadalomour.flowvan.core.database.entity.PaymentEntity
 import com.jehadalomour.flowvan.core.datastore.SessionStore
 import com.jehadalomour.flowvan.core.domain.ledger.CustomerStatement
+import com.jehadalomour.flowvan.core.model.ledger.StatementDocType
+import com.jehadalomour.flowvan.core.model.ledger.StatementMovement
+import com.jehadalomour.flowvan.core.model.ledger.StatementSnapshot
 import com.jehadalomour.flowvan.core.domain.printer.PaperWidth
 import com.jehadalomour.flowvan.core.domain.printer.PrintResult
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
@@ -31,11 +35,16 @@ import kotlin.time.ExperimentalTime
 /**
  * The printable customer account statement (كشف حساب) for one date range.
  *
- * Reads the same two tables the on-screen statement does, and applies the same
- * rule about what belongs on a receivable: only ON-ACCOUNT movement. A cash sale
- * is settled at the counter and creates no receivable, so putting it here would
- * inflate both the debit column and the closing balance — the customer would be
- * handed a demand for money they already paid.
+ * Reads what the on-screen statement reads, in the same order of preference: the
+ * SERVER when there is a connection, this device's own ledger when there is not.
+ * The paper and the screen must never disagree about a closing figure, and they
+ * would the moment one of them was allowed a source the other did not have.
+ *
+ * Both paths apply the same rule about what belongs on a receivable: only
+ * ON-ACCOUNT movement. A cash sale is settled at the counter and creates no
+ * receivable, so putting it here would inflate both the debit column and the
+ * closing balance — the customer would be handed a demand for money they already
+ * paid.
  */
 @OptIn(ExperimentalTime::class)
 class StatementPrintViewModel(
@@ -43,6 +52,7 @@ class StatementPrintViewModel(
     private val fromMillis: Long,
     private val toMillis: Long,
     private val customers: CustomerRepository,
+    private val statements: CustomerStatementRepository,
     private val users: UserRepository,
     private val invoiceDao: InvoiceDao,
     private val paymentDao: PaymentDao,
@@ -63,6 +73,19 @@ class StatementPrintViewModel(
     )
     val state: StateFlow<StatementPrintState> = _state.asStateFlow()
 
+    /** The server's answer, once it lands. While it stands, Room does not overwrite it. */
+    private var live: StatementSnapshot? = null
+
+    /**
+     * The server has not answered yet, so Room must not publish underneath it. Room
+     * answers first every time, and a rep who tapped print in that window would send
+     * the incomplete paper to the printer.
+     */
+    private var awaitingServer = true
+
+    /** The same range rebuilt from Room, kept current by the stream in `init`. */
+    private var local: StatementSnapshot = StatementSnapshot()
+
     init {
         // Four streams: the period's movement, and everything before it — the
         // latter collapsed to a single opening balance rather than printed.
@@ -72,11 +95,15 @@ class StatementPrintViewModel(
             invoiceDao.observeByCustomerRange(customerId, 0L, fromMillis - 1),
             paymentDao.observeByCustomerRange(customerId, 0L, fromMillis - 1),
         ) { invoices, payments, priorInvoices, priorPayments ->
-            val opening = balanceOf(priorInvoices, priorPayments)
-            opening to rowsOf(invoices, payments, opening)
+            StatementSnapshot(
+                openingBalance = movementsOf(priorInvoices, priorPayments).sumOf { it.movement },
+                movements = movementsOf(invoices, payments).sortedBy { it.createdAt },
+                isLive = false,
+            )
         }
-            .onEach { (opening, rows) ->
-                _state.update { it.copy(isLoading = false, openingBalance = opening, rows = rows) }
+            .onEach { snapshot ->
+                local = snapshot
+                if (live == null && !awaitingServer) publish(snapshot)
             }
             .launchIn(viewModelScope)
 
@@ -93,6 +120,18 @@ class StatementPrintViewModel(
                     salesmanNameAr = salesman?.nameAr.orEmpty(),
                 )
             }
+            // The whole account, if it can be reached. Room has only what this
+            // handset created, and a statement short of another van's invoices
+            // prints a debt the shopkeeper will not recognise.
+            val snapshot = statements.load(
+                customerNumber = customer?.code.orEmpty(),
+                customerId = customerId,
+                fromMillis = fromMillis,
+                toMillis = toMillis,
+            )
+            live = snapshot
+            awaitingServer = false
+            publish(snapshot ?: local)
         }
 
         printer.state
@@ -112,51 +151,76 @@ class StatementPrintViewModel(
         }
     }
 
+    private fun publish(snapshot: StatementSnapshot) {
+        var running = snapshot.openingBalance
+        val rows = snapshot.movements.map { m ->
+            running += m.movement
+            StatementRow(
+                createdAt = m.createdAt,
+                number = m.number,
+                docType = when (m.docType) {
+                    StatementDocType.SALE -> CustomerStatement.TYPE_SALE
+                    StatementDocType.RETURN -> CustomerStatement.TYPE_RETURN
+                    StatementDocType.PAYMENT -> DOC_PAYMENT
+                },
+                method = m.method,
+                debit = m.debit,
+                credit = m.credit,
+                balance = running,
+            )
+        }
+        _state.update {
+            it.copy(
+                isLoading = false,
+                openingBalance = snapshot.openingBalance,
+                rows = rows,
+                isLocalOnly = !snapshot.isLive,
+            )
+        }
+    }
+
     // What belongs on the ledger, and what it does to the balance, is [CustomerStatement]
     // — the same rule the on-screen statement uses. It used to be a copy of it here, and
     // the copy had drifted: an order moved this paper's balance by its full value while
     // moving the screen's by nothing.
 
-    private fun balanceOf(invoices: List<InvoiceEntity>, payments: List<PaymentEntity>): Double {
-        val ledger = invoices.filter(CustomerStatement::isLedgerEntry)
-        return ledger.sumOf(CustomerStatement::movement) - payments.sumOf { it.amount }
-    }
-
-    /** Oldest first, each row carrying the balance as it stood after it. */
-    private fun rowsOf(
+    private fun movementsOf(
         invoices: List<InvoiceEntity>,
         payments: List<PaymentEntity>,
-        opening: Double,
-    ): List<StatementRow> {
-        val unsorted = buildList {
-            invoices.filter(CustomerStatement::isLedgerEntry).forEach { inv ->
-                val isCredit = CustomerStatement.isCredit(inv)
-                add(
-                    StatementRow(
-                        createdAt = inv.createdAt,
-                        number = inv.number,
-                        docType = inv.type,
-                        debit = if (isCredit) 0.0 else inv.total,
-                        credit = if (isCredit) inv.total else 0.0,
-                    ),
-                )
+    ): List<StatementMovement> = buildList {
+        invoices.filter(CustomerStatement::isLedgerEntry).forEach { inv ->
+            val docType = when (inv.type) {
+                CustomerStatement.TYPE_SALE -> StatementDocType.SALE
+                CustomerStatement.TYPE_RETURN -> StatementDocType.RETURN
+                // Moves no receivable, so it cannot be printed as a debit or a
+                // credit — see the default in CustomerStatement.movement.
+                else -> return@forEach
             }
-            payments.forEach { pay ->
-                add(
-                    StatementRow(
-                        createdAt = pay.createdAt,
-                        number = pay.number,
-                        docType = "PAYMENT",
-                        method = pay.method,
-                        credit = pay.amount,
-                    ),
-                )
-            }
+            add(
+                StatementMovement(
+                    id = inv.id,
+                    number = inv.number,
+                    createdAt = inv.createdAt,
+                    docType = docType,
+                    debit = if (docType == StatementDocType.SALE) inv.total else 0.0,
+                    credit = if (docType == StatementDocType.RETURN) inv.total else 0.0,
+                    isLocal = true,
+                ),
+            )
         }
-        var running = opening
-        return unsorted.sortedBy { it.createdAt }.map { row ->
-            running += row.debit - row.credit
-            row.copy(balance = running)
+        payments.forEach { pay ->
+            add(
+                StatementMovement(
+                    id = pay.id,
+                    number = pay.number,
+                    createdAt = pay.createdAt,
+                    docType = StatementDocType.PAYMENT,
+                    credit = pay.amount,
+                    method = pay.method,
+                    chequeDate = pay.chequeDate,
+                    isLocal = true,
+                ),
+            )
         }
     }
 
@@ -245,5 +309,7 @@ class StatementPrintViewModel(
 
     private companion object {
         const val SUCCESS_MESSAGE = "تمت الطباعة بنجاح"
+        /** [StatementRow.docType] for a receipt; vouchers use CustomerStatement's names. */
+        const val DOC_PAYMENT = "PAYMENT"
     }
 }

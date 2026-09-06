@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.core.common.format.formatAmount
 import com.jehadalomour.flowvan.core.common.format.formatJod
 import com.jehadalomour.flowvan.core.common.i18n.AppLanguage
+import com.jehadalomour.flowvan.core.model.ledger.StatementDocType
 import com.jehadalomour.flowvan.core.designsystem.components.*
 import com.jehadalomour.flowvan.core.designsystem.resources.Res
 import com.jehadalomour.flowvan.core.designsystem.resources.*
@@ -86,6 +87,23 @@ fun AccountStatementScreen(
                     }
                 }
 
+                // The account belongs to the office. When it could not be reached
+                // the figures below are only this device's own vouchers, and a rep
+                // about to hand the paper over has to know that before they do —
+                // the shopkeeper will name the invoice that is missing.
+                if (state.isLocalOnly && !state.isLoading) {
+                    item {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            FvNotice(
+                                title = stringResource(Res.string.statement_local_only_title),
+                                body = stringResource(Res.string.statement_local_only_body),
+                                tone = FvTone.Warning,
+                            )
+                            Spacer(Modifier.height(12.dp))
+                        }
+                    }
+                }
+
                 // Above the list, not below it: this block is the reason the
                 // screen is opened, and a rep should never scroll to reach it.
                 item {
@@ -143,12 +161,17 @@ fun AccountStatementScreen(
                     else -> items(state.lines, key = { it.key }) { line ->
                         StatementRow(
                             line = line,
-                            onClick = {
-                                when (val entry = line.entry) {
-                                    is StatementEntry.Invoice -> onOpenInvoice(entry.entity.id)
-                                    is StatementEntry.Payment -> onOpenReceipt(entry.entity.id)
+                            // A server row names a voucher this handset never created,
+                            // so there is nothing local to open — the row stays inert
+                            // rather than opening a blank document.
+                            onClick = if (!line.entry.isLocal) null else ({
+                                val entry = line.entry
+                                if (entry.docType == StatementDocType.PAYMENT) {
+                                    onOpenReceipt(entry.id)
+                                } else {
+                                    onOpenInvoice(entry.id)
                                 }
-                            },
+                            }),
                         )
                     }
                 }
@@ -177,44 +200,47 @@ fun AccountStatementScreen(
 }
 
 @Composable
-private fun StatementRow(line: StatementLine, onClick: () -> Unit) {
+private fun StatementRow(line: StatementLine, onClick: (() -> Unit)?) {
+    val entry = line.entry
     val badge: String
     val color: Color
     var detail: String? = null
 
-    when (val entry = line.entry) {
-        // No order branch: an order is not on a statement — see CustomerStatement.
-        is StatementEntry.Invoice -> when (entry.entity.type) {
-            "SALE" -> { badge = stringResource(Res.string.voucher_type_sale); color = Fv.Red }
-            "RETURN" -> { badge = stringResource(Res.string.voucher_type_return); color = Fv.Green }
-            else -> { badge = entry.entity.type; color = Fv.TextMid }
+    // No order branch: an order is not on a statement — see CustomerStatement.
+    when (entry.docType) {
+        StatementDocType.SALE -> {
+            badge = stringResource(Res.string.voucher_type_sale); color = Fv.Red
         }
 
-        is StatementEntry.Payment -> {
+        StatementDocType.RETURN -> {
+            badge = stringResource(Res.string.voucher_type_return); color = Fv.Green
+        }
+
+        StatementDocType.PAYMENT -> {
             badge = stringResource(Res.string.receipt_voucher_title)
             color = Fv.Blue
-            val method = when (entry.entity.method) {
+            val method = when (entry.method) {
                 "CASH" -> stringResource(Res.string.method_cash_label)
                 "CHEQUE" -> stringResource(Res.string.method_cheque_label)
                 "TRANSFER" -> stringResource(Res.string.method_transfer_label)
-                else -> entry.entity.method
+                else -> entry.method
             }
             // A post-dated cheque is already counted in the balance — the app
             // posts collections on receipt — but the rep still needs to know the
             // money is not in hand yet, so the due date rides on the row.
-            val due = entry.entity.chequeDate?.takeIf { entry.entity.method == "CHEQUE" }
+            val due = entry.chequeDate?.takeIf { entry.method == "CHEQUE" }
                 ?.let { stringResource(Res.string.statement_cheque_due, it.toDateString()) }
             detail = listOfNotNull(method, due).joinToString(" · ")
         }
     }
 
-    val subtitle = listOfNotNull(line.entry.createdAt.toDateTimeString(), detail).joinToString(" · ")
+    val subtitle = listOfNotNull(entry.createdAt.toDateTimeString(), detail).joinToString(" · ")
     // Signed, not just coloured: colour is the first thing daylight takes, and a
     // payment read as a charge is the expensive mistake on this screen.
-    val signed = if (line.isCredit) -line.entry.amount else line.entry.amount
+    val signed = entry.movement
 
     ReportRow(
-        title = line.entry.number,
+        title = entry.number,
         subtitle = subtitle,
         value = signed.formatJod(AppLanguage.AR),
         valueCaption = stringResource(Res.string.statement_col_balance) +

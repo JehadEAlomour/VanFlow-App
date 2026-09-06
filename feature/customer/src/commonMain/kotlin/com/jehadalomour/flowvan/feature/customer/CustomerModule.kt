@@ -22,6 +22,6 @@ fun customerModule(): Module = module {
         CustomerDashboardViewModel(customerId, get(), get(), get(), get(), get(), get())
     }
     viewModel { (customerId: String) ->
-        AccountStatementViewModel(customerId, get(), get(), get())
+        AccountStatementViewModel(customerId, get(), get(), get(), get())
     }
 }

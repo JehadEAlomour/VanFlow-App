@@ -1,27 +1,7 @@
 package com.jehadalomour.flowvan.feature.customer
 
-import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
-import com.jehadalomour.flowvan.core.database.entity.PaymentEntity
-import com.jehadalomour.flowvan.core.domain.ledger.CustomerStatement
 import com.jehadalomour.flowvan.core.model.Customer
-
-sealed interface StatementEntry {
-    val createdAt: Long
-    val amount: Double
-    val number: String
-
-    data class Invoice(val entity: InvoiceEntity) : StatementEntry {
-        override val createdAt get() = entity.createdAt
-        override val amount get() = entity.total
-        override val number get() = entity.number
-    }
-
-    data class Payment(val entity: PaymentEntity) : StatementEntry {
-        override val createdAt get() = entity.createdAt
-        override val amount get() = entity.amount
-        override val number get() = entity.number
-    }
-}
+import com.jehadalomour.flowvan.core.model.ledger.StatementMovement
 
 /**
  * One movement, plus the balance as it stood immediately after it.
@@ -31,19 +11,25 @@ sealed interface StatementEntry {
  * the disputed figure has to sit next to the disputed document.
  */
 data class StatementLine(
-    val entry: StatementEntry,
+    val entry: StatementMovement,
     val balanceAfter: Double,
 ) {
     /** True when this line reduced what the customer owes (payment or return). */
-    val isCredit: Boolean get() = when (entry) {
-        is StatementEntry.Payment -> true
-        is StatementEntry.Invoice -> CustomerStatement.isCredit(entry.entity)
-    }
+    val isCredit: Boolean get() = entry.credit > 0.0
 
-    val key: String get() = when (entry) {
-        is StatementEntry.Invoice -> "inv-${entry.entity.id}"
-        is StatementEntry.Payment -> "pay-${entry.entity.id}"
-    }
+    val key: String get() = "${entry.docType}-${entry.id}"
+}
+
+/** Where the figures on screen came from. */
+enum class StatementSource {
+    /** The server — the whole account, including what other vans and the office did. */
+    LIVE,
+
+    /**
+     * This device's own ledger. Only what this handset synced, so it can be short —
+     * the screen says so rather than letting a partial statement pass for a complete one.
+     */
+    LOCAL,
 }
 
 data class AccountStatementState(
@@ -55,28 +41,28 @@ data class AccountStatementState(
     val fromMillis: Long = 0L,
     val toMillis: Long = 0L,
     val isLoading: Boolean = true,
+    val source: StatementSource = StatementSource.LIVE,
 ) {
-    private val entries: List<StatementEntry> get() = lines.map { it.entry }
+    private val entries: List<StatementMovement> get() = lines.map { it.entry }
 
-    // Summed through [CustomerStatement] so the foot of the page agrees with the
-    // running balance beside each line — see CustomerStatement.movement.
-    val totalDebits: Double get() = entries
-        .filterIsInstance<StatementEntry.Invoice>()
-        .sumOf { CustomerStatement.movement(it.entity).coerceAtLeast(0.0) }
+    // Summed from the same debit/credit columns the running balance walks, so the
+    // foot of the page always agrees with the last line beside it.
+    val totalDebits: Double get() = entries.sumOf { it.debit }
 
-    val totalCredits: Double get() {
-        val payments = entries.filterIsInstance<StatementEntry.Payment>().sumOf { it.amount }
-        val returns = entries.filterIsInstance<StatementEntry.Invoice>()
-            .sumOf { -CustomerStatement.movement(it.entity).coerceAtMost(0.0) }
-        return payments + returns
-    }
+    val totalCredits: Double get() = entries.sumOf { it.credit }
 
     val net: Double get() = totalDebits - totalCredits
 
     /** What is owed at the end of the period — the number the screen exists for. */
     val closingBalance: Double get() = openingBalance + net
+
+    /** True when the figures came off this device and may be short. */
+    val isLocalOnly: Boolean get() = source == StatementSource.LOCAL
+
 }
 
 sealed interface AccountStatementEvent {
     data class DateRangeChanged(val fromMillis: Long, val toMillis: Long) : AccountStatementEvent
+    /** The rep asked to try the server again after a local-only load. */
+    data object Retry : AccountStatementEvent
 }

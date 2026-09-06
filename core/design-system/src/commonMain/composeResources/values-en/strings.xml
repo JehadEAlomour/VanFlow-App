@@ -628,6 +628,7 @@
     <string name="voucher_discount_type_value">Value</string>
     <string name="voucher_final_total">Final Total</string>
     <string name="voucher_item_count">%1$d items</string>
+    <string name="voucher_total_items">Item Count</string>
     <string name="voucher_line_discount">Line Discount</string>
     <string name="voucher_line_discount_total">Total Line Discount</string>
     <string name="voucher_line_total">Line Total</string>
@@ -796,6 +797,8 @@
     <string name="statement_print_action">Print statement</string>
     <string name="statement_cheque_due">Due %1$s</string>
     <string name="statement_period_empty">No transactions in this period</string>
+    <string name="statement_local_only_title">Incomplete — from this device</string>
+    <string name="statement_local_only_body">The server could not be reached, so this statement shows only this device's own transactions and may be missing another rep's invoices or entries made at the office.</string>
 
     <!-- Customer transaction report -->
     <string name="txn_report_print_action">Print transaction report</string>

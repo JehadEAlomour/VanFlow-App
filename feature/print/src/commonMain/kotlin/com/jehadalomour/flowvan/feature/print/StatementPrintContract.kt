@@ -45,6 +45,12 @@ data class StatementPrintState(
      */
     val openingBalance: Double = 0.0,
     val rows: List<StatementRow> = emptyList(),
+    /**
+     * The figures came off THIS DEVICE, not the server — so they cover only what
+     * this handset created and may be short of another van's invoices. The screen
+     * says so before the rep prints; see AccountStatementScreen.
+     */
+    val isLocalOnly: Boolean = false,
     /** When the paper was produced — a statement without this is undatable. */
     val printedAt: Long = 0L,
 

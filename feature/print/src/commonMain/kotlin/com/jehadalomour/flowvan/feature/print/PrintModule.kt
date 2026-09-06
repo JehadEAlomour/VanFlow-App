@@ -32,7 +32,7 @@ fun printModule(): Module = module {
     viewModel { (customerId: String, fromMillis: Long, toMillis: Long) ->
         StatementPrintViewModel(
             customerId, fromMillis, toMillis,
-            get(), get(), get(), get(), get(), get(), get(),
+            get(), get(), get(), get(), get(), get(), get(), get(),
         )
     }
 }

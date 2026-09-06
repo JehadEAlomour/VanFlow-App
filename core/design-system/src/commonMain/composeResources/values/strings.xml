@@ -628,6 +628,7 @@
     <string name="voucher_discount_type_value">قيمة</string>
     <string name="voucher_final_total">الإجمالي النهائي</string>
     <string name="voucher_item_count">%1$d صنف</string>
+    <string name="voucher_total_items">عدد الأصناف</string>
     <string name="voucher_line_discount">خصم السطر</string>
     <string name="voucher_line_discount_total">الخصومات والعروض</string>
     <string name="voucher_line_total">إجمالي السطر</string>
@@ -796,6 +797,8 @@
     <string name="statement_print_action">طباعة كشف الحساب</string>
     <string name="statement_cheque_due">استحقاق %1$s</string>
     <string name="statement_period_empty">لا توجد حركات في هذه الفترة</string>
+    <string name="statement_local_only_title">كشف غير مكتمل — من بيانات الجهاز</string>
+    <string name="statement_local_only_body">تعذّر الاتصال بالخادم، لذلك يعرض هذا الكشف حركات هذا الجهاز فقط وقد تنقصه فواتير مندوب آخر أو حركات مُدخَلة من المكتب.</string>
 
     <!-- Customer transaction report -->
     <string name="txn_report_print_action">طباعة تقرير الحركات</string>

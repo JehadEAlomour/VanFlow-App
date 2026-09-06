@@ -1694,6 +1694,14 @@ private fun CartTotals(
                     Fv.TextMid,
                 )
             }
+            // How many pieces are going out, read here and not only on the receipt: the
+            // rep counts what is in their hand against this line before the invoice is
+            // made. Placed where the printed footer puts it, so the two read alike.
+            SummaryDetailRow(
+                stringResource(Res.string.voucher_total_items),
+                state.totalItemQty.formatQty(),
+                Fv.TextHigh,
+            )
             Spacer(Modifier.height(9.dp))
             HorizontalDivider(color = Fv.Border)
             Spacer(Modifier.height(9.dp))
@@ -1715,6 +1723,10 @@ private fun CartTotals(
         }
     }
 }
+
+/** A quantity as a count: whole numbers stay whole, a part-unit keeps its fraction. */
+private fun Double.formatQty(): String =
+    if (this == toLong().toDouble()) toLong().toString() else toString()
 
 @Composable
 private fun SummaryDetailRow(label: String, value: String, valueColor: Color) {
