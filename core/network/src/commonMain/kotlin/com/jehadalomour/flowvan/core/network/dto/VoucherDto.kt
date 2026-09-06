@@ -137,6 +137,10 @@ data class VoucherSummaryDto(
     val creditTotal: String = "0",
     val customerName: String? = null,
     val isPosted: Boolean = false,
+    /** JoFotara e-invoice QR content + status, filled server-side after the ERP
+     * submits the sale to the government. Null until it lands (async). */
+    val jofotaraQrCode: String? = null,
+    val jofotaraStatus: String? = null,
 )
 
 /** A server voucher with its lines (to pre-fill a return from the original sale). */

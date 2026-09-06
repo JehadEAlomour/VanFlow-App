@@ -51,7 +51,7 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         PriceListItemEntity::class,
         TobaccoTaxProfileEntity::class,
     ],
-    version = 20,
+    version = 21,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -103,6 +103,11 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         // v20: app_settings.companyPhone — cached from /company-info, shown under the logo on
         // the shared A4 document. Defaults to '' so an un-synced install just shows no phone.
         AutoMigration(from = 19, to = 20),
+        // v21: invoices.jofotaraQrCode (nullable) — the JoFotara e-invoice QR
+        // mirrored from the server, printed on the sale receipt. Null until the
+        // async government submission lands, so an upgraded install just shows
+        // no QR until the next sync fills it.
+        AutoMigration(from = 20, to = 21),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)

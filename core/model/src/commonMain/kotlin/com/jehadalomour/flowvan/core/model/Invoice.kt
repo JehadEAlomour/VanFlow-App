@@ -43,4 +43,8 @@ data class Invoice(
     val total: Double,
     val paymentMethod: PaymentMethod?,
     val notes: String?,
+    /** JoFotara e-invoice QR content, mirrored from the server once the ERP
+     * submits the sale to the government. Null until it lands (async); the
+     * receipt shows the QR when present and a "pending" note otherwise. */
+    val jofotaraQrCode: String? = null,
 )

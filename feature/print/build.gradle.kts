@@ -26,7 +26,10 @@ dependencies {
     "commonMainImplementation"(projects.core.database)
     // The print-line-discount permission is read from the persisted session.
     "commonMainImplementation"(projects.core.datastore)
+    "commonMainImplementation"(projects.core.network)
     "commonMainImplementation"(projects.core.domain)
+    // Compose-Multiplatform QR renderer — draws the JoFotara QR into the receipt.
+    "commonMainImplementation"("io.github.alexzhirkevich:qrose:1.0.1")
     "commonMainImplementation"(projects.core.designSystem)
 
     // PdfShareHelper.android uses ContextCompat (androidx.core)

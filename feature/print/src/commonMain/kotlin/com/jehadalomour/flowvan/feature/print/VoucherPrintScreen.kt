@@ -3,6 +3,7 @@ package com.jehadalomour.flowvan.feature.print
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import io.github.alexzhirkevich.qrose.rememberQrCodePainter
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -604,21 +605,13 @@ private fun ReceiptBody(
             // Tax QR (JoFotara/ISTD) — only when a payload exists; omitted entirely otherwise.
             state.qrData?.let {
                 Spacer(Modifier.height(10.dp))
-                Box(
+                Image(
+                    painter = rememberQrCodePainter(it),
+                    contentDescription = null,
                     modifier = Modifier
-                        .size(72.dp)
-                        .align(Alignment.CenterHorizontally)
-                        .border(1.5.dp, c.ink, RoundedCornerShape(6.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "QR",
-                        fontSize = 10.sp,
-                        color = c.ink,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 14.sp,
-                    )
-                }
+                        .size(96.dp)
+                        .align(Alignment.CenterHorizontally),
+                )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = t.qrCaption,

@@ -43,6 +43,10 @@ interface InvoiceDao {
     @Query("UPDATE invoices SET number = :number WHERE id = :id")
     suspend fun updateNumber(id: String, number: String)
 
+    /** Cache the JoFotara QR pulled from the server onto the local sale. */
+    @Query("UPDATE invoices SET jofotaraQrCode = :qr WHERE id = :id")
+    suspend fun setJofotaraQr(id: String, qr: String)
+
     /**
      * Overwrite a synced invoice's lines + totals with the server's authoritative computed
      * values (adopted from the create response), so the saved/printed invoice matches the

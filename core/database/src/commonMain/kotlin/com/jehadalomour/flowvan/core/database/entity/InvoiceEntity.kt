@@ -66,4 +66,10 @@ data class InvoiceEntity(
     @ColumnInfo(defaultValue = "0")
     val isTaxExempt: Boolean = false,
     val taxExemptionNumber: String? = null,
+    /**
+     * JoFotara e-invoice QR (v21) — the government QR content, mirrored from the
+     * server once the ERP submits this sale to JoFotara. Null until it lands
+     * (async); the receipt shows the QR when present, a "pending" note otherwise.
+     */
+    val jofotaraQrCode: String? = null,
 )

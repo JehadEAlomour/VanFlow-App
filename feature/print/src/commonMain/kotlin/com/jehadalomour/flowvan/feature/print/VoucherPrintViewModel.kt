@@ -16,6 +16,9 @@ import com.jehadalomour.flowvan.core.domain.printer.PrinterState
 import com.jehadalomour.flowvan.core.domain.printer.PrinterTarget
 import com.jehadalomour.flowvan.core.domain.printer.PrinterType
 import com.jehadalomour.flowvan.core.domain.printer.ReceiptPrinter
+import com.jehadalomour.flowvan.core.network.api.VoucherApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,6 +40,7 @@ class VoucherPrintViewModel(
     private val json: Json,
     private val printer: ReceiptPrinter,
     private val session: SessionStore,
+    private val voucherApi: VoucherApi,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -96,6 +100,10 @@ class VoucherPrintViewModel(
                         isTaxExempt = entity.isTaxExempt,
                         taxExemptionNumber = entity.taxExemptionNumber,
                         branch = settings.branch,
+                        // JoFotara e-invoice QR — mirrored from the server once the
+                        // ERP submits this sale to the government. Null until then,
+                        // so the receipt omits the QR block until it lands.
+                        qrData = entity.jofotaraQrCode,
                     )
                 }
             }
@@ -105,6 +113,8 @@ class VoucherPrintViewModel(
         printer.state
             .onEach { s -> _state.update { it.copy(printerState = s) } }
             .launchIn(viewModelScope)
+
+        fetchJofotaraQrIfNeeded()
 
         // Company header: server-first when online, else the DB cache. Best-effort.
         viewModelScope.launch {
@@ -150,6 +160,33 @@ class VoucherPrintViewModel(
                 unit = product?.unit.orEmpty(),
                 taxRate = 0.0,
             )
+        }
+    }
+
+    /**
+     * Pull the JoFotara QR for this sale from the server and cache it locally.
+     *
+     * The government returns the QR only a few seconds after the ERP submits the
+     * sale, so a single fetch on open would usually miss it — poll briefly. Once
+     * stored, [invoiceDao.observeById] re-emits and the receipt shows the QR.
+     * Best-effort: no signal, a non-sale, or an already-cached QR just skips it.
+     */
+    private fun fetchJofotaraQrIfNeeded() {
+        viewModelScope.launch {
+            val entity = runCatching { invoiceDao.observeById(invoiceId).first() }.getOrNull()
+                ?: return@launch
+            if (entity.type != "SALE" || !entity.jofotaraQrCode.isNullOrBlank()) return@launch
+            val customerNumber = customers.findById(entity.customerId)?.code ?: return@launch
+            repeat(6) {
+                val qr = runCatching {
+                    voucherApi.saleByNumber(entity.number, customerNumber)?.jofotaraQrCode
+                }.getOrNull()
+                if (!qr.isNullOrBlank()) {
+                    invoiceDao.setJofotaraQr(entity.id, qr)
+                    return@launch
+                }
+                delay(5_000)
+            }
         }
     }
 
