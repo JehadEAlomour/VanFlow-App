@@ -18,6 +18,7 @@ val JordanBanks = listOf(
     JordanBank("البنك التجاري الأردني", 0xFF637181L, "تج"),
     JordanBank("بنك الشرق الأوسط", 0xFFD85A30L, "شر"),
     JordanBank("بنك صفوة الإسلامي", 0xFF185FA5L, "صف"),
+    JordanBank("بنك الراجحي", 0xFF003B7AL, "را"),
 )
 
 data class ChequeEntry(
