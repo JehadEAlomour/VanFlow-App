@@ -46,6 +46,8 @@ fun CashFlowReportScreen(
     onBack: () -> Unit,
     onOpenVoucher: (String) -> Unit,
     onOpenReceipt: (String) -> Unit,
+    /** Open the printable slip for the range currently on screen. */
+    onPrint: (Long, Long) -> Unit = { _, _ -> },
     viewModel: CashFlowReportViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -68,6 +70,18 @@ fun CashFlowReportScreen(
                     }
                     Spacer(Modifier.width(4.dp))
                     Text(stringResource(Res.string.cash_flow_title), color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.weight(1f))
+                    // Hand the CURRENT range to the paper: a slip covering a different
+                    // period than the screen it was opened from is the one mistake a
+                    // hand-over document cannot survive.
+                    IconButton(onClick = { onPrint(state.from, state.to) }) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_print),
+                            contentDescription = stringResource(Res.string.printer_thermal_print),
+                            tint = Fv.Blue,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                 }
             }
             item {

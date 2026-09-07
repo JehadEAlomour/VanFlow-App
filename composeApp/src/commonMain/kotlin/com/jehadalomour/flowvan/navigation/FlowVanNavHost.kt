@@ -29,6 +29,7 @@ import com.jehadalomour.flowvan.feature.reports.VisitReportScreen
 import com.jehadalomour.flowvan.feature.reports.PaymentReportScreen
 import com.jehadalomour.flowvan.feature.print.ReceiptDetailScreen
 import com.jehadalomour.flowvan.feature.print.StatementPrintScreen
+import com.jehadalomour.flowvan.feature.print.CashFlowPrintScreen
 import com.jehadalomour.flowvan.feature.print.SalesReportPrintScreen
 import com.jehadalomour.flowvan.feature.print.SalesBulkPrintScreen
 import com.jehadalomour.flowvan.feature.print.TxnReportPrintScreen
@@ -100,6 +101,7 @@ object Routes {
     const val STATEMENT_PRINT = "statementprint/{customerId}/{from}/{to}"
     const val TXN_REPORT_PRINT = "txnreportprint/{customerId}/{from}/{to}"
     const val SALES_REPORT_PRINT = "salesreportprint/{from}/{to}"
+    const val CASH_FLOW_PRINT = "cashflowprint/{from}/{to}"
     const val SALES_BULK_PRINT = "salesbulkprint/{from}/{to}"
     const val DETAILED_TXN_REPORT = "detailedtxn/{customerId}"
     const val VOUCHER_SUMMARY = "vouchersummary"
@@ -126,6 +128,7 @@ object Routes {
     fun txnReportPrint(customerId: String, from: Long, to: Long) =
         "txnreportprint/$customerId/$from/$to"
     fun salesReportPrint(from: Long, to: Long) = "salesreportprint/$from/$to"
+    fun cashFlowPrint(from: Long, to: Long) = "cashflowprint/$from/$to"
     fun salesBulkPrint(from: Long, to: Long) = "salesbulkprint/$from/$to"
     fun detailedTxn(customerId: String) = "detailedtxn/$customerId"
 
@@ -556,6 +559,19 @@ fun FlowVanNavHost(
             )
         }
         composable(
+            Routes.CASH_FLOW_PRINT,
+            arguments = listOf(
+                navArgument("from") { type = NavType.LongType },
+                navArgument("to") { type = NavType.LongType },
+            ),
+        ) { entry ->
+            CashFlowPrintScreen(
+                fromMillis = entry.arguments?.getLong("from") ?: 0L,
+                toMillis = entry.arguments?.getLong("to") ?: 0L,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(
             Routes.SALES_REPORT_PRINT,
             arguments = listOf(
                 navArgument("from") { type = NavType.LongType },
@@ -596,6 +612,7 @@ fun FlowVanNavHost(
                 onBack = { navController.popBackStack() },
                 onOpenVoucher = { id -> navController.navigate(Routes.voucher(id)) },
                 onOpenReceipt = { id -> navController.navigate(Routes.receipt(id)) },
+                onPrint = { from, to -> navController.navigate(Routes.cashFlowPrint(from, to)) },
             )
         }
         composable(Routes.ITEMS_SALES_REPORT) {

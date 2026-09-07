@@ -758,6 +758,8 @@
     <string name="cash_flow_collection_cash">تحصيل نقد</string>
     <string name="cash_flow_collection_cheque">تحصيل شيكات</string>
     <string name="cash_flow_total_cash">إجمالي النقد</string>
+    <string name="cash_flow_print_collections_total">إجمالي التحصيلات</string>
+    <string name="cash_flow_print_count">عدد الحركات</string>
     <string name="cash_flow_additional_info">معلومات إضافية</string>
     <string name="cash_flow_total_cheque_collection">إجمالي شيكات التحصيل</string>
     <string name="cash_flow_total_credit_sales">إجمالي مبيعات الذمم</string>

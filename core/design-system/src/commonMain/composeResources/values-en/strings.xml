@@ -878,4 +878,6 @@
     <string name="report_retry">Try again</string>
     <string name="report_empty">No data in this period.</string>
     <string name="report_error">Couldn't load the data. Check your connection.</string>
+    <string name="cash_flow_print_collections_total">Collections total</string>
+    <string name="cash_flow_print_count">Entries</string>
 </resources>

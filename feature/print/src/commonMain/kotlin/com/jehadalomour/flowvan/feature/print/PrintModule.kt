@@ -24,6 +24,12 @@ fun printModule(): Module = module {
         )
     }
     viewModel { (fromMillis: Long, toMillis: Long) ->
+        CashFlowPrintViewModel(
+            fromMillis, toMillis,
+            get(), get(), get(), get(), get(), get(),
+        )
+    }
+    viewModel { (fromMillis: Long, toMillis: Long) ->
         SalesReportPrintViewModel(
             fromMillis, toMillis,
             get(), get(), get(), get(), get(), get(),
