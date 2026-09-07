@@ -33,12 +33,16 @@ interface ProductDao {
     @Query("UPDATE products SET vanStock = :qty WHERE id = :id")
     suspend fun setStock(id: String, qty: Int)
 
-    /** Main-store (ORDER) on-hand, cached from the ERP. Keyed by sku (the ERP item number). */
-    @Query("UPDATE products SET mainStock = :qty WHERE sku = :sku")
+    /**
+     * Main-store (ORDER) on-hand, cached from the ERP. Keyed by sku (the ERP item number).
+     * Being in the snapshot at all marks the item as CARRIED by the main store, even at
+     * qty 0 — the picker needs that apart from the quantity.
+     */
+    @Query("UPDATE products SET mainStock = :qty, inMainStore = 1 WHERE sku = :sku")
     suspend fun setMainStockBySku(sku: String, qty: Int)
 
-    /** Zero every product's main-store cache before re-applying a fresh snapshot. */
-    @Query("UPDATE products SET mainStock = 0")
+    /** Clear every product's main-store cache before re-applying a fresh snapshot. */
+    @Query("UPDATE products SET mainStock = 0, inMainStore = 0")
     suspend fun clearMainStock()
 
     @Query("SELECT id FROM products")

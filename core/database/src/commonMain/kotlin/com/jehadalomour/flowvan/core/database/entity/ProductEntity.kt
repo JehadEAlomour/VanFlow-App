@@ -17,6 +17,12 @@ data class ProductEntity(
     val vanStock: Int,
     /** Main-store on-hand for the ORDER flow — cached so orders work offline. */
     @ColumnInfo(defaultValue = "0") val mainStock: Int = 0,
+    /**
+     * Does the main store CARRY this item? Separate from [mainStock] because 0 is a
+     * real on-hand: an item the store stocks and is out of must stay in the picker
+     * (badged 0), while an item the store never carries must not appear at all.
+     */
+    @ColumnInfo(defaultValue = "0") val inMainStore: Boolean = false,
     val minStock: Int,
     val expiryDate: Long?,
     val brand: String?,

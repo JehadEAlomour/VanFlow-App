@@ -51,7 +51,7 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         PriceListItemEntity::class,
         TobaccoTaxProfileEntity::class,
     ],
-    version = 21,
+    version = 22,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -108,6 +108,12 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         // async government submission lands, so an upgraded install just shows
         // no QR until the next sync fills it.
         AutoMigration(from = 20, to = 21),
+        // v22: products.inMainStore — does the main store CARRY the item, as opposed to
+        // how much it holds. mainStock alone couldn't say: 0 meant both "carried, out of
+        // stock" and "not carried", so the pickers had to choose between hiding out-of-
+        // stock items and showing the whole catalogue. Defaults to 0; the first online
+        // main-store fetch (on opening ORDER or stock-request) fills it.
+        AutoMigration(from = 21, to = 22),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)

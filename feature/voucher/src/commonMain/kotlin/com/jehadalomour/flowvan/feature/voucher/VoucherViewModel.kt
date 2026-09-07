@@ -172,8 +172,13 @@ class VoucherViewModel(
             viewModelScope.launch {
                 runCatching { orderApi.orderStock() }.onSuccess { rows ->
                     products.cacheMainStock(
-                        rows.filter { it.stockUnitCode.isEmpty() } // base pool — ORDER lines are base units
-                            .associate { it.itemNumber to (it.itemQty.toDoubleOrNull()?.toInt() ?: 0) },
+                        // Every sku in the snapshot — presence is what marks the item as
+                        // carried by the main store; the quantity is the base pool (ORDER
+                        // lines are base units), 0 for a variant-only item.
+                        rows.groupBy { it.itemNumber }.mapValues { (_, r) ->
+                            r.firstOrNull { it.stockUnitCode.isEmpty() }
+                                ?.itemQty?.toDoubleOrNull()?.toInt() ?: 0
+                        },
                     )
                 }
             }
@@ -534,13 +539,14 @@ class VoucherViewModel(
             matchesTokenSearch(s.searchQuery, it.nameAr, it.nameEn, it.sku, it.category)
         }
         // SALE / RETURN stay restricted to the salesman's own (van) warehouse — a rep
-        // can only sell/return what is physically on the van. ORDER shows the WHOLE
-        // catalogue, including items the main store is currently out of: those render
-        // with a "0 / نفد المخزون" badge instead of vanishing, so the rep can still
-        // place an order for an item that needs restocking rather than assuming it
-        // doesn't exist.
+        // can only sell/return what is physically on the van. ORDER is restricted to the
+        // items the MAIN STORE carries, since that is what an order draws on; the rest of
+        // the catalogue can't be ordered. Carried is membership, not quantity: an item the
+        // main store is currently out of stays listed with a "0 / نفد المخزون" badge so
+        // the rep can still order it for restocking. `mainStock > 0` is kept alongside the
+        // flag so an install upgraded offline (flag still 0) shows what it already knew.
         val byWarehouse = when (type) {
-            VoucherType.ORDER -> bySearch
+            VoucherType.ORDER -> bySearch.filter { it.inMainStore || it.mainStock > 0 }
             else -> bySearch.filter { it.vanStock > 0 }
         }
         _state.update { it.copy(visibleProducts = byWarehouse) }

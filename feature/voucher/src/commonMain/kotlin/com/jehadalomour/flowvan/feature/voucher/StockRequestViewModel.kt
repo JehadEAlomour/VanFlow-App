@@ -44,7 +44,9 @@ class StockRequestViewModel(
         // van stock shown per row is the number the rep is deciding against.
         viewModelScope.launch {
             products.observeAll().collect { list ->
-                _state.update { it.copy(products = list, visibleProducts = filter(list, it.searchQuery)) }
+                _state.update {
+                    it.copy(products = list, visibleProducts = filter(list, it.searchQuery, it.mainStock))
+                }
             }
         }
         viewModelScope.launch {
@@ -76,7 +78,7 @@ class StockRequestViewModel(
                     it.copy(
                         mainStock = map,
                         mainStoreName = s.storeName,
-                        visibleProducts = filter(it.products, it.searchQuery),
+                        visibleProducts = filter(it.products, it.searchQuery, map),
                     )
                 }
                 // Also refresh the per-item main-store on-hand cached on each product
@@ -86,8 +88,13 @@ class StockRequestViewModel(
                 // the ORDER picker; a stock request's availability is decided per pool
                 // by the network map above when connected.
                 products.cacheMainStock(
-                    s.items.filter { it.stockUnitCode.isEmpty() }
-                        .associate { it.itemNumber to it.qty.toInt() },
+                    // EVERY sku in the snapshot, not just the ones with a base-pool row:
+                    // being here means the main store carries it, and that membership is
+                    // what the offline picker filters on. Quantity is the base pool (0 for
+                    // a variant-only item), matching the ORDER picker's per-item number.
+                    s.items.groupBy { it.itemNumber }.mapValues { (_, rows) ->
+                        rows.firstOrNull { it.stockUnitCode.isEmpty() }?.qty?.toInt() ?: 0
+                    },
                 )
             }
         }
@@ -113,7 +120,7 @@ class StockRequestViewModel(
             }
 
             is StockRequestEvent.SearchChanged -> _state.update {
-                it.copy(searchQuery = event.v, visibleProducts = filter(it.products, event.v))
+                it.copy(searchQuery = event.v, visibleProducts = filter(it.products, event.v, it.mainStock))
             }
 
             is StockRequestEvent.ConfirmItem -> confirmItem(event.product, event.qty, event.unit)
@@ -136,17 +143,31 @@ class StockRequestViewModel(
     }
 
     /**
-     * The picker shows the WHOLE catalogue. An item the main store is out of is NOT
-     * hidden — it renders with a "بالمستودع: 0" badge (red), so a rep can see the
-     * item exists and is empty and still raise a request for it, rather than the
-     * item silently vanishing from the list. The per-pool availability is shown on
-     * each row and enforced by the server on create; hiding here only lost items.
+     * The picker shows the items the MAIN STORE carries — a rep requests stock from
+     * that depot, so the rest of the catalogue is noise (and can't be granted).
+     *
+     * "Carries" is membership, not quantity: an item the main store stocks and is
+     * currently out of stays in the list with a red "بالمستودع: 0" badge, so the rep
+     * can still raise a request for it. Only items the main store does not carry at
+     * all are hidden.
+     *
+     * Online, the live per-pool map is the truth for membership — it includes items
+     * whose base pool is 0 but a variant pool has stock, and fractional (0<qty<1)
+     * pools the Int cache truncates away. Offline the map is empty and the Room cache
+     * answers instead: `inMainStore`, plus `mainStock > 0` so an install upgraded
+     * offline (where the new flag is still 0) keeps the items it already knew about.
      */
-    private fun filter(all: List<Product>, q: String): List<Product> {
-        return if (q.isBlank()) {
-            all
+    private fun filter(all: List<Product>, q: String, mainStock: Map<String, Double>): List<Product> {
+        val liveSkus = mainStock.keys.mapTo(mutableSetOf()) { it.substringBefore('|') }
+        val inMainStore = if (liveSkus.isNotEmpty()) {
+            all.filter { it.sku in liveSkus }
         } else {
-            all.filter { matchesTokenSearch(q, it.nameAr, it.nameEn, it.sku) }
+            all.filter { it.inMainStore || it.mainStock > 0 }
+        }
+        return if (q.isBlank()) {
+            inMainStore
+        } else {
+            inMainStore.filter { matchesTokenSearch(q, it.nameAr, it.nameEn, it.sku) }
         }
     }
 

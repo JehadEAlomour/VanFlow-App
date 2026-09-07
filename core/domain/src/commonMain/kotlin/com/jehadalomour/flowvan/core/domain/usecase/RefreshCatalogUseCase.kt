@@ -99,8 +99,13 @@ class RefreshCatalogUseCase(
         runCatching { orderApi.orderStock() }
             .onSuccess { rows ->
                 products.cacheMainStock(
-                    rows.filter { it.stockUnitCode.isEmpty() }
-                        .associate { it.itemNumber to (it.itemQty.toDoubleOrNull()?.toInt() ?: 0) },
+                    // Every sku in the snapshot — being there is what marks the item as
+                    // carried by the main store (the pickers filter on that, apart from
+                    // quantity). Qty is the base pool, 0 for a variant-only item.
+                    rows.groupBy { it.itemNumber }.mapValues { (_, r) ->
+                        r.firstOrNull { it.stockUnitCode.isEmpty() }
+                            ?.itemQty?.toDoubleOrNull()?.toInt() ?: 0
+                    },
                 )
             }
             .onFailure { log.w("main-store stock cache skipped: ${it.message}") }

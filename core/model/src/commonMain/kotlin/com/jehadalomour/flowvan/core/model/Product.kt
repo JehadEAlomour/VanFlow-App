@@ -12,6 +12,8 @@ data class Product(
     val vanStock: Int,
     /** Main-store (central depot) on-hand, cached from the ERP for the ORDER flow — works offline. */
     val mainStock: Int = 0,
+    /** Whether the main store carries this item at all — 0 on-hand still counts as carried. */
+    val inMainStore: Boolean = false,
     val minStock: Int,
     val expiryDate: Long?,
     val brand: String?,
