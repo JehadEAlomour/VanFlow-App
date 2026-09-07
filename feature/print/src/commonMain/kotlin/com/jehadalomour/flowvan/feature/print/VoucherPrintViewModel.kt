@@ -6,10 +6,12 @@ import com.jehadalomour.flowvan.core.database.dao.InvoiceDao
 import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.core.data.repository.CompanyInfoRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
+import com.jehadalomour.flowvan.core.data.repository.PrintTemplateRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.UserRepository
 import com.jehadalomour.flowvan.core.model.InvoiceAppliedOffer
 import com.jehadalomour.flowvan.core.model.InvoiceLine
+import com.jehadalomour.flowvan.core.model.print.VoucherKinds
 import com.jehadalomour.flowvan.core.domain.printer.PaperWidth
 import com.jehadalomour.flowvan.core.domain.printer.PrintResult
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
@@ -41,6 +43,7 @@ class VoucherPrintViewModel(
     private val printer: ReceiptPrinter,
     private val session: SessionStore,
     private val voucherApi: VoucherApi,
+    private val printTemplates: PrintTemplateRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -76,6 +79,10 @@ class VoucherPrintViewModel(
                 val salesman = users.findById(entity.salesmanId)
                 val settings = appSettings.get()
                 val freeLines = resolveFreeLines(entity.chosenFreeItemsCsv)
+                // The designed layout for this kind, from the offline cache. Looked up here
+                // (not once in init) because the kind is only known once the row loads, and
+                // a refresh that lands later re-emits through the same collector.
+                val printTemplate = printTemplates.templateFor(VoucherKinds.documentTypeFor(entity.type))
 
                 _state.update {
                     it.copy(
@@ -104,10 +111,22 @@ class VoucherPrintViewModel(
                         // ERP submits this sale to the government. Null until then,
                         // so the receipt omits the QR block until it lands.
                         qrData = entity.jofotaraQrCode,
+                        printTemplate = printTemplate,
                     )
                 }
             }
             .launchIn(viewModelScope)
+
+        // Best-effort, non-blocking template refresh on open (spec §2): a layout the office
+        // changed today prints today. Bounded by the repository's own timeout; the screen
+        // never waits on it. When it lands, re-resolve so this print uses the new layout.
+        viewModelScope.launch {
+            if (printTemplates.refresh()) {
+                val type = _state.value.type
+                val fresh = printTemplates.templateFor(VoucherKinds.documentTypeFor(type))
+                _state.update { it.copy(printTemplate = fresh) }
+            }
+        }
 
         // Mirror the live connection state into our UI state.
         printer.state

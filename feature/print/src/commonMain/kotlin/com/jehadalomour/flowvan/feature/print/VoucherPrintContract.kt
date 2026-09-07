@@ -3,6 +3,7 @@ package com.jehadalomour.flowvan.feature.print
 import com.jehadalomour.flowvan.core.model.InvoiceAppliedOffer
 import com.jehadalomour.flowvan.core.model.InvoiceLine
 import com.jehadalomour.flowvan.core.model.VoucherTemplate
+import com.jehadalomour.flowvan.core.model.print.Template
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
 import com.jehadalomour.flowvan.core.domain.printer.PrinterTarget
 import com.jehadalomour.flowvan.core.domain.printer.PrinterType
@@ -53,6 +54,13 @@ data class VoucherPrintState(
     val qrData: String? = null,
     /** Render configuration. Jordan defaults today; server-fed in the next step. */
     val template: VoucherTemplate = VoucherTemplate(),
+    /**
+     * The dashboard-designed layout for this voucher's kind, from the offline template
+     * cache. Null → nothing designed (or nothing cached yet): the built-in receipt prints,
+     * exactly as before templates existed. A THERMAL_80 template replaces the thermal
+     * receipt; an A4/A5 one replaces only the shared PDF (the roll stays thermal).
+     */
+    val printTemplate: Template? = null,
 
     // ── Thermal printer ──────────────────────────────────────────────────────
     val printerState: PrinterState = PrinterState.Disconnected,

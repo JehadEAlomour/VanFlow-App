@@ -499,6 +499,8 @@
     <string name="print_customer">Customer</string>
     <string name="print_customer_code">Customer Code</string>
     <string name="print_customer_tax_number">Tax Number</string>
+    <string name="print_company_tax_number">Company Tax No.</string>
+    <string name="print_tax_invoice_title">Tax Invoice</string>
     <string name="print_footer_legal">This invoice is issued electronically</string>
     <string name="print_footer_thanks">Thank you for your business</string>
     <string name="print_free_tag">Free</string>

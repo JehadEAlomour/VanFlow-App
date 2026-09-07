@@ -66,6 +66,7 @@ import com.jehadalomour.flowvan.feature.print.PrinterConnectDialog
 import com.jehadalomour.flowvan.core.model.InvoiceLine
 import com.jehadalomour.flowvan.core.model.PaymentType
 import com.jehadalomour.flowvan.core.model.VoucherTemplate
+import com.jehadalomour.flowvan.core.model.print.PaperSize
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
@@ -166,6 +167,7 @@ fun VoucherPrintScreen(
     val thermalLayer = rememberGraphicsLayer()
     val scope = rememberCoroutineScope()
     val pdfHelper = rememberPdfShareHelper()
+    val isArabicLocale = Locale.current.language.startsWith("ar")
 
     // Print-only line compacting. Asked ONCE per opening of this screen, before the receipt
     // is printed or shared, and only when there is actually something to merge — so a normal
@@ -319,7 +321,24 @@ fun VoucherPrintScreen(
             ) {
                 Column {
                     ReceiptTear()
-                    ReceiptBody(state, shownLines)
+                    // A THERMAL_80 template designed on the dashboard replaces the built-in
+                    // receipt inside the SAME layer, so capture → PNG → printer is untouched.
+                    // Anything else (no template, or an A4/A5 one) prints today's receipt.
+                    val thermalTemplate = state.printTemplate?.takeIf { it.isThermal && it.layout.elements.isNotEmpty() }
+                    if (thermalTemplate != null) {
+                        TemplateReceipt(
+                            template = thermalTemplate,
+                            ctx = state.toTemplateContext(
+                                shownLines = shownLines,
+                                taxExemptStamp = stringResource(Res.string.voucher_tax_exempt_banner),
+                                isArabic = isArabicLocale,
+                            ),
+                            monochrome = true,
+                            isArabic = isArabicLocale,
+                        )
+                    } else {
+                        ReceiptBody(state, shownLines)
+                    }
                     ReceiptTear(flipped = true)
                 }
             }
@@ -338,15 +357,33 @@ fun VoucherPrintScreen(
                 layout(0, 0) { placeable.place(0, 0) }
             },
         ) {
+            // An A4/A5 template replaces only this shared document; the roll stays thermal.
+            // Widths are the paper at 96 dpi (A4 794 dp = 210 mm, A5 559 dp = 148 mm); the
+            // PDF helper then fits the capture onto its A4 page as it always has.
+            val pageTemplate = state.printTemplate?.takeIf { !it.isThermal && it.layout.elements.isNotEmpty() }
+            val pageWidth = if (pageTemplate?.paperSize == PaperSize.A5) 559.dp else 794.dp
             Box(
                 modifier = Modifier
-                    .requiredWidth(794.dp)
+                    .requiredWidth(pageWidth)
                     .background(Color.White)
                     .drawWithContent {
                         graphicsLayer.record { this@drawWithContent.drawContent() }
                     },
             ) {
-                VoucherA4Document(state)
+                if (pageTemplate != null) {
+                    TemplateReceipt(
+                        template = pageTemplate,
+                        ctx = state.toTemplateContext(
+                            shownLines = shownLines,
+                            taxExemptStamp = stringResource(Res.string.voucher_tax_exempt_banner),
+                            isArabic = isArabicLocale,
+                        ),
+                        monochrome = false,
+                        isArabic = isArabicLocale,
+                    )
+                } else {
+                    VoucherA4Document(state)
+                }
             }
         }
     }

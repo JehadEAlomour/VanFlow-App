@@ -499,6 +499,8 @@
     <string name="print_customer">العميل</string>
     <string name="print_customer_code">رمز العميل</string>
     <string name="print_customer_tax_number">الرقم الضريبي</string>
+    <string name="print_company_tax_number">الرقم الضريبي للشركة</string>
+    <string name="print_tax_invoice_title">فاتورة ضريبية</string>
     <string name="print_footer_legal">هذه الفاتورة صادرة إلكترونياً</string>
     <string name="print_footer_thanks">شكراً لتعاملكم معنا</string>
     <string name="print_free_tag">مجاني</string>
