@@ -7,6 +7,7 @@ import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.model.CartLine
+import com.jehadalomour.flowvan.core.model.FreeLine
 import com.jehadalomour.flowvan.core.model.InvoiceAppliedOffer
 import com.jehadalomour.flowvan.core.model.InvoiceDiscountInput
 import com.jehadalomour.flowvan.core.model.InvoiceLine
@@ -66,6 +67,12 @@ class CreateSaleVoucherUseCase(
         notes: String?,
         chosenFreeItems: List<String> = emptyList(),
         /**
+         * The free (gift) lines the offers engine granted for this cart. They cost nothing
+         * but they leave the van like any other piece, so they are checked and deducted
+         * alongside [cart] — see [saleStockDemand]. Empty → no gifts.
+         */
+        freeLines: List<FreeLine> = emptyList(),
+        /**
          * The cart with the offers engine's per-line discounts overlaid (the same lines
          * the cart screen shows). When offers applied this differs from [cart]; we store
          * the OFFER-APPLIED result as the invoice's primary/display totals so the saved
@@ -83,16 +90,15 @@ class CreateSaleVoucherUseCase(
     ): Result<InvoiceEntity> = runCatching {
         if (cart.isEmpty()) throw EmptyCartException()
 
-        for (line in cart) {
-            val product = products.findById(line.productId)
-                ?: error("product ${line.productId} not found")
-            // Check the SAME pool, in the SAME scale, that the decrement below will move.
-            // This used to compare line.qty (a count of units) against vanStock (base pieces),
-            // so 5 cartons of 12 were checked against 5 and then deducted as 60.
-            val available = line.stockUnit(productUnits)?.vanStock ?: product.vanStock
-            val requested = line.stockQty.toInt()
-            if (requested > available) {
-                throw StockShortageException(line.productId, available, requested)
+        // Check the SAME pools, in the SAME scale, that the decrement below will move —
+        // the sold lines AND the offers' gift lines, each pool tallied once. This used to
+        // compare line.qty (a count of units) against vanStock (base pieces), so 5 cartons
+        // of 12 were checked against 5 and then deducted as 60; and it ignored gifts, so
+        // "buy 6 get 1 free" off the last 6 pieces passed here and failed on sync.
+        val demand = saleStockDemand(products, productUnits, cart, freeLines)
+        for (pool in demand) {
+            if (pool.requestedBase > pool.available) {
+                throw StockShortageException(pool.productId, pool.available, pool.requestedBase)
             }
         }
 
@@ -219,9 +225,11 @@ class CreateSaleVoucherUseCase(
         )
 
         invoices.save(entity)
-        // Local van stock only — the server derives stock from the posted voucher transaction.
-        for (line in cart) {
-            applyVanStockDelta(products, productUnits, line, -line.stockQty.toInt())
+        // Local van stock only — the server derives stock from the posted voucher transaction,
+        // gift lines included, so the gifts are deducted here too or the van's count drifts
+        // one piece per gift from the server's.
+        for (pool in demand) {
+            applyVanStockDelta(products, productUnits, pool, -pool.requestedBase)
         }
         if (paymentMethod == PaymentMethod.CREDIT) {
             // The customer owes the offer-applied total, not the pre-offer amount.

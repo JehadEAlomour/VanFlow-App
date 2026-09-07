@@ -313,6 +313,9 @@ fun VoucherScreen(
             offerDiscountPct = offerDiscountPct,
             dbUnits = state.productUnits[product.id] ?: emptyList(),
             enforceStock = state.showStockBadge,
+            // Pieces already promised away as gifts from this item's base pool — the
+            // sheet may not sell them. See VoucherState.giftedBase.
+            giftedBase = state.giftedBase(product.sku),
             canDiscount = state.showDiscountInputs,
             canEditPrice = state.canEditPrice,
             customerBasePrice = state.customerPrices[product.sku],
@@ -347,6 +350,7 @@ fun VoucherScreen(
             productNameFor = { itemNumber ->
                 state.products.firstOrNull { it.sku == itemNumber }?.nameAr ?: itemNumber
             },
+            stockLeftFor = { itemNumber -> state.giftRoomFor(itemNumber) },
             onAdd = { offerId, itemNumber ->
                 viewModel.onEvent(VoucherEvent.ChooseFreeItem(offerId, itemNumber))
             },
@@ -990,6 +994,19 @@ private fun CartView(
         modifier = modifier,
         contentPadding = PaddingValues(bottom = 16.dp),
     ) {
+        // ── SALE: the van cannot cover this voucher once the gifts are counted. Stated
+        // before everything else, because it is the one notice that blocks the save.
+        items(state.stockShortages, key = { "stock-short-${it.sku}" }) { short ->
+            NoticeStrip(
+                stringResource(
+                    Res.string.voucher_stock_short,
+                    short.nameAr,
+                    short.available,
+                    short.requested,
+                ),
+                Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
         if (creditNotice != null) {
             item(key = "credit-notice") {
                 NoticeStrip(creditNotice, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
@@ -1361,6 +1378,8 @@ private fun ChooseFreeItemSheet(
     choices: List<OfferChoice>,
     selectedItems: List<String>,
     productNameFor: (String) -> String,
+    /** Base pieces of the item the van can still spare — see VoucherState.giftRoomFor. */
+    stockLeftFor: (String) -> Int,
     onAdd: (offerId: String, itemNumber: String) -> Unit,
     onRemove: (offerId: String, itemNumber: String) -> Unit,
 ) {
@@ -1433,14 +1452,28 @@ private fun ChooseFreeItemSheet(
                                                 fontWeight = FontWeight.Bold,
                                             )
                                         }
-                                        Text(
-                                            productNameFor(itemNumber),
-                                            color = Fv.TextHigh,
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                productNameFor(itemNumber),
+                                                color = Fv.TextHigh,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                            // What the van can still spare of this item. A
+                                            // gift comes out of the same stock as the sale,
+                                            // so a pool item at zero is one the rep hasn't
+                                            // got to give — read in red rather than hidden,
+                                            // because the pick itself stays open.
+                                            val left = stockLeftFor(itemNumber)
+                                            Text(
+                                                stringResource(Res.string.voucher_gift_stock_left, left),
+                                                color = if (left > 0) Fv.TextMid else Fv.Red,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                            )
+                                        }
                                     }
                                     // Quantity stepper: − count + (so a single-item pool like
                                     // "3 free water" can be picked as water ×3).
@@ -1870,6 +1903,8 @@ private fun AddItemBottomSheet(
     offerDiscountPct: Double? = null,
     dbUnits: List<ProductUnit>,
     enforceStock: Boolean,
+    /** Base pieces of this item the offers are giving away — not sellable. */
+    giftedBase: Double = 0.0,
     canDiscount: Boolean,
     canEditPrice: Boolean,
     /** The customer's price-list base-unit price for this product (JOD), or null. */
@@ -1969,8 +2004,11 @@ private fun AddItemBottomSheet(
     // Stock check (SALE only): the requested quantity is converted to base units via the
     // selected unit's pack size, then validated against the pool it will actually draw from
     // — a variant (أحمر) has its own stock, a packaging unit (كرتونة ×12) shares the item's.
+    // A gift drawn from the base pool is spoken for before this line gets any of it; a
+    // variant unit has its own pool, which gifts never touch.
     val availableBase =
-        if (selectedUnit.isStockUnit) selectedUnit.vanStock.toDouble() else product.vanStock.toDouble()
+        if (selectedUnit.isStockUnit) selectedUnit.vanStock.toDouble()
+        else (product.vanStock - giftedBase).coerceAtLeast(0.0)
     val requestedBase = qty * selectedUnit.conversionQty
     val maxQtyForUnit = if (selectedUnit.conversionQty > 0.0)
         floor(availableBase / selectedUnit.conversionQty).toInt() else 0

@@ -29,4 +29,5 @@ dependencies {
     "commonMainImplementation"(projects.core.domain)
     "commonMainImplementation"(projects.core.designSystem)
     "androidMainImplementation"(libs.androidx.activity.compose)
+    "commonTestImplementation"(libs.kotlin.test)
 }

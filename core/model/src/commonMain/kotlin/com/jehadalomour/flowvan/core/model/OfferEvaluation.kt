@@ -93,6 +93,21 @@ data class FreeLine(
     val offerId: String,
 )
 
+/**
+ * Base pieces given away as gifts, by item number (= sku).
+ *
+ * A gift costs nothing but it still leaves the van, so every stock check has to add this
+ * on top of what the cart itself asks for: "buy 6 get 1 free" moves SEVEN pieces, and a
+ * rep holding six cannot fulfil it. The backend derives stock from the posted voucher,
+ * which carries the free lines, so a check that saw only the cart accepted a sale the
+ * server then refused — after the goods had been handed over.
+ *
+ * The offers engine works in item numbers and base units, so these are always pieces of
+ * the item's BASE pool (never a variant unit's own pool).
+ */
+fun List<FreeLine>.giftedBaseQtyBySku(): Map<String, Double> =
+    groupingBy { it.itemNumber }.fold(0.0) { acc, line -> acc + line.qty }
+
 /** An applied offer, for the banner. */
 data class AppliedOffer(
     val offerId: String,

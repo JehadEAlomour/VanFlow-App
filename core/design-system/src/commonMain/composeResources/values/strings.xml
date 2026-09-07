@@ -888,6 +888,8 @@
     <string name="voucher_line_remove">حذف السطر</string>
     <string name="voucher_credit_no_limit">لا يوجد حد ائتماني لهذا العميل — البيع نقداً فقط.</string>
     <string name="voucher_credit_over_limit">تجاوز العميل الحد الائتماني — البيع نقداً فقط. المتاح: %1$s</string>
+    <string name="voucher_stock_short">الكمية غير كافية بعد إضافة الهدية: %1$s — المتوفر %2$d والمطلوب %3$d. قلّل الكمية المباعة.</string>
+    <string name="voucher_gift_stock_left">متوفر: %1$d</string>
 
     <!-- Sales report -->
     <string name="all_sales_total_requests">إجمالي الطلبات</string>

@@ -698,6 +698,11 @@ class VoucherViewModel(
                     paymentMethod = s.paymentMethod,
                     notes = s.notes.takeIf { it.isNotBlank() },
                     chosenFreeItems = s.chosenFreeItems,   // GIFT picks → server adds free lines on upload
+                    // The gifts those picks (and the automatic offers) turned into. They
+                    // leave the van like sold pieces, so the use case checks and deducts
+                    // them with the cart — see VoucherState.stockShortages for the gate
+                    // that stops this ever reaching the shortage guard.
+                    freeLines = s.freeLines,
                     // Offer-applied lines → stored as the display invoice so it matches the
                     // cart offline; the raw cart above is still what uploads.
                     offerAdjustedCart = s.displayCart,
