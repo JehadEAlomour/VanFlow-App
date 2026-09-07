@@ -11,6 +11,7 @@ import com.jehadalomour.flowvan.core.data.repository.InvoiceRepository
 import com.jehadalomour.flowvan.core.data.repository.OfferRepository
 import com.jehadalomour.flowvan.core.data.repository.PriceListRepository
 import com.jehadalomour.flowvan.core.data.repository.TobaccoTaxProfileRepository
+import com.jehadalomour.flowvan.core.data.repository.PrintTemplateRepository
 import com.jehadalomour.flowvan.core.data.repository.PaymentRepository
 import com.jehadalomour.flowvan.core.data.repository.TargetRepository
 import com.jehadalomour.flowvan.core.network.api.TargetApi
@@ -30,6 +31,7 @@ import com.jehadalomour.flowvan.core.network.api.ProspectingApi
 import com.jehadalomour.flowvan.core.network.api.NotificationApi
 import com.jehadalomour.flowvan.core.network.api.OfferApi
 import com.jehadalomour.flowvan.core.network.api.TobaccoTaxProfileApi
+import com.jehadalomour.flowvan.core.network.api.PrintTemplateApi
 import com.jehadalomour.flowvan.core.network.api.PriceListApi
 import com.jehadalomour.flowvan.core.network.api.OrderApi
 import com.jehadalomour.flowvan.core.network.api.ProductApi
@@ -121,6 +123,7 @@ fun sharedModule(): Module = module {
     single { OfferRepository(get(), get(), get()) }
     single { PriceListRepository(get(), get()) }
     single { TobaccoTaxProfileRepository(get(), get()) }
+    single { PrintTemplateRepository(get(), get(), get()) }
     single { LocationRepository(get()) }
     single { StopDetector() }
     single { LocationTrackingCoordinator(get(), get(), get()) }
@@ -162,6 +165,7 @@ fun sharedModule(): Module = module {
     single { NotificationApi(get()) }
     single { OfferApi(get()) }
     single { TobaccoTaxProfileApi(get()) }
+    single { PrintTemplateApi(get()) }
     single { PriceListApi(get()) }
 
     factory { GetCurrentUserUseCase(get(), get()) }
@@ -185,7 +189,7 @@ fun sharedModule(): Module = module {
     factory { StartShiftUseCase(get(), get()) }
     factory { BackendLoginUseCase(get(), get(), get(), get()) }
     factory { BackupDatabaseUseCase(get()) }
-    factory { RefreshCatalogUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    factory { RefreshCatalogUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     // Its own HttpClient: the shared one has a 15s request timeout that would cut
     // a long-lived socket every 15 seconds (see createWebSocketClient).
     single { SyncSocketClient(createWebSocketClient(), get(), get()) }

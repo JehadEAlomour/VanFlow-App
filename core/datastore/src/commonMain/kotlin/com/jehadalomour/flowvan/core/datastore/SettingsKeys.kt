@@ -76,6 +76,15 @@ object SettingsKeys {
     /** Legacy P6 sync-engine endpoint base (SyncConfig/SyncApi batch upload). */
     const val SYNC_BASE_URL = "sync_base_url"
 
+    // ── Print templates ─────────────────────────────────────────────
+    /**
+     * The whole `GET /invoice-templates/resolve-all` payload as JSON, so a receipt prints
+     * from the dashboard-designed layout with no signal. Refreshed after login and, best
+     * effort, when a print screen opens; never cleared on sign-out (the layouts are the
+     * company's, not the salesman's).
+     */
+    const val PRINT_TEMPLATES_JSON = "print_templates_json"
+
     // ── AI ──────────────────────────────────────────────────────────
     /** Claude API key for the AI assistant (see AiSettings). */
     const val AI_API_KEY = "ai_api_key"

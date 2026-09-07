@@ -14,6 +14,7 @@ import com.jehadalomour.flowvan.core.data.repository.AppSettingsRepository
 import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.data.repository.OfferRepository
 import com.jehadalomour.flowvan.core.data.repository.PriceListRepository
+import com.jehadalomour.flowvan.core.data.repository.PrintTemplateRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.TobaccoTaxProfileRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
@@ -43,6 +44,7 @@ class RefreshCatalogUseCase(
     private val offers: OfferRepository,
     private val priceLists: PriceListRepository,
     private val tobaccoProfiles: TobaccoTaxProfileRepository,
+    private val printTemplates: PrintTemplateRepository,
 ) {
     private val log = Logger.withTag("RefreshCatalog")
 
@@ -62,6 +64,11 @@ class RefreshCatalogUseCase(
         priceLists.refresh().onFailure { log.w("price-lists refresh failed: ${it.message}") }
         // Cache tobacco tax profiles so tobacco items apply their excise/special tax at sale.
         tobaccoProfiles.refresh().onFailure { log.w("tobacco profiles refresh failed: ${it.message}") }
+        // Cache the dashboard-designed print templates so a receipt prints from the company's
+        // layout offline. This runs right after login (home refresh) and on every home pull;
+        // it swallows its own failures. The session does not know the van's store number,
+        // so the company defaults are asked for (a store-pinned template needs `storeNumber`).
+        printTemplates.refresh()
         return try {
             coroutineScope {
                 val customersJob = async { refreshCustomers() }
