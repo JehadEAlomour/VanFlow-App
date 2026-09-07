@@ -49,6 +49,9 @@ data class TemplateLine(
     val taxRate: Double = 0.0,
     val discount: Double = 0.0,
     val tax: Double = 0.0,
+    /** qty × price, before discount and tax. */
+    val gross: Double = 0.0,
+    /** Net of discount and including tax — what this line costs the customer. */
     val total: Double = 0.0,
     /** A 100 %-discounted line; printed with the " (هدية)" suffix. */
     val isGift: Boolean = false,
@@ -202,6 +205,7 @@ object TemplateTokens {
         "taxPct" -> if (line.taxRate > 0.0) "${(line.taxRate * 100).roundToInt()}%" else ""
         "discount" -> formatAmount(line.discount, ctx.decimals)
         "tax" -> formatAmount(line.tax, ctx.decimals)
+        "gross" -> formatAmount(line.gross, ctx.decimals)
         "total" -> formatAmount(line.total, ctx.decimals)
         else -> ""
     }

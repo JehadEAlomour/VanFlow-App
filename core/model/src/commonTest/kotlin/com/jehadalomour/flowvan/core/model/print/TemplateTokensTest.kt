@@ -28,8 +28,8 @@ class TemplateTokensTest {
         taxExemptStamp = "فاتورة معفاة من الضريبة",
         qrData = "QR-PAYLOAD",
         lines = listOf(
-            TemplateLine(name = "ماء 1.5 لتر", sku = "W15", qty = 6.0, unit = "حبة", price = 0.5, taxRate = 0.16, discount = 0.0, tax = 0.48, total = 3.0),
-            TemplateLine(name = "عصير", sku = "J1", qty = 1.0, unit = "كرتونة", price = 2.0, taxRate = 0.0, discount = 2.0, tax = 0.0, total = 0.0, isGift = true),
+            TemplateLine(name = "ماء 1.5 لتر", sku = "W15", qty = 6.0, unit = "حبة", price = 0.5, taxRate = 0.16, discount = 0.0, tax = 0.48, gross = 3.0, total = 3.48),
+            TemplateLine(name = "عصير", sku = "J1", qty = 1.0, unit = "كرتونة", price = 2.0, taxRate = 0.0, discount = 2.0, tax = 0.0, gross = 2.0, total = 0.0, isGift = true),
         ),
         decimals = 3,
         currency = "JOD",
@@ -119,7 +119,8 @@ class TemplateTokensTest {
         assertEquals("16%", TemplateTokens.cell("taxPct", line, ctx))
         assertEquals("0.000", TemplateTokens.cell("discount", line, ctx))
         assertEquals("0.480", TemplateTokens.cell("tax", line, ctx))
-        assertEquals("3.000", TemplateTokens.cell("total", line, ctx))
+        assertEquals("3.480", TemplateTokens.cell("total", line, ctx))
+        assertEquals("3.000", TemplateTokens.cell("gross", line, ctx))
         assertEquals("", TemplateTokens.cell("taxPct", ctx.lines[1], ctx))
         assertEquals("", TemplateTokens.cell("unknownColumn", line, ctx))
     }

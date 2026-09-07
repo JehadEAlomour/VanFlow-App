@@ -16,8 +16,9 @@ import kotlinx.datetime.toLocalDateTime
  * The money figures follow the built-in receipt's own footer so the two never disagree on a
  * counter: the subtotal is Σ(qty × price) including the gift lines' notional value, the
  * discount is what the receipt would itemise (offers when applied, else line + invoice
- * discount + the gifts), and a line's `total` is its gross — discount and tax are each
- * stated once, in the totals block.
+ * discount + the gifts). A line's `gross` is qty × price and its `total` is the net of
+ * discount including tax, per the print-templates contract, so a figure printed here
+ * and the same figure printed by the dashboard always agree.
  */
 internal fun VoucherPrintState.toTemplateContext(
     /** The lines to print — the compacted view when the rep chose to merge rows. */
@@ -86,6 +87,7 @@ internal fun VoucherPrintState.toTemplateContext(
  */
 private fun InvoiceLine.toTemplateLine(isGift: Boolean): TemplateLine {
     val gross = qty * unitPrice
+    val discount = if (isGift) gross else gross * discountPct
     return TemplateLine(
         name = nameAr,
         sku = sku,
@@ -94,9 +96,12 @@ private fun InvoiceLine.toTemplateLine(isGift: Boolean): TemplateLine {
         unit = unit,
         price = if (isGift) 0.0 else unitPrice,
         taxRate = taxRate,
-        discount = if (isGift) gross else gross * discountPct,
+        discount = discount,
         tax = taxAmount,
-        total = if (isGift) 0.0 else gross,
+        gross = gross,
+        // Net of discount, including tax — the contract's meaning of `total`,
+        // the same figure the dashboard prints for the same line.
+        total = if (isGift) 0.0 else gross - discount + taxAmount,
         isGift = isGift || discountPct >= 1.0,
     )
 }
