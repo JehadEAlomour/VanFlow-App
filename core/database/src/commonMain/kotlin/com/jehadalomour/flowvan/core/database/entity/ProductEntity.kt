@@ -32,4 +32,10 @@ data class ProductEntity(
     @ColumnInfo(defaultValue = "0") val isTobacco: Boolean = false,
     val tobaccoProfileId: String? = null,
     @ColumnInfo(defaultValue = "0") val consumerPriceFils: Long = 0,
+    /**
+     * The ERP Item-Alternatives group — mutually substitutable items share one key.
+     * Null when the item has no declared alternative, which is what keeps it from
+     * merging with anything on a printed receipt.
+     */
+    val altGroup: String? = null,
 )

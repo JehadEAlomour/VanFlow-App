@@ -51,7 +51,7 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         PriceListItemEntity::class,
         TobaccoTaxProfileEntity::class,
     ],
-    version = 22,
+    version = 23,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -114,6 +114,11 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         // stock items and showing the whole catalogue. Defaults to 0; the first online
         // main-store fetch (on opening ORDER or stock-request) fills it.
         AutoMigration(from = 21, to = 22),
+        // v23: products.altGroup — the ERP Item-Alternatives group, so the receipt's
+        // line merge folds only items the ERP actually declares substitutes instead of
+        // anything that happens to share a price. Nullable, so an install that upgrades
+        // and never re-syncs simply merges nothing across items.
+        AutoMigration(from = 22, to = 23),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)

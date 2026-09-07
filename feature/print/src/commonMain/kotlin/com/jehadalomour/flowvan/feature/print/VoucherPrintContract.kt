@@ -22,6 +22,13 @@ data class VoucherPrintState(
     /** Gift/free items (ITEM_QTY_REWARD picks) resolved for display; unitPrice/lineTotal = 0. */
     val freeLines: List<InvoiceLine> = emptyList(),
     /**
+     * sku → its ERP Item-Alternatives group, for the skus on this voucher. Drives the
+     * "merge alternatives" print option: only items the ERP declares substitutes may
+     * fold into one row. A sku missing from the map has no alternative and merges with
+     * nothing, which is also what an offline install that never synced the groups gets.
+     */
+    val altGroupBySku: Map<String, String> = emptyMap(),
+    /**
      * Print the discount on each row. A per-salesman permission, not a printer
      * setting — a slip left on a counter shows the next customer what rate the
      * last one got, so it follows the person, not the device.

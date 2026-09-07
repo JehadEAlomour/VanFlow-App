@@ -23,4 +23,5 @@ fun ProductEntity.toDomain(): Product = Product(
     isTobacco = isTobacco,
     tobaccoProfileId = tobaccoProfileId,
     consumerPriceFils = consumerPriceFils,
+    altGroup = altGroup,
 )

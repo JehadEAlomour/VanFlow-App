@@ -19,7 +19,8 @@ import org.jetbrains.compose.resources.stringResource
  * Up to three answers, each printing a different document, so the dialog is deliberately NOT
  * dismissable by tapping outside — a stray tap must not silently pick one:
  *   - Merge units:        [unitCount] > 0 — several units of the SAME item become one row.
- *   - Merge alternatives: [altCount] > [unitCount] — same-priced DIFFERENT items also fold.
+ *   - Merge alternatives: [altCount] > [unitCount] — DIFFERENT items also fold, but only
+ *     ones the ERP lists as alternatives of each other (and still at the same price/unit).
  *   - Keep all:           print every line.
  * Both merge buttons show how many lines that choice removes. All strings are localized.
  */

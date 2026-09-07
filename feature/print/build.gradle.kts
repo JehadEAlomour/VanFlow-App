@@ -34,4 +34,5 @@ dependencies {
 
     // PdfShareHelper.android uses ContextCompat (androidx.core)
     "androidMainImplementation"(libs.androidx.core.ktx)
+    "commonTestImplementation"(libs.kotlin.test)
 }

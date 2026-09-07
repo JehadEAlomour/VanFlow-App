@@ -110,6 +110,7 @@ fun ProductDto.toEntity(): ProductEntity = ProductEntity(
     isTobacco = isTobaccoProduct,
     tobaccoProfileId = tobaccoTaxProfileId,
     consumerPriceFils = consumerPriceFils ?: 0,
+    altGroup = altGroup,
 )
 
 // ---- Invoices ----

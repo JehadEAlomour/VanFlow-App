@@ -76,6 +76,8 @@ class VoucherPrintViewModel(
                 val salesman = users.findById(entity.salesmanId)
                 val settings = appSettings.get()
                 val freeLines = resolveFreeLines(entity.chosenFreeItemsCsv)
+                // Only the skus actually on this voucher — the merge never looks beyond them.
+                val altGroups = products.altGroupsBySku(lines.map { it.sku })
 
                 _state.update {
                     it.copy(
@@ -91,6 +93,7 @@ class VoucherPrintViewModel(
                         salesmanNameAr = salesman?.nameAr.orEmpty(),
                         lines = lines,
                         freeLines = freeLines,
+                        altGroupBySku = altGroups,
                         appliedOffers = appliedOffers,
                         subtotal = entity.subtotal,
                         discountAmount = entity.discountAmount,

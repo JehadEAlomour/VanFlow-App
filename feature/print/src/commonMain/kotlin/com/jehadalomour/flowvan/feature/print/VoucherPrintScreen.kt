@@ -175,10 +175,15 @@ fun VoucherPrintScreen(
     var compact by remember(state.invoiceId) { mutableStateOf<CompactMode?>(null) }
     // Two levels: same-item unit merges, and (a superset) same-priced alternative merges.
     val unitMergeable = remember(state.lines) { compactableCount(state.lines, mergeAlternatives = false) }
-    val altMergeable = remember(state.lines) { compactableCount(state.lines, mergeAlternatives = true) }
-    val shownLines = remember(state.lines, compact) {
+    // The alternatives level folds DIFFERENT items, so it needs the ERP's groups: without
+    // them the count is the unit count and the dialog never offers the second button.
+    val altMergeable = remember(state.lines, state.altGroupBySku) {
+        compactableCount(state.lines, mergeAlternatives = true, altGroups = state.altGroupBySku)
+    }
+    val shownLines = remember(state.lines, state.altGroupBySku, compact) {
         when (compact) {
-            CompactMode.ALTERNATIVES -> compactLines(state.lines, mergeAlternatives = true)
+            CompactMode.ALTERNATIVES ->
+                compactLines(state.lines, mergeAlternatives = true, altGroups = state.altGroupBySku)
             CompactMode.UNITS -> compactLines(state.lines, mergeAlternatives = false)
             else -> state.lines
         }

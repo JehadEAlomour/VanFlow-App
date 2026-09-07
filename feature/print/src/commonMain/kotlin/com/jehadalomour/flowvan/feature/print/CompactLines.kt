@@ -5,7 +5,7 @@ import com.jehadalomour.flowvan.core.model.InvoiceLine
 /**
  * Which print-only line merge the rep chose. NONE prints every line; UNITS folds
  * several lines of ONE item sold on the same unit/price; ALTERNATIVES also folds
- * DIFFERENT items that share the same unit + price (same-priced substitutes).
+ * DIFFERENT items — but only ones the ERP declares substitutes for each other.
  */
 enum class CompactMode { NONE, UNITS, ALTERNATIVES }
 
@@ -19,12 +19,14 @@ enum class CompactMode { NONE, UNITS, ALTERNATIVES }
  *
  * Two levels, both gated so merging can never change a number the customer sees:
  *  - UNITS: same item, same unit factor, same unit price, discount and tax.
- *  - ALTERNATIVES: same unit/price/discount/tax but DIFFERENT items — same-priced
- *    substitutes fold into one row. The price match is the whole safety: the summed
- *    total foots to exactly the un-merged figure, so nothing is misstated. The row
- *    takes the first member's name (the rest are its same-priced alternatives).
- * Anything priced differently always stays apart — folding it would print a price
- * nobody agreed to.
+ *  - ALTERNATIVES: DIFFERENT items may also fold, but ONLY when the ERP lists them
+ *    as alternatives of one another (Inventory → Item Alternatives, mirrored onto
+ *    each product as [Product.altGroup]). Sharing a price is not enough on its own:
+ *    a shampoo and a hairbrush at the same price are not one line item, and folding
+ *    them printed a receipt the customer could not reconcile against the goods.
+ *    An item with no declared alternative merges with nothing but itself.
+ * The price/unit/tax fields stay in the key at every level, and quantities are summed
+ * rather than recomputed, so a merge never changes a printed figure.
  */
 private data class CompactKey(
     val sku: String,
@@ -35,11 +37,17 @@ private data class CompactKey(
     val taxRate: Double,
 )
 
-private fun InvoiceLine.compactKey(mergeAlternatives: Boolean): CompactKey =
+/**
+ * [altGroups] maps sku → its ERP alternatives group. Standing in for the sku is what
+ * lets two substitutes share a key; the prefix keeps a group whose key happens to equal
+ * some other item's sku from colliding with that item.
+ */
+private fun InvoiceLine.compactKey(
+    mergeAlternatives: Boolean,
+    altGroups: Map<String, String>,
+): CompactKey =
     CompactKey(
-        // Dropping the sku is what lets same-priced DIFFERENT items merge; the price
-        // and tax fields stay in the key, so a merge never changes a printed figure.
-        sku = if (mergeAlternatives) "" else sku,
+        sku = if (mergeAlternatives) altGroups[sku]?.let { "alt:$it" } ?: sku else sku,
         conversionQty = unitConversionQty,
         unitPrice = unitPrice,
         discountPct = discountPct,
@@ -48,8 +56,11 @@ private fun InvoiceLine.compactKey(mergeAlternatives: Boolean): CompactKey =
     )
 
 /** How many lines the receipt would LOSE by compacting at [mergeAlternatives]. 0 → nothing to ask. */
-fun compactableCount(lines: List<InvoiceLine>, mergeAlternatives: Boolean = false): Int =
-    lines.size - lines.groupBy { it.compactKey(mergeAlternatives) }.size
+fun compactableCount(
+    lines: List<InvoiceLine>,
+    mergeAlternatives: Boolean = false,
+    altGroups: Map<String, String> = emptyMap(),
+): Int = lines.size - lines.groupBy { it.compactKey(mergeAlternatives, altGroups) }.size
 
 /**
  * The compacted lines, in the order the first member of each group appeared.
@@ -61,8 +72,12 @@ fun compactableCount(lines: List<InvoiceLine>, mergeAlternatives: Boolean = fals
  * they do not — a row that is "3 red + 2 blue" is honestly not any one unit, and the print
  * grid already renders a blank unit as "—".
  */
-fun compactLines(lines: List<InvoiceLine>, mergeAlternatives: Boolean = false): List<InvoiceLine> =
-    lines.groupBy { it.compactKey(mergeAlternatives) }
+fun compactLines(
+    lines: List<InvoiceLine>,
+    mergeAlternatives: Boolean = false,
+    altGroups: Map<String, String> = emptyMap(),
+): List<InvoiceLine> =
+    lines.groupBy { it.compactKey(mergeAlternatives, altGroups) }
         .values
         .map { group ->
             if (group.size == 1) group.first()

@@ -26,4 +26,6 @@ data class Product(
     val tobaccoProfileId: String? = null,
     /** MSRP / consumer price used as a tobacco tax base, in integer fils per base piece. */
     val consumerPriceFils: Long = 0L,
+    /** ERP Item-Alternatives group key; null when the item has no declared substitute. */
+    val altGroup: String? = null,
 )

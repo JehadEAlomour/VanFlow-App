@@ -18,6 +18,18 @@ class ProductRepository(private val dao: ProductDao) {
 
     suspend fun findBySku(sku: String): Product? = dao.findBySku(sku)?.toDomain()
 
+    /**
+     * The ERP Item-Alternatives group of each of [skus] that has one, keyed by sku.
+     * Items with no declared alternative are simply absent from the map — the caller
+     * treats "not in the map" as "substitutable with nothing".
+     */
+    suspend fun altGroupsBySku(skus: List<String>): Map<String, String> {
+        if (skus.isEmpty()) return emptyMap()
+        return dao.findBySkus(skus.distinct())
+            .mapNotNull { p -> p.altGroup?.takeIf { it.isNotBlank() }?.let { p.sku to it } }
+            .toMap()
+    }
+
     suspend fun adjustStock(id: String, delta: Int) = dao.adjustStock(id, delta)
 
     /** Set absolute van quantity (used when pulling per-rep stock from the backend). */

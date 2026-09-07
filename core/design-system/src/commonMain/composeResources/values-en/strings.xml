@@ -774,7 +774,7 @@
     <string name="offers_all_days">Every day</string>
     <string name="offers_priority">Priority</string>
     <string name="print_compact_title">Merge invoice lines?</string>
-    <string name="print_compact_body">Lines can be merged for printing only — the saved invoice is unchanged. "Merge units" folds lines of the same item at the same unit and price; "Merge alternatives" also folds different items that share the same price and unit into one line.</string>
+    <string name="print_compact_body">Lines can be merged for printing only — the saved invoice is unchanged. "Merge units" folds lines of the same item at the same unit and price; "Merge alternatives" also folds different items the ERP lists as alternatives of one another, at the same price and unit, into one line.</string>
     <string name="print_compact_yes">Merge units</string>
     <string name="print_compact_alternatives">Merge alternatives</string>
     <string name="print_compact_no">Print every line</string>

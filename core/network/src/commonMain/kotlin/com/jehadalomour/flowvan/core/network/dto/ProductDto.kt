@@ -30,6 +30,12 @@ data class ProductDto(
     /** MSRP / consumer price for the tobacco base, integer fils per base piece.
      *  Nullable — the BE sends null for non-tobacco items. */
     val consumerPriceFils: Long? = null,
+    /**
+     * The ERP "Item Alternatives" group this item belongs to — every item the ERP
+     * declares mutually substitutable shares one key. Null when it has none, and an
+     * item with no group is never treated as a substitute for anything.
+     */
+    val altGroup: String? = null,
     /** The item's real sellable units (base + larger), from the dashboard/ERP. */
     val units: List<ProductUnitDto> = emptyList(),
 )

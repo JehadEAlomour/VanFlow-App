@@ -27,6 +27,9 @@ interface ProductDao {
     @Query("SELECT * FROM products WHERE sku = :sku LIMIT 1")
     suspend fun findBySku(sku: String): ProductEntity?
 
+    @Query("SELECT * FROM products WHERE sku IN (:skus)")
+    suspend fun findBySkus(skus: List<String>): List<ProductEntity>
+
     @Query("UPDATE products SET vanStock = vanStock + :delta WHERE id = :id")
     suspend fun adjustStock(id: String, delta: Int)
 
