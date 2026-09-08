@@ -541,6 +541,20 @@ private fun TotalsRow(
     }
 }
 
+/**
+ * Ask the server for the small square rather than the full picture.
+ *
+ * A thumbnail is drawn at 40dp and the full photo is up to 900px wide, so a
+ * catalogue screen that used the full one downloaded roughly two hundred times
+ * the pixels it drew — over a rep's phone signal, standing in a shop. The
+ * server renders both at upload and serves whichever is asked for.
+ *
+ * Unknown parameters are ignored, so a handset on this build still loads photos
+ * from a server too old to have the square.
+ */
+private fun thumbUrl(imageUrl: String): String =
+    if (imageUrl.contains("?")) "$imageUrl&thumb=1" else "$imageUrl?thumb=1"
+
 /** Product image when available (Coil async), else the generated letter avatar. */
 @Composable
 fun ProductThumb(imageUrl: String?, seed: String, letter: String, size: Dp) {
@@ -548,7 +562,7 @@ fun ProductThumb(imageUrl: String?, seed: String, letter: String, size: Dp) {
         ProductAvatar(seed = seed, letter = letter, size = size)
     } else {
         AsyncImage(
-            model = imageUrl,
+            model = thumbUrl(imageUrl),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
