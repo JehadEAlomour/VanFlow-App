@@ -2,6 +2,7 @@ package com.jehadalomour.flowvan.core.network.api
 
 import com.jehadalomour.flowvan.core.network.dto.CreateCustomerRequest
 import com.jehadalomour.flowvan.core.network.dto.CustomerDto
+import com.jehadalomour.flowvan.core.network.dto.ErpStatementDto
 import com.jehadalomour.flowvan.core.network.dto.StagedPhotoDto
 import com.jehadalomour.flowvan.core.network.http.ApiEnvelope
 import com.jehadalomour.flowvan.core.network.dto.LogVisitRequest
@@ -100,6 +101,30 @@ class CustomerApi(private val client: FlowVanApiClient) {
             "customers/$customerId/location",
             SeedLocationRequest(lat, lng, overwrite = true),
         )
+
+    /**
+     * The customer's account as the ERP keeps it, for a date window.
+     *
+     * The office invoices a shop in the ERP, not through a van, so those documents
+     * exist in no cash-van voucher and the app's own ledger shows nothing for them.
+     * This is the account the customer's balance is actually made of.
+     *
+     * Returns an unavailable envelope rather than failing when the customer has no
+     * ERP code, ERP mode is off, or the ERP could not be reached — see
+     * [ErpStatementDto.isUsable].
+     */
+    suspend fun erpStatement(
+        customerId: String,
+        from: String? = null,
+        to: String? = null,
+    ): ErpStatementDto {
+        val query = listOfNotNull(
+            from?.let { "from=$it" },
+            to?.let { "to=$it" },
+        ).joinToString("&")
+        val suffix = if (query.isEmpty()) "" else "?$query"
+        return client.getData("customers/$customerId/erp-statement$suffix")
+    }
 
     suspend fun logVisit(customerId: String, body: LogVisitRequest) {
         client.execute(

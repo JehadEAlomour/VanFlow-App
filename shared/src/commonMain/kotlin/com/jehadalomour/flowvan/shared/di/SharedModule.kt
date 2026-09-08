@@ -112,7 +112,7 @@ fun sharedModule(): Module = module {
     single { AppSettingsRepository(get()) }
     single { CompanyInfoRepository(get(), get(), get()) }
     single { TransactionReportRepository(get(), get(), get()) }
-    single { CustomerStatementRepository(get(), get(), get()) }
+    single { CustomerStatementRepository(get(), get(), get(), get()) }
     single { ProductRepository(get()) }
     single { ProductUnitRepository(get()) }
     single { InvoiceRepository(get()) }

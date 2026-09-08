@@ -6,8 +6,11 @@ import com.jehadalomour.flowvan.core.model.ledger.StatementDocType
 import com.jehadalomour.flowvan.core.model.ledger.StatementMovement
 import com.jehadalomour.flowvan.core.model.ledger.StatementSnapshot
 import com.jehadalomour.flowvan.core.network.api.CollectionApi
+import com.jehadalomour.flowvan.core.network.api.CustomerApi
 import com.jehadalomour.flowvan.core.network.api.VoucherApi
 import com.jehadalomour.flowvan.core.network.dto.CollectionDto
+import com.jehadalomour.flowvan.core.network.dto.ErpStatementDto
+import com.jehadalomour.flowvan.core.network.dto.ErpStatementLineDto
 import com.jehadalomour.flowvan.core.network.dto.VoucherSummaryDto
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -40,6 +43,7 @@ import kotlin.time.ExperimentalTime
 class CustomerStatementRepository(
     private val vouchers: VoucherApi,
     private val collections: CollectionApi,
+    private val customerApi: CustomerApi,
     private val connectivity: ConnectivityObserver,
 ) {
     private val log = Logger.withTag("CustomerStatement")
@@ -60,6 +64,18 @@ class CustomerStatementRepository(
     ): StatementSnapshot? = coroutineScope {
         if (customerNumber.isBlank() || !connectivity.isOnline()) return@coroutineScope null
 
+        // THE ERP'S ACCOUNT FIRST, WHERE THERE IS ONE.
+        //
+        // A shop invoiced by the office has no cash-van voucher and no cash-van
+        // collection, so the ledger below finds nothing for it and the statement came
+        // back empty while the balance directly above it said the shop owed money.
+        // Where the ERP keeps the account, the ERP IS the account.
+        //
+        // It replaces the voucher ledger rather than joining it: a van's sale is
+        // pushed to the ERP and comes back as an ERP document under the ERP's own
+        // reference, so adding both lists would bill the shop twice for one sale.
+        erpStatement(customerId, fromMillis, toMillis)?.let { return@coroutineScope it }
+
         // The period, and everything before it. The prior window is fetched in full
         // rather than trusting the customer's CURRENT balance as an opening figure:
         // that number is today's, and a statement opened for last month would then
@@ -74,6 +90,38 @@ class CustomerStatementRepository(
         StatementSnapshot(
             openingBalance = priorRows.sumOf { it.movement },
             movements = periodRows.sortedBy { it.createdAt },
+            isLive = true,
+        )
+    }
+
+    /**
+     * The ERP's own statement for the window, or null to fall through to the ledger.
+     *
+     * Null means "this is not an ERP-kept account, or the ERP could not be reached" —
+     * the server says which in an unavailable envelope. It is deliberately not an
+     * error: a client running cash-van without an ERP is a normal installation, and
+     * its statement comes from the vouchers as it always did.
+     */
+    private suspend fun erpStatement(
+        customerId: String,
+        fromMillis: Long,
+        toMillis: Long,
+    ): StatementSnapshot? {
+        val dto = runCatching {
+            customerApi.erpStatement(
+                customerId = customerId,
+                from = fromMillis.toIsoDate(),
+                to = toMillis.toIsoDate(),
+            )
+        }.onFailure { log.w("ERP statement fetch failed: ${it.message}") }.getOrNull()
+
+        if (dto == null || !dto.isUsable) {
+            if (dto != null) log.d("no ERP statement (${dto.reason}); using the voucher ledger")
+            return null
+        }
+        return StatementSnapshot(
+            openingBalance = dto.openingBalance ?: 0.0,
+            movements = dto.lines.mapNotNull { it.toMovement() }.sortedBy { it.createdAt },
             isLive = true,
         )
     }
@@ -206,6 +254,35 @@ class CustomerStatementRepository(
 }
 
 // ── Dates ────────────────────────────────────────────────────────────────────
+
+/**
+ * One ERP posting → a statement row.
+ *
+ * `isLocal` is false without exception: the document is the ERP's, under the ERP's own
+ * reference, and this handset has nothing to open for it. Tapping the row must do
+ * nothing rather than open a blank voucher.
+ *
+ * A line the ERP could not date is dropped. A statement is a running balance in date
+ * order, and a row with no date has no place in that order — showing it somewhere
+ * arbitrary makes every balance after it wrong.
+ */
+@OptIn(ExperimentalTime::class)
+private fun ErpStatementLineDto.toMovement(): StatementMovement? {
+    val millis = date?.isoDateToMillis() ?: return null
+    return StatementMovement(
+        id = "ERP-$reference-$millis",
+        number = reference.ifBlank { description },
+        createdAt = millis,
+        docType = if (type.equals("PAYMENT", ignoreCase = true)) {
+            StatementDocType.PAYMENT
+        } else {
+            StatementDocType.SALE
+        },
+        debit = debit,
+        credit = credit,
+        isLocal = false,
+    )
+}
 
 @OptIn(ExperimentalTime::class)
 private fun Long.toIsoDate(): String {
