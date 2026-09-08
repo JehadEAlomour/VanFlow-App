@@ -106,14 +106,15 @@ fun TargetsScreen(
 /**
  * One month, as the salesman sees it.
  *
- * They are measured on two separate things — what they SOLD and what they
- * COLLECTED — and paid at a different rate for each. Both are shown, and both
- * only if a target was actually set: a bar for a target nobody set would read as
- * total failure rather than as "nothing was asked of you here".
+ * NO COMMISSION FIGURE. What the month pays is between the salesman and the
+ * office, settled away from this screen; here they see what they were asked for
+ * and how far along they are. The server still sends it — the dashboard needs
+ * it — so this is a deliberate omission, not a field that does not exist.
  *
- * The commission is broken into its parts rather than stated as one figure. A
- * salesman who can watch the month adding up does not have to take the number on
- * trust at the end of it.
+ * They are measured on two separate things — what they SOLD and what they
+ * COLLECTED. Both are shown, and each gets a bar only if a target was actually
+ * set: a bar for a target nobody set would read as total failure rather than as
+ * "nothing was asked of you here".
  */
 @Composable
 private fun TargetCard(t: SalesTarget, highlighted: Boolean) {
@@ -131,14 +132,7 @@ private fun TargetCard(t: SalesTarget, highlighted: Boolean) {
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),
                 )
-                if (t.commissionTotal > 0.0) {
-                    Text(
-                        t.commissionTotal.formatJod(AppLanguage.AR),
-                        color = Fv.Green,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
+
             }
 
             Spacer(Modifier.height(10.dp))
@@ -156,29 +150,6 @@ private fun TargetCard(t: SalesTarget, highlighted: Boolean) {
                 progressPct = t.collectionProgressPct,
             )
 
-            if (t.commissionTotal > 0.0) {
-                Spacer(Modifier.height(10.dp))
-                // On SALES, not on cash and credit separately: a salesman works
-                // one payment method, so splitting the line would show them a
-                // zero beside their own commission and invite the question.
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Figure(
-                        stringResource(Res.string.targets_sales),
-                        (t.commissionOnCash + t.commissionOnCredit).formatJod(AppLanguage.AR),
-                        Modifier.weight(1f),
-                    )
-                    Figure(
-                        stringResource(Res.string.targets_collections),
-                        t.commissionOnCollection.formatJod(AppLanguage.AR),
-                        Modifier.weight(1f),
-                    )
-                    Figure(
-                        stringResource(Res.string.targets_commission_total),
-                        t.commissionTotal.formatJod(AppLanguage.AR),
-                        Modifier.weight(1f),
-                    )
-                }
-            }
         }
     }
 }
