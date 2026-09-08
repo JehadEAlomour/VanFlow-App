@@ -142,9 +142,14 @@ class VoucherViewModel(
             )
         }
 
-        // SALE only: re-evaluate offers (debounced) whenever the cart, payment method,
-        // or the rep's gift picks change. RETURN/ORDER never evaluate offers.
-        if (type == VoucherType.SALE) {
+        // SALE and ORDER: re-evaluate offers (debounced) whenever the cart, payment
+        // method, or the rep's gift picks change. RETURN never evaluates offers —
+        // a return gives back what a sale already priced.
+        //
+        // ORDER earns it because the order becomes the sale. Quoting a customer at
+        // list price and then discounting on delivery means the figure they agreed
+        // to is not the figure they are invoiced, and the gap is found at the door.
+        if (type == VoucherType.SALE || type == VoucherType.ORDER) {
             observeCartForOffers()
             // Freshen the offline offers cache on open so the first offline evaluation is
             // as current as possible. Best-effort — a failure leaves the existing cache.
@@ -223,7 +228,7 @@ class VoucherViewModel(
 
     }
 
-    // ── Offers (SALE only) ─────────────────────────────────────────────────────
+    // ── Offers (SALE + ORDER) ──────────────────────────────────────────────────
 
     /** A cart fingerprint that changes only when offer-relevant cart data changes. */
     private fun cartKey(s: VoucherState): List<Pair<String, Double>> =
@@ -744,12 +749,20 @@ class VoucherViewModel(
                 VoucherType.ORDER -> createRequest(
                     customerId = customerId,
                     salesmanId = salesmanId,
+                    // RAW cart, exactly as the sale sends it: the server re-applies
+                    // offers on ingest, so the offer-adjusted cart would be
+                    // discounted twice. The display copy goes in below.
                     cart = s.cart,
                     expectedDeliveryAt = s.deliveryDate,
                     notes = s.notes.takeIf { it.isNotBlank() },
                     // An exempt customer's order is tax-free, like the sale it becomes.
                     taxExempt = s.isTaxExemptDoc,
                     taxExemptionNumber = s.customer?.taxExemptionNumber,
+                    // Offers — the order is quoted at the price the sale will charge.
+                    chosenFreeItems = s.chosenFreeItems,
+                    freeLines = s.freeLines,
+                    offerAdjustedCart = s.displayCart,
+                    appliedOffers = s.printedOffers,
                 )
             }
             result.fold(
