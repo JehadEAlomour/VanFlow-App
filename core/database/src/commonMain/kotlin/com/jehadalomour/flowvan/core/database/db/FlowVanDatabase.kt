@@ -51,7 +51,7 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         PriceListItemEntity::class,
         TobaccoTaxProfileEntity::class,
     ],
-    version = 23,
+    version = 24,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -119,6 +119,11 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
         // anything that happens to share a price. Nullable, so an install that upgrades
         // and never re-syncs simply merges nothing across items.
         AutoMigration(from = 22, to = 23),
+        // v24: invoices.freeLinesJson — the gift lines a sale (or order) carried.
+        // Only the rep's PICKS were stored, never the resulting lines, so a return
+        // built from a sale with a gift pre-filled the paid items and dropped the
+        // free one. Nullable, so every existing document simply reads null.
+        AutoMigration(from = 23, to = 24),
     ],
 )
 @ConstructedBy(FlowVanDatabaseConstructor::class)

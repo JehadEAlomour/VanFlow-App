@@ -58,6 +58,20 @@ data class InvoiceEntity(
      */
     val appliedOffersJson: String? = null,
     /**
+     * The GIFT lines this document carried, as a JSON list of
+     * [com.jehadalomour.flowvan.core.model.FreeLine] (v24).
+     *
+     * They were never stored. The picks travelled to the server as
+     * [chosenFreeItemsCsv] and the printed footer got its figures from
+     * [appliedOffersJson], but neither carries the item numbers, so nothing local
+     * knew WHICH pieces were given away. A return built from this sale therefore
+     * pre-filled only the paid lines and the gift silently vanished — the rep
+     * could not take back the piece the customer was actually handed.
+     *
+     * Null on every document saved before v24, and on any with no gifts.
+     */
+    val freeLinesJson: String? = null,
+    /**
      * Tax-exemption SNAPSHOT (v18) — how THIS document was issued, not what the
      * customer's record says today. Frozen at save time and mirrored from the
      * server's own snapshot on sync, so a receipt reprinted months later still

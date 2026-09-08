@@ -222,6 +222,14 @@ class CreateSaleVoucherUseCase(
             appliedOffersJson = appliedOffers
                 .takeIf { it.isNotEmpty() }
                 ?.let { json.encodeToString(it) },
+            // The gift lines themselves. appliedOffersJson carries each offer's NAME and
+            // AMOUNT but no item numbers, and chosenFreeItemsCsv carries the rep's picks
+            // rather than what the evaluation actually produced — so without this nothing
+            // local knows which pieces left the van for free, and a return built from this
+            // sale silently drops them.
+            freeLinesJson = freeLines
+                .takeIf { it.isNotEmpty() }
+                ?.let { json.encodeToString(it) },
         )
 
         invoices.save(entity)

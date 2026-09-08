@@ -19,6 +19,7 @@ import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
 import com.jehadalomour.flowvan.core.model.CartLine
 import kotlin.math.floor
+import com.jehadalomour.flowvan.core.model.FreeLine
 import com.jehadalomour.flowvan.core.model.InvoiceLine
 import com.jehadalomour.flowvan.core.model.InvoiceTaxCalculator
 import com.jehadalomour.flowvan.core.model.LineTaxType
@@ -439,14 +440,53 @@ class VoucherViewModel(
                     imageUrl = s.products.firstOrNull { it.id == line.productId }?.imageUrl,
                 )
             }
+            // The GIFT lines the sale carried. They are not in linesJson — a gift is not
+            // a sold line — so a return built from the paid lines alone handed the
+            // customer's free piece back to nobody: it stayed on their shelf and on the
+            // van's books. Priced like the server posts them, at full price with a 100%
+            // discount, so the returned gift refunds nothing while still moving the stock.
+            val freeLines = runCatching {
+                invoice.freeLinesJson?.let { json.decodeFromString<List<FreeLine>>(it) }
+            }.getOrNull().orEmpty()
+
+            val giftCart = freeLines.mapNotNull { free ->
+                // Match the catalogue by sku — a FreeLine carries the item number, not the
+                // productId, and the base unit is what a gift is always given in.
+                val product = s.products.firstOrNull { it.sku == free.itemNumber } ?: return@mapNotNull null
+                CartLine(
+                    productId = product.id,
+                    sku = free.itemNumber,
+                    nameAr = product.nameAr,
+                    unitPrice = free.unitPriceJod,
+                    qty = free.qty,
+                    discountPct = 1.0,
+                    unit = product.unit,
+                    unitId = "",
+                    unitConversionQty = 1.0,
+                    taxRate = product.taxRate,
+                    lineTaxType = s.taxType,
+                    imageUrl = product.imageUrl,
+                )
+            }
+
             // A return is issued "as it was": if the source sale was tax-exempt, re-price
             // the lines tax-free so the return document (screen, save, print) carries no
             // tax — even for an older sale whose lines predate exempt line-typing.
-            val cart = if (invoice.isTaxExempt) InvoiceTaxCalculator.exemptCartLines(rawCart) else rawCart
+            val paidCart = if (invoice.isTaxExempt) InvoiceTaxCalculator.exemptCartLines(rawCart) else rawCart
+            val cart = paidCart + giftCart
             // Per (product, unit): a sale of 3 red + 2 blue caps each colour on its own,
             // where a productId-keyed map would have kept only the last line's quantity.
-            val sold = lines.associate {
-                lineKey(it.productId, it.unitId) to it.qty * conversionFor(it)
+            // The gifts join the cap too, or the rep could see the free line and still be
+            // refused when trying to return it.
+            val sold = buildMap<String, Double> {
+                lines.forEach {
+                    val k = lineKey(it.productId, it.unitId)
+                    put(k, (get(k) ?: 0.0) + it.qty * conversionFor(it))
+                }
+                giftCart.forEach {
+                    val k = lineKey(it.productId, it.unitId)
+                    put(k, (get(k) ?: 0.0) + it.qty * it.unitConversionQty)
+                }
             }
 
             s.copy(

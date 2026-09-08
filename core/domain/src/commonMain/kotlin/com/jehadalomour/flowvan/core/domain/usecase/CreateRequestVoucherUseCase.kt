@@ -146,6 +146,11 @@ class CreateRequestVoucherUseCase(
             appliedOffersJson = appliedOffers
                 .takeIf { it.isNotEmpty() }
                 ?.let { json.encodeToString(it) },
+            // The gift lines themselves — see the sale for why the breakdown alone
+            // is not enough to know which pieces were given.
+            freeLinesJson = freeLines
+                .takeIf { it.isNotEmpty() }
+                ?.let { json.encodeToString(it) },
         )
         invoices.save(entity)
         // No stock or balance change — intentional for pre-orders. That holds for
