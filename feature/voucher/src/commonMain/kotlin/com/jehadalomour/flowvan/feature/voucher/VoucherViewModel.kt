@@ -454,8 +454,14 @@ class VoucherViewModel(
                 invoice.freeLinesJson?.let { json.decodeFromString<List<FreeLine>>(it) }
             }.getOrNull().orEmpty()
 
-            val giftCart = freeLines.mapNotNull { free ->
-                // Match the catalogue by sku — a FreeLine carries the item number, not the
+            // Two offers can gift the same item; that is one line of two pieces, not two
+            // lines sharing a key. Pooling here keeps the cart's keys unique whatever the
+            // evaluation produced.
+            val giftCart = freeLines
+                .groupBy { it.itemNumber }
+                .map { (_, group) -> group.first().copy(qty = group.sumOf { it.qty }) }
+                .mapNotNull { free ->
+                    // Match the catalogue by sku — a FreeLine carries the item number, not the
                 // productId, and the base unit is what a gift is always given in.
                 val product = s.products.firstOrNull { it.sku == free.itemNumber } ?: return@mapNotNull null
                 CartLine(
@@ -466,7 +472,10 @@ class VoucherViewModel(
                     qty = free.qty,
                     discountPct = 1.0,
                     unit = product.unit,
-                    unitId = "",
+                    // NOT "" — the paid line that earned this gift is the same item in
+                    // the same base unit, so both would key on (productId, "") and the
+                    // cart's LazyColumn dies on the duplicate key. See GIFT_UNIT_ID.
+                    unitId = GIFT_UNIT_ID,
                     unitConversionQty = 1.0,
                     taxRate = product.taxRate,
                     lineTaxType = s.taxType,
