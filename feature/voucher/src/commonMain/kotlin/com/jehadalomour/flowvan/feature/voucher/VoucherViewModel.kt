@@ -102,7 +102,20 @@ class VoucherViewModel(
     private var approvalPollJob: Job? = null
 
     private val _state = MutableStateFlow(
-        VoucherState(type = type, showSourcePicker = type == VoucherType.RETURN),
+        VoucherState(
+            type = type,
+            showSourcePicker = type == VoucherType.RETURN,
+            // An ORDER is taken on account — the goods are not delivered yet, so
+            // nobody pays at the counter. Sale and return keep CASH, and a sale
+            // still asks the rep outright (showPaymentChooser). The order screen
+            // never asks, so before this it silently kept the CASH default and
+            // printed a slip that said cash for a document that was always credit.
+            paymentMethod = if (type == VoucherType.ORDER) {
+                PaymentMethod.CREDIT
+            } else {
+                PaymentMethod.CASH
+            },
+        ),
     )
     val state: StateFlow<VoucherState> = _state.asStateFlow()
 

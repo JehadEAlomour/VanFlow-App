@@ -7,6 +7,7 @@ import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.InvoiceDiscountInput
 import com.jehadalomour.flowvan.core.model.InvoiceLine
 import com.jehadalomour.flowvan.core.model.InvoiceTaxCalculator
+import com.jehadalomour.flowvan.core.model.PaymentMethod
 import com.jehadalomour.flowvan.core.domain.sync.SyncScheduler
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -84,7 +85,13 @@ class CreateRequestVoucherUseCase(
             discountAmount = summary.totalLineDiscounts,
             taxAmount      = summary.totalTax,
             total          = summary.grandTotal,
-            paymentMethod  = null,
+            // An order is taken on account: nobody pays for goods that have not
+            // been delivered, so CREDIT is what it is. It used to be stored null
+            // and every reader inferred credit from the absence — the cash-flow
+            // report by convention, the printed slip by leaving the line blank.
+            // Recording it says the same thing the server now records, so the
+            // offline copy and the synced one agree instead of coinciding.
+            paymentMethod  = PaymentMethod.CREDIT.name,
             notes          = if (noteParts.isEmpty()) null else noteParts.joinToString(" — "),
             syncedAt       = null,
             repLat = loc?.lat,

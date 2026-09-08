@@ -66,7 +66,14 @@ fun InvoiceEntity.toVoucherRequest(userCode: String, customerNumber: String?, js
         "RETURN" -> "RETURN"
         else -> "ORDER"
     }
-    val payments = if ((type == "SALE" || type == "RETURN") && paymentMethod != null) {
+    // REQUEST joins SALE/RETURN here: an order now carries its own CREDIT method,
+    // so the uploaded document states what it is instead of arriving blank and
+    // leaning on the server's default. Same value either way — this just means
+    // the local record and the server's record are identical rather than agreeing
+    // by two separate rules.
+    val payments = if (
+        (type == "SALE" || type == "RETURN" || type == "REQUEST") && paymentMethod != null
+    ) {
         // Use the payment type saved with the invoice (CASH | CHEQUE | TRANSFER | CREDIT).
         // RETURN carries it too: without a payment row the server records no return
         // payment, so the rep settlement never deducts a cash return, the credit-note
