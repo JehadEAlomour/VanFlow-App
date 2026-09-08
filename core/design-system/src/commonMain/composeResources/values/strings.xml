@@ -216,6 +216,14 @@
     <string name="targets_target">الهدف</string>
     <string name="targets_achieved">المُحقَّق</string>
     <string name="targets_remaining">المتبقّي</string>
+    <string name="targets_sales">المبيعات</string>
+    <string name="targets_collections">التحصيل</string>
+    <string name="targets_commission">العمولة</string>
+    <string name="targets_commission_total">إجمالي العمولة</string>
+    <string name="targets_on_cash">على النقدي</string>
+    <string name="targets_on_credit">على الآجل</string>
+    <string name="targets_on_collection">على التحصيل</string>
+    <string name="targets_no_target_set">بدون هدف</string>
     <string name="targets_qty_unit">وحدة</string>
 
     <!-- All Sales Report -->

@@ -26,5 +26,18 @@ private fun TargetDto.toDomain(): SalesTarget {
         achieved = conv(achievedRaw),
         remaining = conv(remaining ?: 0.0),
         progressPct = progressPct ?: 0,
+
+        // Always fils, whatever `metric` says: these are money, and the old
+        // AMOUNT/QTY switch above does not apply to them.
+        salesTarget = salesTargetFils?.let { it / 1000.0 },
+        collectionTarget = collectionTargetFils?.let { it / 1000.0 },
+        salesAchieved = totalSalesFils / 1000.0,
+        collectedAchieved = collectedFils / 1000.0,
+        salesProgressPct = salesProgressPct,
+        collectionProgressPct = collectionProgressPct,
+        commissionOnCash = commissionOnCashFils / 1000.0,
+        commissionOnCredit = commissionOnCreditFils / 1000.0,
+        commissionOnCollection = commissionOnCollectionFils / 1000.0,
+        commissionTotal = commissionTotalFils / 1000.0,
     )
 }

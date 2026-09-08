@@ -216,6 +216,14 @@
     <string name="targets_target">Target</string>
     <string name="targets_achieved">Achieved</string>
     <string name="targets_remaining">Remaining</string>
+    <string name="targets_sales">Sales</string>
+    <string name="targets_collections">Collections</string>
+    <string name="targets_commission">Commission</string>
+    <string name="targets_commission_total">Total commission</string>
+    <string name="targets_on_cash">On cash</string>
+    <string name="targets_on_credit">On credit</string>
+    <string name="targets_on_collection">On collection</string>
+    <string name="targets_no_target_set">No target</string>
     <string name="targets_qty_unit">units</string>
 
     <!-- All Sales Report -->
