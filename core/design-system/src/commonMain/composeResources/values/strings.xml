@@ -809,6 +809,8 @@
     <string name="statement_col_debit">مدين</string>
     <string name="statement_col_credit">دائن</string>
     <string name="statement_col_balance">الرصيد</string>
+    <string name="statement_col_doc_no">رقم السند</string>
+    <string name="statement_page_of">صفحة %1$d من %2$d</string>
     <string name="statement_payment">دفعة</string>
     <string name="statement_salesman">المندوب</string>
     <string name="statement_printed_at">تاريخ الطباعة</string>

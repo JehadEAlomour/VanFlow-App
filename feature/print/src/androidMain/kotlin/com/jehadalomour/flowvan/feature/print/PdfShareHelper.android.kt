@@ -27,6 +27,52 @@ private class AndroidPdfShareHelper(private val context: Context) : PdfShareHelp
         context.startActivity(Intent.createChooser(intent, "مشاركة الفاتورة"))
     }
 
+    override suspend fun shareAsPagedPdf(pages: List<ImageBitmap>, documentName: String) {
+        if (pages.isEmpty()) return
+        val file = writePagedPdf(pages.map { it.asAndroidBitmap() }, "${sanitize(documentName)}.pdf")
+        share(file)
+    }
+
+    /**
+     * Each captured sheet becomes one A4 page, drawn edge to edge.
+     *
+     * No fit-to-margin here: the sheets were LAID OUT at A4 proportions with their
+     * own margins already in them, so scaling them again inside a margin would inset
+     * the document twice and shrink the type for nothing.
+     */
+    private fun writePagedPdf(bitmaps: List<Bitmap>, fileName: String): File {
+        val document = PdfDocument()
+        val dest = android.graphics.RectF(0f, 0f, A4_POINTS_WIDE, A4_POINTS_TALL)
+        bitmaps.forEachIndexed { index, bitmap ->
+            val soft = bitmap.toSoftware()
+            val pageInfo = PdfDocument.PageInfo
+                .Builder(A4_POINTS_WIDE.toInt(), A4_POINTS_TALL.toInt(), index + 1)
+                .create()
+            val page = document.startPage(pageInfo)
+            page.canvas.drawBitmap(soft, null, dest, null)
+            document.finishPage(page)
+            if (soft !== bitmap) soft.recycle()
+        }
+        val file = File(context.cacheDir, fileName)
+        document.writeTo(FileOutputStream(file))
+        document.close()
+        return file
+    }
+
+    private fun share(file: File) {
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/pdf"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "مشاركة الكشف"))
+    }
+
+    /** GraphicsLayer hands back a hardware bitmap; a PDF canvas cannot draw one. */
+    private fun Bitmap.toSoftware(): Bitmap =
+        if (config == Bitmap.Config.HARDWARE) copy(Bitmap.Config.ARGB_8888, false) else this
+
     private fun writePdf(bitmap: Bitmap, fileName: String, a4: Boolean): File {
         // GraphicsLayer returns a hardware-backed bitmap; PDF canvas needs software rendering.
         val soft = if (bitmap.config == Bitmap.Config.HARDWARE) {
@@ -64,6 +110,12 @@ private class AndroidPdfShareHelper(private val context: Context) : PdfShareHelp
         document.close()
         if (soft !== bitmap) soft.recycle()
         return file
+    }
+
+    private companion object {
+        /** Portrait A4 in PostScript points (1/72"). */
+        const val A4_POINTS_WIDE = 595f
+        const val A4_POINTS_TALL = 842f
     }
 
     private fun sanitize(name: String) = name.replace(Regex("[^A-Za-z0-9_\\-]"), "_")
