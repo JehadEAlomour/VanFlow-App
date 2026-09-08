@@ -19,6 +19,18 @@ interface PdfShareHelper {
      * (the thermal-receipt behaviour), unchanged.
      */
     suspend fun shareAsPdf(imageBitmap: ImageBitmap, invoiceNumber: String, a4: Boolean = false)
+
+    /**
+     * Share a document that already HAS pages: one captured A4 sheet per [pages]
+     * entry, each written to a page of its own at full size.
+     *
+     * Distinct from [shareAsPdf] with `a4 = true`, which takes one image of any
+     * shape and shrinks it to fit a single sheet. That is right for an invoice,
+     * which is about a page long; it is wrong for an account statement, where the
+     * number of movements is however many the shop made — scaled onto one sheet, a
+     * busy month becomes type nobody can read.
+     */
+    suspend fun shareAsPagedPdf(pages: List<ImageBitmap>, documentName: String)
 }
 
 @Composable
