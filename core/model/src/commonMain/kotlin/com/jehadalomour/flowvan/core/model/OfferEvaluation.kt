@@ -1,5 +1,7 @@
 package com.jehadalomour.flowvan.core.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * Domain result of an offers evaluation. Money is JOD (major units, Double) — the
  * network mapper converts fils → JOD at its boundary. Discounts here are **display
@@ -85,7 +87,14 @@ data class OfferLineAdj(
     val discountJod: Double,
 )
 
-/** A free item added by an offer: a normal cart line at its real price, netted to 0. */
+/**
+ * A free item added by an offer: a normal cart line at its real price, netted to 0.
+ *
+ * Serializable because the document stores its gift lines (invoices.freeLinesJson) —
+ * without the annotation encodeToString still COMPILES, defers to a runtime serializer
+ * lookup, and throws SerializationException the moment a sale with a gift is saved.
+ */
+@Serializable
 data class FreeLine(
     val itemNumber: String,
     val qty: Double,
