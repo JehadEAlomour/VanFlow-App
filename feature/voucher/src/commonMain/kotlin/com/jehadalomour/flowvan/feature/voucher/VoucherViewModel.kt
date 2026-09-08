@@ -5,6 +5,7 @@ import com.jehadalomour.flowvan.core.common.search.matchesTokenSearch
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jehadalomour.flowvan.core.database.dao.InvoiceDao
+import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
 import com.jehadalomour.flowvan.core.data.location.LatLng
 import com.jehadalomour.flowvan.core.data.location.LocationProvider
 import com.jehadalomour.flowvan.core.data.location.isWithinProximity
@@ -58,6 +59,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -176,9 +178,29 @@ class VoucherViewModel(
         // numbers match the server (the server keeps the app's number on upload), so
         // they're valid references. Sales made elsewhere use the lookup-by-number box.
         if (type == VoucherType.RETURN) {
-            invoiceDao.observeByCustomerAndType(customerId, "SALE")
-                .onEach { sales ->
-                    _state.update { it.copy(sourceInvoices = sales.filter { inv -> inv.status != "CANCELLED" }) }
+            // Sales AND the returns already taken against them. A piece can only come
+            // back once: without the second flow the same sale could be returned over
+            // and over, each time for its full quantity.
+            combine(
+                invoiceDao.observeByCustomerAndType(customerId, "SALE"),
+                invoiceDao.observeByCustomerAndType(customerId, "RETURN"),
+            ) { sales, returns -> sales to returns }
+                .onEach { (sales, returns) ->
+                    val live = sales.filter { inv -> inv.status != "CANCELLED" }
+                    val returnedBySale = returnedBaseQtyBySale(returns)
+                    _state.update {
+                        it.copy(
+                            sourceInvoices = live,
+                            returnedBySale = returnedBySale,
+                            // A sale with nothing left is shown, but greyed and labelled:
+                            // hiding it would leave the rep hunting for an invoice they
+                            // can see on the customer's own paperwork.
+                            fullyReturnedSaleIds = live
+                                .filter { sale -> remainingOf(sale, returnedBySale).isEmpty() }
+                                .map { sale -> sale.id }
+                                .toSet(),
+                        )
+                    }
                 }
                 .launchIn(viewModelScope)
         }
@@ -413,6 +435,68 @@ class VoucherViewModel(
         }
     }
 
+    /**
+     * What each sale has ALREADY had returned, in base units, keyed by sale id and
+     * then by [lineKey].
+     *
+     * Reads the returns the device holds — the ones this rep raised. A return taken
+     * on another handset is not here, and the server refuses the excess on upload;
+     * this is what stops the rep filling a cart that was always going to bounce.
+     */
+    private fun returnedBaseQtyBySale(
+        returns: List<InvoiceEntity>,
+    ): Map<String, Map<String, Double>> {
+        val out = mutableMapOf<String, MutableMap<String, Double>>()
+        for (ret in returns) {
+            if (ret.status == "CANCELLED") continue
+            val saleId = ret.referenceInvoiceId ?: continue
+            val lines = runCatching {
+                json.decodeFromString<List<InvoiceLine>>(ret.linesJson)
+            }.getOrDefault(emptyList())
+            val bySale = out.getOrPut(saleId) { mutableMapOf() }
+            for (l in lines) {
+                val k = lineKey(l.productId, l.unitId)
+                bySale[k] = (bySale[k] ?: 0.0) + l.qty * l.unitConversionQty
+            }
+        }
+        return out
+    }
+
+    /**
+     * Base units still returnable on one sale, per [lineKey] — what it sold (its paid
+     * lines PLUS the gifts it carried) minus what has come back. Entries that reach
+     * zero are dropped, so an empty map means the sale is fully returned.
+     */
+    private fun remainingOf(
+        sale: InvoiceEntity,
+        returnedBySale: Map<String, Map<String, Double>>,
+    ): Map<String, Double> {
+        val sold = mutableMapOf<String, Double>()
+        runCatching { json.decodeFromString<List<InvoiceLine>>(sale.linesJson) }
+            .getOrDefault(emptyList())
+            .forEach { l ->
+                val k = lineKey(l.productId, l.unitId)
+                sold[k] = (sold[k] ?: 0.0) + l.qty * l.unitConversionQty
+            }
+        // Gifts are returnable too — the customer was handed them.
+        runCatching {
+            sale.freeLinesJson?.let { json.decodeFromString<List<FreeLine>>(it) }
+        }.getOrNull().orEmpty().forEach { free ->
+            val productId = productIdForSku(free.itemNumber) ?: return@forEach
+            val k = lineKey(productId, GIFT_UNIT_ID)
+            sold[k] = (sold[k] ?: 0.0) + free.qty
+        }
+
+        val taken = returnedBySale[sale.id].orEmpty()
+        return sold
+            .mapValues { (k, qty) -> qty - (taken[k] ?: 0.0) }
+            .filterValues { it > 0.0001 }
+    }
+
+    /** The catalogue id behind an item number, for gift lines that carry only the sku. */
+    private fun productIdForSku(sku: String): String? =
+        _state.value.products.firstOrNull { it.sku == sku }?.id
+
     /** Pre-fill the return cart from a locally-saved sale invoice — same items/quantities. */
     private fun selectSourceInvoice(invoiceId: String) {
         _state.update { s ->
@@ -429,13 +513,29 @@ class VoucherViewModel(
             fun conversionFor(line: InvoiceLine): Double =
                 unitFor(line)?.conversionQty ?: line.unitConversionQty
 
-            val rawCart = lines.map { line ->
+            // What is still returnable on this sale, after everything already taken back.
+            val remaining = remainingOf(invoice, s.returnedBySale)
+
+            val rawCart = lines
+                // A line returned in full is gone from the cart: offering it again is
+                // offering a refund the server will refuse.
+                .filter { (remaining[lineKey(it.productId, it.unitId)] ?: 0.0) > 0.0 }
+                .map { line ->
                 CartLine(
                     productId = line.productId,
                     sku = line.sku,
                     nameAr = line.nameAr,
                     unitPrice = line.unitPrice,
-                    qty = line.qty,
+                    // Capped at what is LEFT, converted back into this line's own unit —
+                    // a partly-returned carton line pre-fills with the rest, not the
+                    // original quantity.
+                    qty = minOf(
+                        line.qty,
+                        // A 0 conversion would divide by zero; treat it as base units,
+                        // which is what a missing or broken unit means everywhere else.
+                        (remaining[lineKey(line.productId, line.unitId)] ?: 0.0) /
+                            conversionFor(line).let { if (it > 0.0) it else 1.0 },
+                    ),
                     discountPct = line.discountPct,
                     unit = line.unit,
                     unitId = line.unitId,
@@ -460,6 +560,14 @@ class VoucherViewModel(
             val giftCart = freeLines
                 .groupBy { it.itemNumber }
                 .map { (_, group) -> group.first().copy(qty = group.sumOf { it.qty }) }
+                .mapNotNull { free ->
+                    val productIdForGift = s.products.firstOrNull { it.sku == free.itemNumber }?.id
+                    val leftOfGift = productIdForGift
+                        ?.let { remaining[lineKey(it, GIFT_UNIT_ID)] }
+                        ?: 0.0
+                    if (leftOfGift <= 0.0) return@mapNotNull null
+                    free.copy(qty = minOf(free.qty, leftOfGift))
+                }
                 .mapNotNull { free ->
                     // Match the catalogue by sku — a FreeLine carries the item number, not the
                 // productId, and the base unit is what a gift is always given in.
@@ -492,16 +600,9 @@ class VoucherViewModel(
             // where a productId-keyed map would have kept only the last line's quantity.
             // The gifts join the cap too, or the rep could see the free line and still be
             // refused when trying to return it.
-            val sold = buildMap<String, Double> {
-                lines.forEach {
-                    val k = lineKey(it.productId, it.unitId)
-                    put(k, (get(k) ?: 0.0) + it.qty * conversionFor(it))
-                }
-                giftCart.forEach {
-                    val k = lineKey(it.productId, it.unitId)
-                    put(k, (get(k) ?: 0.0) + it.qty * it.unitConversionQty)
-                }
-            }
+            // The per-line cap is what is LEFT, not what was sold — otherwise a rep who
+            // already returned half could type the original quantity back in.
+            val sold = remaining
 
             s.copy(
                 cart = cart,

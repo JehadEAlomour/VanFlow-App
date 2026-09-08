@@ -659,6 +659,7 @@
     <string name="return_source_pick">Pick the sale invoice to return against</string>
     <string name="return_source_title">Sale invoices</string>
     <string name="return_source_empty">No sale invoices for this customer</string>
+    <string name="return_source_fully_returned">Fully returned</string>
     <string name="return_reference_label">Reference: #%1$s</string>
     <string name="return_change">Change</string>
     <string name="voucher_unit_price">Unit Price</string>

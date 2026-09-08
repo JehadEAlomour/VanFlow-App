@@ -659,6 +659,7 @@
     <string name="return_source_pick">اختر فاتورة البيع للإرجاع</string>
     <string name="return_source_title">فواتير البيع</string>
     <string name="return_source_empty">لا توجد فواتير بيع لهذا العميل</string>
+    <string name="return_source_fully_returned">مُرتجعة بالكامل</string>
     <string name="return_reference_label">مرجع الفاتورة: #%1$s</string>
     <string name="return_change">تغيير</string>
     <string name="voucher_unit_price">سعر الوحدة</string>

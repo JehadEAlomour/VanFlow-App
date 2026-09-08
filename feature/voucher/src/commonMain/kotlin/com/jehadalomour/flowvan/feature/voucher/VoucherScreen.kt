@@ -379,6 +379,7 @@ fun VoucherScreen(
     if (state.showSourcePicker) {
         SourceInvoicePickerDialog(
             invoices = state.sourceInvoices,
+            fullyReturnedIds = state.fullyReturnedSaleIds,
             lookupQuery = state.sourceLookupQuery,
             isLookingUp = state.isLookingUp,
             onLookupChange = { viewModel.onEvent(VoucherEvent.SourceLookupChanged(it)) },
@@ -2414,6 +2415,8 @@ private fun ReturnReferenceBanner(referenceNumber: String?, onPick: () -> Unit) 
 @Composable
 private fun SourceInvoicePickerDialog(
     invoices: List<InvoiceEntity>,
+    /** Sales with nothing left to return — shown, but greyed and unselectable. */
+    fullyReturnedIds: Set<String>,
     lookupQuery: String,
     isLookingUp: Boolean,
     onLookupChange: (String) -> Unit,
@@ -2455,20 +2458,53 @@ private fun SourceInvoicePickerDialog(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(invoices) { inv ->
+                        // Everything on this sale has already come back. Listed anyway —
+                        // the rep is holding the customer's copy and would otherwise hunt
+                        // for an invoice that had silently vanished — but greyed, not
+                        // tappable, and told why.
+                        val spent = inv.id in fullyReturnedIds
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(Fv.SurfaceTop)
-                                .clickable { onSelect(inv.id) }
+                                .clickable(enabled = !spent) { onSelect(inv.id) }
                                 .padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalArrangement = Arrangement.spacedBy(2.dp),
                         ) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("#${inv.number}", color = Fv.TextHigh, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                Text(inv.total.formatJod(AppLanguage.AR), color = Fv.Green, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    "#${inv.number}",
+                                    color = if (spent) Fv.TextMid else Fv.TextHigh,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Text(
+                                    inv.total.formatJod(AppLanguage.AR),
+                                    color = if (spent) Fv.TextMid else Fv.Green,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
                             }
-                            Text(formatInvoiceDate(inv.createdAt), color = Fv.TextMid, fontSize = 11.sp)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(formatInvoiceDate(inv.createdAt), color = Fv.TextMid, fontSize = 11.sp)
+                                if (spent) {
+                                    Text(
+                                        stringResource(Res.string.return_source_fully_returned),
+                                        color = Fv.Amber,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(Fv.Amber.copy(alpha = 0.15f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                                    )
+                                }
+                            }
                         }
                     }
                     }
