@@ -106,6 +106,11 @@ class VoucherViewModel(
         VoucherState(
             type = type,
             showSourcePicker = type == VoucherType.RETURN,
+            // A RETURN opens on the CART, not the catalogue. Its lines come from the
+            // chosen invoice, so the picker behind the source-invoice dialog was a
+            // list of items that could never be added — and dismissing the dialog
+            // left the rep looking at exactly that.
+            view = if (type == VoucherType.RETURN) VoucherView.CART else VoucherView.PICKER,
             // An ORDER is taken on account — the goods are not delivered yet, so
             // nobody pays at the counter. Sale and return keep CASH, and a sale
             // still asks the rep outright (showPaymentChooser). The order screen

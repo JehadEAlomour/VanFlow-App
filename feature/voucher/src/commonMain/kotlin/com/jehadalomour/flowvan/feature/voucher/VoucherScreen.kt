@@ -148,7 +148,10 @@ fun VoucherScreen(
         onPrint(id)
     }
 
-    AppBackHandler(enabled = state.view == VoucherView.CART) {
+    // Only intercept back when there IS a picker to fall back to. On a return the
+    // handler stays disabled so the press propagates and leaves the screen, instead
+    // of switching to a catalogue the rep cannot choose from.
+    AppBackHandler(enabled = state.view == VoucherView.CART && state.pickerAvailable) {
         viewModel.onEvent(VoucherEvent.ToggleView)
     }
 
@@ -166,8 +169,11 @@ fun VoucherScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = {
-                        if (state.view == VoucherView.CART) viewModel.onEvent(VoucherEvent.ToggleView)
-                        else onBack()
+                        if (state.view == VoucherView.CART && state.pickerAvailable) {
+                            viewModel.onEvent(VoucherEvent.ToggleView)
+                        } else {
+                            onBack()
+                        }
                     }) {
                         Icon(
                             painter = painterResource(Res.drawable.ic_back),
@@ -180,7 +186,9 @@ fun VoucherScreen(
                         Text(stringResource(state.titleRes), color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         state.customer?.let { Text(it.nameAr, color = Fv.TextMid, fontSize = 11.sp) }
                     }
-                    CartToggle(state.view, state.cart.size) { viewModel.onEvent(VoucherEvent.ToggleView) }
+                    if (state.pickerAvailable) {
+                        CartToggle(state.view, state.cart.size) { viewModel.onEvent(VoucherEvent.ToggleView) }
+                    }
                 }
             }
 
@@ -231,7 +239,14 @@ fun VoucherScreen(
                         onNotesChange = { viewModel.onEvent(VoucherEvent.NotesChanged(it)) },
                         onReasonSelect = { viewModel.onEvent(VoucherEvent.ReasonSelected(it)) },
                         onPaymentMethod = { viewModel.onEvent(VoucherEvent.PaymentMethodSelected(it)) },
-                        onGoToPicker = { viewModel.onEvent(VoucherEvent.ToggleView) },
+                        onGoToPicker = {
+                            // On a return the way out of an empty cart is a different
+                            // invoice, not the catalogue.
+                            viewModel.onEvent(
+                                if (state.pickerAvailable) VoucherEvent.ToggleView
+                                else VoucherEvent.OpenSourcePicker,
+                            )
+                        },
                         modifier = Modifier.weight(1f),
                     )
                     // An empty cart has no totals worth a block — the zeros would only
