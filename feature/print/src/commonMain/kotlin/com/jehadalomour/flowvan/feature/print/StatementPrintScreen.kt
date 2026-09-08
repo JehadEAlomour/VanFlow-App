@@ -28,7 +28,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -42,10 +41,6 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -132,13 +127,8 @@ private val LogoSize = 300.dp
  *  the receipt is read once, quickly, by someone not looking for it. */
 private val PaperWeight = FontWeight.Bold
 
-/**
- * Statement money: always 3 decimals, always Latin digits, sign carried separately.
- *
- * Internal, and deliberately the ONLY one: the roll and the A4 sheet state the same
- * balance, so they cannot be allowed separate opinions about how to round it.
- */
-internal fun Double.jod(): String {
+/** Statement money: always 3 decimals, always Latin digits, sign carried separately. */
+private fun Double.jod(): String {
     val v = abs(this)
     val whole = v.toLong()
     val frac = ((v - whole) * 1000).toLong().coerceIn(0, 999)
@@ -150,14 +140,14 @@ private fun Long.dayMonth(): String {
     return "${dt.dayOfMonth.toString().padStart(2, '0')}/${dt.monthNumber.toString().padStart(2, '0')}"
 }
 
-internal fun Long.fullDate(): String {
+private fun Long.fullDate(): String {
     val dt = Instant.fromEpochMilliseconds(this).toLocalDateTime(TimeZone.currentSystemDefault())
     val d = dt.dayOfMonth.toString().padStart(2, '0')
     val m = dt.monthNumber.toString().padStart(2, '0')
     return "$d/$m/${dt.year}"
 }
 
-internal fun Long.fullDateTime(): String {
+private fun Long.fullDateTime(): String {
     val dt = Instant.fromEpochMilliseconds(this).toLocalDateTime(TimeZone.currentSystemDefault())
     val h = dt.hour.toString().padStart(2, '0')
     val min = dt.minute.toString().padStart(2, '0')
@@ -186,10 +176,6 @@ fun StatementPrintScreen(
     val graphicsLayer = rememberGraphicsLayer()
     val scope = rememberCoroutineScope()
     val pdfHelper = rememberPdfShareHelper()
-
-    // How the account divides into A4 sheets, and a capture layer for each.
-    val pagePlans = remember(state.rows.size) { planStatementPages(state.rows.size) }
-    val pageLayers = List(pagePlans.size) { i -> key(i) { rememberGraphicsLayer() } }
 
     // The document name used by the share sheet and the OS print dialog.
     val docName = remember(state.customerCode, state.toMillis) {
@@ -269,12 +255,7 @@ fun StatementPrintScreen(
                 label = stringResource(Res.string.print_action_share_pdf),
                 filled = false,
                 onClick = {
-                    // Shares the A4 SHEETS rendered off-screen below — not the roll.
-                    // The roll shrunk onto a page was the old behaviour, and on a busy
-                    // month it produced a strip of type too small to read.
-                    scope.launch {
-                        pdfHelper.shareAsPagedPdf(pageLayers.map { it.toImageBitmap() }, docName)
-                    }
+                    scope.launch { pdfHelper.shareAsPdf(graphicsLayer.toImageBitmap(), docName, a4 = true) }
                 },
             )
         }
@@ -331,52 +312,8 @@ fun StatementPrintScreen(
             }
             Spacer(Modifier.height(32.dp))
         }
-
-        // ── The A4 sheets, drawn off-screen and captured for "share as PDF" ──
-        //
-        // The outer layout measures each sheet at its true A4 size but then reports
-        // zero size to the parent, so nothing occupies the screen while the pages are
-        // still drawn at full size into their layers. A size(0) wrapper would instead
-        // clamp the child to nothing and toImageBitmap() would crash on a 0x0 layer.
-        //
-        // They stay composed rather than being spun up at the moment of sharing:
-        // reading a layer that has not been drawn yet is the one thing that cannot be
-        // made reliable, and a statement is a page or two of movements in practice.
-        Box(
-            modifier = Modifier.layout { measurable, _ ->
-                val placeable = measurable.measure(Constraints())
-                layout(0, 0) { placeable.place(0, 0) }
-            },
-        ) {
-            // Capture at a FIXED density, so a sheet is the same document whatever
-            // phone produced it, and its cost is known: at 1.5 an A4 page is about
-            // 1190x1685 pixels — comfortably past the 595pt it is drawn into, without
-            // the ~32MB per page a 3x handset would otherwise allocate.
-            CompositionLocalProvider(LocalDensity provides Density(A4_CAPTURE_DENSITY)) {
-                Column {
-                    pagePlans.forEachIndexed { index, plan ->
-                        val layer = pageLayers[index]
-                        Box(
-                            modifier = Modifier.drawWithContent {
-                                layer.record { this@drawWithContent.drawContent() }
-                            },
-                        ) {
-                            StatementA4Page(
-                                state = state,
-                                plan = plan,
-                                pageNumber = index + 1,
-                                pageCount = pagePlans.size,
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
 }
-
-/** See the capture block above: fixed so the document does not vary by handset. */
-private const val A4_CAPTURE_DENSITY = 1.5f
 
 // ── The paper ─────────────────────────────────────────────────────────────────
 

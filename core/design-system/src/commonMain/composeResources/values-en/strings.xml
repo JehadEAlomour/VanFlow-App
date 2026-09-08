@@ -809,8 +809,6 @@
     <string name="statement_col_debit">Debit</string>
     <string name="statement_col_credit">Credit</string>
     <string name="statement_col_balance">Balance</string>
-    <string name="statement_col_doc_no">Document no.</string>
-    <string name="statement_page_of">Page %1$d of %2$d</string>
     <string name="statement_payment">Payment</string>
     <string name="statement_salesman">Salesman</string>
     <string name="statement_printed_at">Printed</string>
