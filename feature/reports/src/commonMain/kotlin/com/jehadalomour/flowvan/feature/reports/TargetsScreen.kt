@@ -158,10 +158,25 @@ private fun TargetCard(t: SalesTarget, highlighted: Boolean) {
 
             if (t.commissionTotal > 0.0) {
                 Spacer(Modifier.height(10.dp))
+                // On SALES, not on cash and credit separately: a salesman works
+                // one payment method, so splitting the line would show them a
+                // zero beside their own commission and invite the question.
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    Figure(stringResource(Res.string.targets_on_cash), t.commissionOnCash.formatJod(AppLanguage.AR), Modifier.weight(1f))
-                    Figure(stringResource(Res.string.targets_on_credit), t.commissionOnCredit.formatJod(AppLanguage.AR), Modifier.weight(1f))
-                    Figure(stringResource(Res.string.targets_on_collection), t.commissionOnCollection.formatJod(AppLanguage.AR), Modifier.weight(1f))
+                    Figure(
+                        stringResource(Res.string.targets_sales),
+                        (t.commissionOnCash + t.commissionOnCredit).formatJod(AppLanguage.AR),
+                        Modifier.weight(1f),
+                    )
+                    Figure(
+                        stringResource(Res.string.targets_collections),
+                        t.commissionOnCollection.formatJod(AppLanguage.AR),
+                        Modifier.weight(1f),
+                    )
+                    Figure(
+                        stringResource(Res.string.targets_commission_total),
+                        t.commissionTotal.formatJod(AppLanguage.AR),
+                        Modifier.weight(1f),
+                    )
                 }
             }
         }
