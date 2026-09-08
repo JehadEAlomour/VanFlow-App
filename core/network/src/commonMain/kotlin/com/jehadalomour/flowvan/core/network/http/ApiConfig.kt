@@ -37,8 +37,12 @@ class ApiConfig(private val settings: Settings) {
     companion object {
         const val API_PREFIX = "api/v1"
 
-        //     Deployed VanFlow backend on Render. (Local dev:
-        //     "http://10.0.2.2:3100/api/v1" for the Android emulator.)
-        const val DEFAULT_BASE_URL = "http://94.142.51.91:3100/api/v1"
+        //     The dev backend. HTTPS through the proxy rather than an ip:port,
+        //     so the handset is not doing cleartext to a bare address — Android
+        //     blocks that by default, and a client install should never have to
+        //     be told to allow it.
+        //
+        //     Local dev: "http://10.0.2.2:3100/api/v1" for the Android emulator.
+        const val DEFAULT_BASE_URL = "https://app-dev.7softwarejo.com/api/v1"
     }
 }
