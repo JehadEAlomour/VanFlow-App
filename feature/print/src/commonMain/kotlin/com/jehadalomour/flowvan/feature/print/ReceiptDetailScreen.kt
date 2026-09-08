@@ -1,6 +1,7 @@
 package com.jehadalomour.flowvan.feature.print
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,8 +37,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.core.common.format.formatJod
@@ -68,12 +73,16 @@ fun ReceiptDetailScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val entity = state.entity
-    val graphicsLayer = rememberGraphicsLayer()
+    // The visible slip IS the thermal receipt; this layer is what printing captures.
+    val thermalLayer = rememberGraphicsLayer()
+    // The A4 page is rendered off-screen; this layer captures it for "Share as PDF".
+    val a4Layer = rememberGraphicsLayer()
     val scope = rememberCoroutineScope()
+    val pdfHelper = rememberPdfShareHelper()
 
     // Capture the on-screen receipt document and hand it to the VM as PNG bytes.
     suspend fun captureAndPrint() {
-        val bitmap = graphicsLayer.toImageBitmap()
+        val bitmap = thermalLayer.toImageBitmap()
         val png = withContext(Dispatchers.Default) { bitmap.toPngBytes() }
         viewModel.print(png)
     }
@@ -93,9 +102,41 @@ fun ReceiptDetailScreen(
                 IconButton(onClick = onBack) {
                     Icon(painterResource(Res.drawable.ic_back), contentDescription = null, tint = Fv.TextHigh, modifier = Modifier.size(22.dp))
                 }
-                Text(stringResource(Res.string.receipt_voucher_title), color = Fv.TextHigh, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.weight(1f))
+                // The title takes the slack and truncates; the two action buttons keep their
+                // full width. Sized the other way round, a narrow phone pushed "Thermal Print"
+                // off the edge of the bar the moment Share joined it.
+                Text(
+                    stringResource(Res.string.receipt_voucher_title),
+                    modifier = Modifier.weight(1f),
+                    color = Fv.TextHigh,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 if (entity != null) {
+                    // Share sends the A4 page, not the thermal slip: a receipt that leaves
+                    // the phone is read on a screen or filed, where a 58mm-wide strip is
+                    // useless. Printing keeps the slip. Outlined, so the thermal button
+                    // stays the primary action for a rep standing at the counter.
+                    Surface(
+                        onClick = {
+                            scope.launch {
+                                val bmp = a4Layer.toImageBitmap()
+                                pdfHelper.shareAsPdf(bmp, entity.number, a4 = true)
+                            }
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.Transparent,
+                        border = BorderStroke(1.dp, Fv.Blue),
+                    ) {
+                        Text(
+                            stringResource(Res.string.print_action_share_pdf),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            color = Fv.Blue, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Spacer(Modifier.size(8.dp))
                     Surface(
                         onClick = {
                             if (state.printerState is PrinterState.Connected) scope.launch { captureAndPrint() }
@@ -106,7 +147,7 @@ fun ReceiptDetailScreen(
                     ) {
                         Text(
                             stringResource(Res.string.printer_thermal_print),
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                             color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold,
                         )
                     }
@@ -138,13 +179,38 @@ fun ReceiptDetailScreen(
                             .widthIn(max = 340.dp)
                             .background(PaperBg, RoundedCornerShape(4.dp))
                             .drawWithContent {
-                                graphicsLayer.record { this@drawWithContent.drawContent() }
-                                drawLayer(graphicsLayer)
+                                thermalLayer.record { this@drawWithContent.drawContent() }
+                                drawLayer(thermalLayer)
                             },
                     ) {
                         PaymentReceiptDocument(entity, state)
                     }
                     Spacer(Modifier.height(24.dp))
+
+                    // Off-screen A4 page — captured for "Share as PDF" only, never painted.
+                    //
+                    // The outer layout measures it at its natural size (fixed width, UNBOUNDED
+                    // height) then reports zero size to the parent, so it takes up no room on
+                    // screen while still being drawn full-size into the layer. A size(0) wrapper
+                    // would clamp the child to 0 height and toImageBitmap() would fail on a 0x0
+                    // layer. Same construction as VoucherPrintScreen's.
+                    Box(
+                        modifier = Modifier.layout { measurable, _ ->
+                            val placeable = measurable.measure(Constraints())
+                            layout(0, 0) { placeable.place(0, 0) }
+                        },
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .requiredWidth(794.dp)
+                                .background(Color.White)
+                                .drawWithContent {
+                                    a4Layer.record { this@drawWithContent.drawContent() }
+                                },
+                        ) {
+                            ReceiptA4Document(entity, state)
+                        }
+                    }
                 }
             }
         }

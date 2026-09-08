@@ -33,7 +33,6 @@ import kotlin.math.abs
 import kotlin.math.roundToLong
 import org.jetbrains.compose.resources.painterResource
 
-// A clean A4 invoice palette (mirrors the ERP web print: light borders, gray header).
 private val Ink = Color(0xFF111111)
 private val Muted = Color(0xFF666666)
 private val Faint = Color(0xFF999999)
@@ -250,7 +249,7 @@ private fun androidx.compose.foundation.layout.RowScope.BodyCell(
 }
 
 @Composable
-private fun MetaRow(label: String, value: String) {
+internal fun MetaRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 1.dp)) {
         Text(label, fontSize = 11.sp, color = Muted, modifier = Modifier.weight(1f))
         Text(value, fontSize = 11.sp, color = Ink, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1.4f))
@@ -258,7 +257,7 @@ private fun MetaRow(label: String, value: String) {
 }
 
 @Composable
-private fun TotalRow(
+internal fun TotalRow(
     label: String,
     value: String,
     bold: Boolean = false,
@@ -275,7 +274,7 @@ private fun TotalRow(
 }
 
 @Composable
-private fun SignatureCell(label: String, modifier: Modifier) {
+internal fun SignatureCell(label: String, modifier: Modifier) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(Ink))
         Spacer(Modifier.height(4.dp))
@@ -285,7 +284,7 @@ private fun SignatureCell(label: String, modifier: Modifier) {
 
 // ── Formatting (Latin digits, locale-independent — mirrors the receipt) ──────────
 
-private fun a4Amount(value: Double, decimals: Int): String {
+internal fun a4Amount(value: Double, decimals: Int): String {
     var factor = 1L
     repeat(decimals) { factor *= 10 }
     val scaled = (abs(value) * factor).roundToLong()
@@ -298,7 +297,7 @@ private fun a4Amount(value: Double, decimals: Int): String {
     return sb.toString()
 }
 
-private fun a4Money(value: Double, decimals: Int, currency: String): String =
+internal fun a4Money(value: Double, decimals: Int, currency: String): String =
     "${a4Amount(value, decimals)} $currency"
 
 private fun a4Rate(rate: Double): String =
@@ -311,13 +310,13 @@ private fun String.docTitle(): String = when (uppercase()) {
     else -> uppercase()
 }
 
-private fun Long.a4DateTime(): String {
+internal fun Long.a4DateTime(): String {
     val dt = Instant.fromEpochMilliseconds(this).toLocalDateTime(TimeZone.currentSystemDefault())
     val p = { n: Int -> n.toString().padStart(2, '0') }
     return "${dt.year}-${p(dt.monthNumber)}-${p(dt.dayOfMonth)} ${p(dt.hour)}:${p(dt.minute)}"
 }
 
-private fun Long.a4DateOnly(): String {
+internal fun Long.a4DateOnly(): String {
     val dt = Instant.fromEpochMilliseconds(this).toLocalDateTime(TimeZone.currentSystemDefault())
     val p = { n: Int -> n.toString().padStart(2, '0') }
     return "${dt.year}-${p(dt.monthNumber)}-${p(dt.dayOfMonth)}"
