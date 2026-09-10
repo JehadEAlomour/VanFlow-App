@@ -340,6 +340,8 @@ private fun VsPrintPreviewDialog(
                 connectAddress = state.connectAddress,
                 discoveredDevices = state.discoveredDevices,
                 onTypeSelected = { onEvent(VoucherSummaryEvent.ConnectTypeSelected(it)) },
+                connectLanguage = state.connectLanguage,
+                onLanguageSelected = { onEvent(VoucherSummaryEvent.PrinterLanguageSelected(it)) },
                 onAddressChanged = { onEvent(VoucherSummaryEvent.ConnectAddressChanged(it)) },
                 onDeviceSelected = { onEvent(VoucherSummaryEvent.DeviceSelected(it)) },
                 onRefresh = { onEvent(VoucherSummaryEvent.RefreshDevices) },

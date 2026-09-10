@@ -19,6 +19,7 @@ import com.jehadalomour.flowvan.core.domain.printer.PaperWidth
 import com.jehadalomour.flowvan.core.domain.printer.PrintResult
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
 import com.jehadalomour.flowvan.core.domain.printer.PrinterTarget
+import com.jehadalomour.flowvan.core.domain.printer.PrinterLanguage
 import com.jehadalomour.flowvan.core.domain.printer.PrinterType
 import com.jehadalomour.flowvan.core.domain.printer.ReceiptPrinter
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,6 +69,7 @@ class StatementPrintViewModel(
             toMillis = toMillis,
             printedAt = Clock.System.now().toEpochMilliseconds(),
             connectType = printer.lastTarget?.type ?: PrinterType.BLUETOOTH,
+            connectLanguage = printer.language,
             connectAddress = printer.lastTarget?.address.orEmpty(),
         ),
     )
@@ -236,6 +238,19 @@ class StatementPrintViewModel(
             StatementPrintEvent.DismissConnectDialog -> _state.update {
                 it.copy(showConnectDialog = false, pendingPrint = false)
             }
+
+            is StatementPrintEvent.PrinterLanguageSelected -> {
+
+                // Device-wide and persisted: writing it here routes every print
+
+                // screen to the right SDK from now on, not just this one.
+
+                printer.language = event.language
+
+                _state.update { it.copy(connectLanguage = event.language) }
+
+            }
+
 
             is StatementPrintEvent.ConnectTypeSelected -> {
                 _state.update { it.copy(connectType = event.type) }

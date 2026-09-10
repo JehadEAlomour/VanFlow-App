@@ -13,6 +13,7 @@ import com.jehadalomour.flowvan.core.domain.printer.PaperWidth
 import com.jehadalomour.flowvan.core.domain.printer.PrintResult
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
 import com.jehadalomour.flowvan.core.domain.printer.PrinterTarget
+import com.jehadalomour.flowvan.core.domain.printer.PrinterLanguage
 import com.jehadalomour.flowvan.core.domain.printer.PrinterType
 import com.jehadalomour.flowvan.core.domain.printer.ReceiptPrinter
 import com.jehadalomour.flowvan.core.model.InvoiceAppliedOffer
@@ -50,6 +51,11 @@ data class SalesBulkPrintState(
     val message: String? = null,
     val showConnectDialog: Boolean = false,
     val connectType: PrinterType = PrinterType.BLUETOOTH,
+    /**
+     * ESC/POS or Zebra CPCL. Device-wide and persisted on the printer, so the choice
+     * made on any print screen holds for all of them — this only surfaces it here.
+     */
+    val connectLanguage: PrinterLanguage = PrinterLanguage.ESCPOS,
     val connectAddress: String = "",
     val discoveredDevices: List<PrinterTarget> = emptyList(),
 )
@@ -58,6 +64,7 @@ sealed interface SalesBulkPrintEvent {
     data object RequestConnect : SalesBulkPrintEvent
     data object DismissConnectDialog : SalesBulkPrintEvent
     data class ConnectTypeSelected(val type: PrinterType) : SalesBulkPrintEvent
+    data class PrinterLanguageSelected(val language: PrinterLanguage) : SalesBulkPrintEvent
     data class ConnectAddressChanged(val address: String) : SalesBulkPrintEvent
     data class DeviceSelected(val target: PrinterTarget) : SalesBulkPrintEvent
     data object RefreshDevices : SalesBulkPrintEvent
@@ -90,6 +97,7 @@ class SalesBulkPrintViewModel(
     private val _state = MutableStateFlow(
         SalesBulkPrintState(
             connectType = printer.lastTarget?.type ?: PrinterType.BLUETOOTH,
+            connectLanguage = printer.language,
             connectAddress = printer.lastTarget?.address.orEmpty(),
         ),
     )
@@ -141,6 +149,13 @@ class SalesBulkPrintViewModel(
                 refreshDevices()
             }
             SalesBulkPrintEvent.DismissConnectDialog -> _state.update { it.copy(showConnectDialog = false) }
+            is SalesBulkPrintEvent.PrinterLanguageSelected -> {
+                // Device-wide and persisted: writing it here routes every print
+                // screen to the right SDK from now on, not just this one.
+                printer.language = event.language
+                _state.update { it.copy(connectLanguage = event.language) }
+            }
+
             is SalesBulkPrintEvent.ConnectTypeSelected -> {
                 _state.update { it.copy(connectType = event.type) }
                 refreshDevices()

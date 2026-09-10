@@ -2,6 +2,7 @@ package com.jehadalomour.flowvan.feature.print
 
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
 import com.jehadalomour.flowvan.core.domain.printer.PrinterTarget
+import com.jehadalomour.flowvan.core.domain.printer.PrinterLanguage
 import com.jehadalomour.flowvan.core.domain.printer.PrinterType
 
 /**
@@ -69,6 +70,11 @@ data class StatementPrintState(
     /** Print automatically once a connection is established from the dialog. */
     val pendingPrint: Boolean = false,
     val connectType: PrinterType = PrinterType.BLUETOOTH,
+    /**
+     * ESC/POS or Zebra CPCL. Device-wide and persisted on the printer, so the choice
+     * made on any print screen holds for all of them — this only surfaces it here.
+     */
+    val connectLanguage: PrinterLanguage = PrinterLanguage.ESCPOS,
     val connectAddress: String = "",
     val discoveredDevices: List<PrinterTarget> = emptyList(),
 ) {
@@ -84,6 +90,7 @@ sealed interface StatementPrintEvent {
     data object RequestConnectThenPrint : StatementPrintEvent
     data object DismissConnectDialog : StatementPrintEvent
     data class ConnectTypeSelected(val type: PrinterType) : StatementPrintEvent
+    data class PrinterLanguageSelected(val language: PrinterLanguage) : StatementPrintEvent
     data class ConnectAddressChanged(val address: String) : StatementPrintEvent
     data class DeviceSelected(val target: PrinterTarget) : StatementPrintEvent
     data object RefreshDevices : StatementPrintEvent

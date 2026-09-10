@@ -299,6 +299,8 @@ fun StatementPrintScreen(
                 connectAddress = state.connectAddress,
                 discoveredDevices = state.discoveredDevices,
                 onTypeSelected = { viewModel.onEvent(StatementPrintEvent.ConnectTypeSelected(it)) },
+                connectLanguage = state.connectLanguage,
+                onLanguageSelected = { viewModel.onEvent(StatementPrintEvent.PrinterLanguageSelected(it)) },
                 onAddressChanged = { viewModel.onEvent(StatementPrintEvent.ConnectAddressChanged(it)) },
                 onDeviceSelected = { viewModel.onEvent(StatementPrintEvent.DeviceSelected(it)) },
                 onRefresh = { viewModel.onEvent(StatementPrintEvent.RefreshDevices) },

@@ -182,6 +182,8 @@ fun SalesReportPrintScreen(
                 connectAddress = state.connectAddress,
                 discoveredDevices = state.discoveredDevices,
                 onTypeSelected = { viewModel.onEvent(SalesReportPrintEvent.ConnectTypeSelected(it)) },
+                connectLanguage = state.connectLanguage,
+                onLanguageSelected = { viewModel.onEvent(SalesReportPrintEvent.PrinterLanguageSelected(it)) },
                 onAddressChanged = { viewModel.onEvent(SalesReportPrintEvent.ConnectAddressChanged(it)) },
                 onDeviceSelected = { viewModel.onEvent(SalesReportPrintEvent.DeviceSelected(it)) },
                 onRefresh = { viewModel.onEvent(SalesReportPrintEvent.RefreshDevices) },

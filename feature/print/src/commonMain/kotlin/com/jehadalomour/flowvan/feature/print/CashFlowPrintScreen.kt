@@ -176,6 +176,8 @@ fun CashFlowPrintScreen(
                 connectAddress = state.connectAddress,
                 discoveredDevices = state.discoveredDevices,
                 onTypeSelected = { viewModel.onEvent(CashFlowPrintEvent.ConnectTypeSelected(it)) },
+                connectLanguage = state.connectLanguage,
+                onLanguageSelected = { viewModel.onEvent(CashFlowPrintEvent.PrinterLanguageSelected(it)) },
                 onAddressChanged = { viewModel.onEvent(CashFlowPrintEvent.ConnectAddressChanged(it)) },
                 onDeviceSelected = { viewModel.onEvent(CashFlowPrintEvent.DeviceSelected(it)) },
                 onRefresh = { viewModel.onEvent(CashFlowPrintEvent.RefreshDevices) },

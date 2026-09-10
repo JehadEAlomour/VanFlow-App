@@ -222,6 +222,8 @@ fun ReceiptDetailScreen(
                 connectAddress = state.connectAddress,
                 discoveredDevices = state.discoveredDevices,
                 onTypeSelected = viewModel::connectTypeSelected,
+                connectLanguage = state.connectLanguage,
+                onLanguageSelected = viewModel::printerLanguageSelected,
                 onAddressChanged = viewModel::connectAddressChanged,
                 onDeviceSelected = viewModel::deviceSelected,
                 onRefresh = viewModel::refreshDevices,

@@ -1,6 +1,7 @@
 package com.jehadalomour.flowvan.feature.print
 
 import com.jehadalomour.flowvan.core.domain.printer.PrinterTarget
+import com.jehadalomour.flowvan.core.domain.printer.PrinterLanguage
 import com.jehadalomour.flowvan.core.domain.printer.PrinterType
 
 sealed class VoucherSummaryEvent {
@@ -13,6 +14,7 @@ sealed class VoucherSummaryEvent {
     data object RequestConnectThenPrint : VoucherSummaryEvent()
     data object DismissConnectDialog : VoucherSummaryEvent()
     data class ConnectTypeSelected(val type: PrinterType) : VoucherSummaryEvent()
+    data class PrinterLanguageSelected(val language: PrinterLanguage) : VoucherSummaryEvent()
     data class ConnectAddressChanged(val address: String) : VoucherSummaryEvent()
     data class DeviceSelected(val target: PrinterTarget) : VoucherSummaryEvent()
     data object RefreshDevices : VoucherSummaryEvent()

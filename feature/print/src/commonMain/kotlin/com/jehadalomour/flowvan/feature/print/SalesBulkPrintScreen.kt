@@ -156,6 +156,8 @@ fun SalesBulkPrintScreen(
                 connectAddress = state.connectAddress,
                 discoveredDevices = state.discoveredDevices,
                 onTypeSelected = { viewModel.onEvent(SalesBulkPrintEvent.ConnectTypeSelected(it)) },
+                connectLanguage = state.connectLanguage,
+                onLanguageSelected = { viewModel.onEvent(SalesBulkPrintEvent.PrinterLanguageSelected(it)) },
                 onAddressChanged = { viewModel.onEvent(SalesBulkPrintEvent.ConnectAddressChanged(it)) },
                 onDeviceSelected = { viewModel.onEvent(SalesBulkPrintEvent.DeviceSelected(it)) },
                 onRefresh = { viewModel.onEvent(SalesBulkPrintEvent.RefreshDevices) },

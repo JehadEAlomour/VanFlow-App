@@ -9,6 +9,7 @@ import com.jehadalomour.flowvan.core.database.dao.PaymentDao
 import com.jehadalomour.flowvan.core.database.entity.PaymentEntity
 import com.jehadalomour.flowvan.core.domain.printer.PaperWidth
 import com.jehadalomour.flowvan.core.domain.printer.PrintResult
+import com.jehadalomour.flowvan.core.domain.printer.PrinterLanguage
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
 import com.jehadalomour.flowvan.core.domain.printer.PrinterTarget
 import com.jehadalomour.flowvan.core.domain.printer.PrinterType
@@ -37,6 +38,11 @@ data class ReceiptDetailState(
     // ── Printing ──────────────────────────────────────────────────────────────
     val printerState: PrinterState = PrinterState.Disconnected,
     val connectType: PrinterType = PrinterType.BLUETOOTH,
+    /**
+     * ESC/POS or Zebra CPCL. Device-wide and persisted on the printer, so the choice
+     * made on any print screen holds for all of them — this only surfaces it here.
+     */
+    val connectLanguage: PrinterLanguage = PrinterLanguage.ESCPOS,
     val connectAddress: String = "",
     val discoveredDevices: List<PrinterTarget> = emptyList(),
     val showConnectDialog: Boolean = false,
@@ -62,6 +68,7 @@ class ReceiptDetailViewModel(
     private val _state = MutableStateFlow(
         ReceiptDetailState(
             connectType = printer.lastTarget?.type ?: PrinterType.BLUETOOTH,
+            connectLanguage = printer.language,
             connectAddress = printer.lastTarget?.address.orEmpty(),
         ),
     )
@@ -114,6 +121,12 @@ class ReceiptDetailViewModel(
 
     fun dismissConnectDialog() = _state.update { it.copy(showConnectDialog = false, pendingPrint = false) }
     fun connectTypeSelected(type: PrinterType) { _state.update { it.copy(connectType = type) }; refreshDevices() }
+
+    /** Device-wide and persisted: this routes every print screen, not just this one. */
+    fun printerLanguageSelected(language: PrinterLanguage) {
+        printer.language = language
+        _state.update { it.copy(connectLanguage = language) }
+    }
     fun connectAddressChanged(address: String) = _state.update { it.copy(connectAddress = address) }
     fun deviceSelected(target: PrinterTarget) =
         _state.update { it.copy(connectType = target.type, connectAddress = target.address) }

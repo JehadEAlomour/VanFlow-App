@@ -14,6 +14,7 @@ import com.jehadalomour.flowvan.core.domain.printer.PaperWidth
 import com.jehadalomour.flowvan.core.domain.printer.PrintResult
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
 import com.jehadalomour.flowvan.core.domain.printer.PrinterTarget
+import com.jehadalomour.flowvan.core.domain.printer.PrinterLanguage
 import com.jehadalomour.flowvan.core.domain.printer.PrinterType
 import com.jehadalomour.flowvan.core.domain.printer.ReceiptPrinter
 import com.jehadalomour.flowvan.core.network.api.VoucherApi
@@ -46,6 +47,7 @@ class VoucherPrintViewModel(
     private val _state = MutableStateFlow(
         VoucherPrintState(
             connectType = printer.lastTarget?.type ?: PrinterType.BLUETOOTH,
+            connectLanguage = printer.language,
             connectAddress = printer.lastTarget?.address.orEmpty(),
             // Read from the persisted session, not fetched: a receipt is often
             // printed with no signal, and the permission must hold offline.
@@ -205,6 +207,19 @@ class VoucherPrintViewModel(
             VoucherPrintEvent.DismissConnectDialog -> _state.update {
                 it.copy(showConnectDialog = false, pendingPrint = false)
             }
+
+            is VoucherPrintEvent.PrinterLanguageSelected -> {
+
+                // Device-wide and persisted: writing it here routes every print
+
+                // screen to the right SDK from now on, not just this one.
+
+                printer.language = event.language
+
+                _state.update { it.copy(connectLanguage = event.language) }
+
+            }
+
 
             is VoucherPrintEvent.ConnectTypeSelected -> {
                 _state.update { it.copy(connectType = event.type) }

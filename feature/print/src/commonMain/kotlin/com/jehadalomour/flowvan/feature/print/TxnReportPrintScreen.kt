@@ -186,6 +186,8 @@ fun TxnReportPrintScreen(
                 connectAddress = state.connectAddress,
                 discoveredDevices = state.discoveredDevices,
                 onTypeSelected = { viewModel.onEvent(TxnReportPrintEvent.ConnectTypeSelected(it)) },
+                connectLanguage = state.connectLanguage,
+                onLanguageSelected = { viewModel.onEvent(TxnReportPrintEvent.PrinterLanguageSelected(it)) },
                 onAddressChanged = { viewModel.onEvent(TxnReportPrintEvent.ConnectAddressChanged(it)) },
                 onDeviceSelected = { viewModel.onEvent(TxnReportPrintEvent.DeviceSelected(it)) },
                 onRefresh = { viewModel.onEvent(TxnReportPrintEvent.RefreshDevices) },

@@ -5,6 +5,7 @@ import com.jehadalomour.flowvan.core.model.InvoiceLine
 import com.jehadalomour.flowvan.core.model.VoucherTemplate
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
 import com.jehadalomour.flowvan.core.domain.printer.PrinterTarget
+import com.jehadalomour.flowvan.core.domain.printer.PrinterLanguage
 import com.jehadalomour.flowvan.core.domain.printer.PrinterType
 
 data class VoucherPrintState(
@@ -69,6 +70,11 @@ data class VoucherPrintState(
     /** Print the receipt automatically once a connection is established. */
     val pendingPrint: Boolean = false,
     val connectType: PrinterType = PrinterType.BLUETOOTH,
+    /**
+     * ESC/POS or Zebra CPCL. Device-wide and persisted on the printer, so the choice
+     * made on any print screen holds for all of them — this only surfaces it here.
+     */
+    val connectLanguage: PrinterLanguage = PrinterLanguage.ESCPOS,
     val connectAddress: String = "",
     val discoveredDevices: List<PrinterTarget> = emptyList(),
 )
@@ -79,6 +85,7 @@ sealed interface VoucherPrintEvent {
     data object RequestConnectThenPrint : VoucherPrintEvent
     data object DismissConnectDialog : VoucherPrintEvent
     data class ConnectTypeSelected(val type: PrinterType) : VoucherPrintEvent
+    data class PrinterLanguageSelected(val language: PrinterLanguage) : VoucherPrintEvent
     data class ConnectAddressChanged(val address: String) : VoucherPrintEvent
     data class DeviceSelected(val target: PrinterTarget) : VoucherPrintEvent
     data object RefreshDevices : VoucherPrintEvent

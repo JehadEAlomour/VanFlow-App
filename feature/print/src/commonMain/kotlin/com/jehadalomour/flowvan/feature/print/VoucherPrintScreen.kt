@@ -296,6 +296,8 @@ fun VoucherPrintScreen(
                 connectAddress = state.connectAddress,
                 discoveredDevices = state.discoveredDevices,
                 onTypeSelected = { viewModel.onEvent(VoucherPrintEvent.ConnectTypeSelected(it)) },
+                connectLanguage = state.connectLanguage,
+                onLanguageSelected = { viewModel.onEvent(VoucherPrintEvent.PrinterLanguageSelected(it)) },
                 onAddressChanged = { viewModel.onEvent(VoucherPrintEvent.ConnectAddressChanged(it)) },
                 onDeviceSelected = { viewModel.onEvent(VoucherPrintEvent.DeviceSelected(it)) },
                 onRefresh = { viewModel.onEvent(VoucherPrintEvent.RefreshDevices) },
