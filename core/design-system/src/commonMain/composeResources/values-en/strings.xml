@@ -33,6 +33,7 @@
     <string name="location_lock_body_permission">The office requires location for this salesman. Open the app settings and allow location to carry on working.</string>
     <string name="location_lock_body_off">Location is switched off on this device. Turn it on in the device settings to carry on working.</string>
     <string name="location_lock_recheck">I've turned it on — check again</string>
+    <string name="location_lock_sign_out">Sign out</string>
     <string name="login_loading">Signing in…</string>
     <string name="login_error_invalid">Invalid username or password</string>
     <string name="login_error_empty">Please enter your credentials</string>

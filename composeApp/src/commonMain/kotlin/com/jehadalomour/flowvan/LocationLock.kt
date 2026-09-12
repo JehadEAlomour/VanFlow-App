@@ -14,10 +14,13 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,11 +36,15 @@ import com.jehadalomour.flowvan.core.designsystem.resources.Res
 import com.jehadalomour.flowvan.core.designsystem.resources.location_lock_body_off
 import com.jehadalomour.flowvan.core.designsystem.resources.location_lock_body_permission
 import com.jehadalomour.flowvan.core.designsystem.resources.location_lock_recheck
+import com.jehadalomour.flowvan.core.designsystem.resources.location_lock_sign_out
 import com.jehadalomour.flowvan.core.designsystem.resources.location_lock_title
 import com.jehadalomour.flowvan.core.designsystem.resources.login_open_location_settings
 import com.jehadalomour.flowvan.core.domain.usecase.LocationBlock
 import com.jehadalomour.flowvan.core.domain.usecase.LocationGate
+import com.jehadalomour.flowvan.core.domain.usecase.LogoutUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.RefreshLocationRequirementUseCase
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
@@ -67,13 +74,33 @@ import org.koin.compose.koinInject
 fun LocationLock(content: @Composable () -> Unit) {
     val gate = koinInject<LocationGate>()
     val settings = koinInject<SettingsOpener>()
+    val refreshRequirement = koinInject<RefreshLocationRequirementUseCase>()
+    val logout = koinInject<LogoutUseCase>()
+    val scope = rememberCoroutineScope()
 
     var block by remember { mutableStateOf(gate.check()) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { block = gate.check() }
 
     if (block != LocationBlock.NONE) {
-        LaunchedRecheck { block = gate.check() }
+        /**
+         * While the lock is up this is the ONLY thing still running, so it has
+         * to ask both questions — has the phone changed, and has the OFFICE
+         * changed its mind.
+         *
+         * The second one is not optional. The requirement is cached in the
+         * session and refreshed by the catalogue sync, which this screen has
+         * stopped from running: an office that turned the requirement off could
+         * not reach the handset at all, and the rep sat looking at a lock whose
+         * cause had already been removed with no way out but signing out.
+         */
+        LaunchedEffect(Unit) {
+            while (true) {
+                delay(RECHECK_MS)
+                refreshRequirement()
+                block = gate.check()
+            }
+        }
         LocationBlockedScreen(
             block = block,
             onOpenSettings = {
@@ -83,7 +110,28 @@ fun LocationLock(content: @Composable () -> Unit) {
                     settings.openAppSettings()
                 }
             },
-            onRecheck = { block = gate.check() },
+            onRecheck = {
+                scope.launch {
+                    refreshRequirement()
+                    block = gate.check()
+                }
+            },
+            onSignOut = {
+                // The way out when nothing else works.
+                //
+                // Everything else on this screen depends on something the rep may
+                // not have: a settings toggle they are allowed to change, or a
+                // server they can reach. A van with no signal whose requirement
+                // was set by mistake would otherwise have NO route at all — the
+                // app would be a wall until someone drove back to the office.
+                //
+                // It gives nothing away. A signed-out rep carries no session and
+                // can do nothing; signing back in runs the same check again.
+                scope.launch {
+                    logout()
+                    block = gate.check()
+                }
+            },
         )
         return
     }
@@ -91,22 +139,19 @@ fun LocationLock(content: @Composable () -> Unit) {
     content()
 }
 
-/** Re-asks while the block is up. Never runs otherwise. */
-@Composable
-private fun LaunchedRecheck(onTick: () -> Unit) {
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        while (true) {
-            delay(1_500)
-            onTick()
-        }
-    }
-}
+/**
+ * How often the lock re-asks. Slow on purpose: it is one small request, but it
+ * is a request on a rep's own data allowance, and nothing behind this screen is
+ * waiting on it.
+ */
+private const val RECHECK_MS = 5_000L
 
 @Composable
 private fun LocationBlockedScreen(
     block: LocationBlock,
     onOpenSettings: () -> Unit,
     onRecheck: () -> Unit,
+    onSignOut: () -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -168,7 +213,15 @@ private fun LocationBlockedScreen(
             ) {
                 Text(text = stringResource(Res.string.location_lock_recheck))
             }
-            Box(Modifier.height(18.dp))
+            Box(Modifier.height(6.dp))
+            TextButton(onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = stringResource(Res.string.location_lock_sign_out),
+                    fontSize = 13.sp,
+                    color = Color(0xFF8A97A8),
+                )
+            }
+            Box(Modifier.height(12.dp))
             CircularProgressIndicator(
                 modifier = Modifier.height(18.dp),
                 strokeWidth = 2.dp,

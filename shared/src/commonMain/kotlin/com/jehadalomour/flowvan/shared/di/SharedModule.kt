@@ -62,6 +62,7 @@ import com.jehadalomour.flowvan.core.domain.usecase.GetCurrentUserUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetDailyKpiUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.LogoutUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.LocationGate
+import com.jehadalomour.flowvan.core.domain.usecase.RefreshLocationRequirementUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.RecordCollectionUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.VoucherNumberGenerator
 import com.jehadalomour.flowvan.core.domain.usecase.BackendLoginUseCase
@@ -185,6 +186,7 @@ fun sharedModule(): Module = module {
     // One rule for every document: a location-locked rep writes nothing while
     // the phone denies location.
     single { LocationGate(get(), get()) }
+    factory { RefreshLocationRequirementUseCase(get(), get()) }
     factory { EndShiftUseCase(get()) }
     factory { StartShiftUseCase(get(), get()) }
     factory { BackendLoginUseCase(get(), get(), get(), get(), get(), get()) }

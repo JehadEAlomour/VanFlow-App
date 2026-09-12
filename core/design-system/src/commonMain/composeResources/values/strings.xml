@@ -33,6 +33,7 @@
     <string name="location_lock_body_permission">الإدارة تطلب تشغيل الموقع لهذا المندوب. افتح إعدادات التطبيق واسمح بالوصول إلى الموقع لمتابعة العمل.</string>
     <string name="location_lock_body_off">خدمة الموقع مغلقة في الجهاز. شغّل الموقع من إعدادات الجهاز لمتابعة العمل.</string>
     <string name="location_lock_recheck">تحققت — أعد المحاولة</string>
+    <string name="location_lock_sign_out">تسجيل الخروج</string>
     <string name="login_loading">جاري تسجيل الدخول…</string>
     <string name="login_error_invalid">اسم المستخدم أو كلمة المرور غير صحيحة</string>
     <string name="login_error_empty">يرجى إدخال بيانات تسجيل الدخول</string>
