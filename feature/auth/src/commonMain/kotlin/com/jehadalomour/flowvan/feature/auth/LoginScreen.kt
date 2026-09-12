@@ -25,6 +25,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -151,6 +152,25 @@ fun LoginScreen(
                 if (state.error != null && !state.error!!.isDeviceBlock()) {
                     Spacer(Modifier.height(16.dp))
                     ErrorChip(messageAr = state.error!!.messageAr, messageEn = state.error!!.messageEn)
+                    // A location refusal is the one error on this screen the rep
+                    // CAN fix, and the fix is two or three taps deep in a
+                    // settings app they are being asked to find on their own.
+                    // Telling someone what is wrong without a way to it is how a
+                    // locked-out rep ends up phoning the office.
+                    if (state.error!!.isLocationBlock()) {
+                        Spacer(Modifier.height(10.dp))
+                        OutlinedButton(
+                            onClick = { viewModel.onEvent(LoginEvent.OpenLocationSettings) },
+                            modifier = Modifier.fillMaxWidth().height(46.dp),
+                            shape = RoundedCornerShape(16.dp),
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.login_open_location_settings),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp,
+                            )
+                        }
+                    }
                 }
 
                 Spacer(Modifier.height(28.dp))
@@ -328,6 +348,16 @@ private fun lightFieldColors() = TextFieldDefaults.colors(
 
 
 /** The two refusals only the office can clear. */
+/**
+ * A refusal the rep can clear themselves, by changing something on the phone.
+ *
+ * Both location cases, because both are fixed in settings — which one, and
+ * therefore which page, is decided in the view model where the error lives.
+ */
+private fun CashFlowError.isLocationBlock(): Boolean =
+    this is CashFlowError.Auth.LocationRequired ||
+        this is CashFlowError.Auth.LocationServiceOff
+
 private fun CashFlowError.isDeviceBlock(): Boolean =
     this is CashFlowError.Auth.DeviceBoundToOtherUser ||
         this is CashFlowError.Auth.UserActiveOnOtherDevice

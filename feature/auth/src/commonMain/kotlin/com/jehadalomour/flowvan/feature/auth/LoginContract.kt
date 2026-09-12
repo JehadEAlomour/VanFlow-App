@@ -17,6 +17,16 @@ sealed interface LoginEvent {
     data object TogglePasswordVisibility : LoginEvent
     data object Submit : LoginEvent
     data object DismissError : LoginEvent
+
+    /**
+     * Take the rep to the settings page that can fix their location.
+     *
+     * WHICH page is decided from the error being shown, not chosen by the
+     * screen: a denied permission and a switched-off location service are fixed
+     * in two different places, and sending someone to the wrong one lands them
+     * somewhere that already looks correct.
+     */
+    data object OpenLocationSettings : LoginEvent
 }
 
 sealed interface LoginEffect {

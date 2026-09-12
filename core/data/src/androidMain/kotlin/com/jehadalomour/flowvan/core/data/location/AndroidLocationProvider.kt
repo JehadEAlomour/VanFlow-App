@@ -8,6 +8,7 @@ import android.location.Location
 import android.location.LocationManager
 import android.os.Looper
 import androidx.core.content.ContextCompat
+import androidx.core.location.LocationManagerCompat
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.location.LocationServices
@@ -116,5 +117,19 @@ class AndroidLocationProvider(private val context: Context) : LocationProvider {
         ) == PackageManager.PERMISSION_GRANTED
         // Coarse is enough for a 2 km prospecting search — do not demand fine.
         return fine || coarse
+    }
+
+    /**
+     * Whether the device's location master switch is on.
+     *
+     * `LocationManagerCompat.isLocationEnabled` rather than asking whether the
+     * GPS provider specifically is enabled: a phone using only network
+     * positioning is switched on as far as anybody is concerned, and refusing it
+     * would block reps indoors on perfectly configured handsets.
+     */
+    override fun isServiceEnabled(): Boolean {
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+            ?: return false
+        return LocationManagerCompat.isLocationEnabled(lm)
     }
 }

@@ -8,6 +8,7 @@ import com.jehadalomour.flowvan.core.data.location.AndroidLocationProvider
 import com.jehadalomour.flowvan.core.data.location.AndroidLocationTracker
 import com.jehadalomour.flowvan.core.data.location.LocationProvider
 import com.jehadalomour.flowvan.core.data.location.LocationStatusProvider
+import com.jehadalomour.flowvan.core.data.location.SettingsOpener
 import com.jehadalomour.flowvan.core.data.location.LocationTracker
 import com.jehadalomour.flowvan.core.domain.notify.AlertNotifier
 import com.jehadalomour.flowvan.core.domain.notify.AndroidAlertNotifier
@@ -22,6 +23,7 @@ actual fun platformModule(): Module = module {
     single { ConnectivityObserver(androidContext()) }
     single { DeviceIdentityProvider(androidContext()) }
     single { LocationStatusProvider(androidContext()) }
+    single { SettingsOpener(androidContext()) }
     single<AlertNotifier> { AndroidAlertNotifier(androidContext()) }
     single<LocationProvider> { AndroidLocationProvider(androidContext()) }
     single<LocationTracker> {

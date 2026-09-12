@@ -28,6 +28,7 @@
     <string name="login_username">Username</string>
     <string name="login_password">Password</string>
     <string name="login_button">Sign In</string>
+    <string name="login_open_location_settings">Open settings to turn location on</string>
     <string name="login_loading">Signing in…</string>
     <string name="login_error_invalid">Invalid username or password</string>
     <string name="login_error_empty">Please enter your credentials</string>

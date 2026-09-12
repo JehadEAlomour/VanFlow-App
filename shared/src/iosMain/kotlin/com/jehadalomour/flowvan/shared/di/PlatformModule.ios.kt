@@ -7,6 +7,7 @@ import com.jehadalomour.flowvan.core.data.location.IosLocationProvider
 import com.jehadalomour.flowvan.core.data.location.IosLocationTracker
 import com.jehadalomour.flowvan.core.data.location.LocationProvider
 import com.jehadalomour.flowvan.core.data.location.LocationStatusProvider
+import com.jehadalomour.flowvan.core.data.location.SettingsOpener
 import com.jehadalomour.flowvan.core.data.location.LocationTracker
 import com.jehadalomour.flowvan.core.domain.printer.IosReceiptPrinter
 import com.jehadalomour.flowvan.core.domain.printer.ReceiptPrinter
@@ -20,6 +21,7 @@ actual fun platformModule(): Module = module {
     single { ConnectivityObserver() }
     single { DeviceIdentityProvider() }
     single { LocationStatusProvider() }
+    single { SettingsOpener() }
     single<LocationProvider> { IosLocationProvider() }
     single<LocationTracker> { IosLocationTracker() }
     single<ReceiptPrinter> { IosReceiptPrinter() }

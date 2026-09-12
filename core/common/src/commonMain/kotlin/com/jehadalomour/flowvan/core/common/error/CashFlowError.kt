@@ -41,8 +41,21 @@ sealed class CashFlowError(open val messageAr: String, open val messageEn: Strin
          * describe what happened.
          */
         data object LocationRequired : Auth(
-            messageAr = "يجب تشغيل الموقع للمتابعة — افتح إعدادات الجهاز واسمح بالوصول للموقع لتطبيق فان فلو",
-            messageEn = "Location must be on to continue — allow location for VanFlow in the device settings",
+            messageAr = "يجب تشغيل الموقع للمتابعة — افتح إعدادات التطبيق واسمح بالوصول للموقع لتطبيق فان فلو",
+            messageEn = "Location must be on to continue — allow location for VanFlow in the app settings",
+        )
+
+        /**
+         * Location is ALLOWED, and the device's location service is switched off.
+         *
+         * Its own case rather than a shade of [LocationRequired] because the two
+         * are fixed on different screens. A rep sent to the app's permission page
+         * for this one arrives somewhere that already says location is allowed,
+         * decides the app is broken, and rings the office.
+         */
+        data object LocationServiceOff : Auth(
+            messageAr = "خدمة الموقع مغلقة في الجهاز — شغّل الموقع (GPS) من إعدادات الجهاز للمتابعة",
+            messageEn = "Location is switched off on this device — turn location on in the device settings to continue",
         )
 
         /**

@@ -3,6 +3,7 @@ package com.jehadalomour.flowvan.feature.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jehadalomour.flowvan.core.common.error.CashFlowError
+import com.jehadalomour.flowvan.core.data.location.SettingsOpener
 import com.jehadalomour.flowvan.core.domain.usecase.AuthException
 import com.jehadalomour.flowvan.core.domain.usecase.BackendLoginUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.BackupDatabaseUseCase
@@ -18,6 +19,7 @@ import kotlinx.coroutines.launch
 class LoginViewModel(
     private val backendLogin: BackendLoginUseCase,
     private val backupDatabase: BackupDatabaseUseCase,
+    private val settings: SettingsOpener,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LoginState())
@@ -39,6 +41,13 @@ class LoginViewModel(
                 it.copy(passwordVisible = !it.passwordVisible)
             }
             LoginEvent.DismissError -> _state.update { it.copy(error = null) }
+
+            LoginEvent.OpenLocationSettings ->
+                if (_state.value.error is CashFlowError.Auth.LocationServiceOff) {
+                    settings.openLocationSettings()
+                } else {
+                    settings.openAppSettings()
+                }
             LoginEvent.Submit -> submit()
         }
     }

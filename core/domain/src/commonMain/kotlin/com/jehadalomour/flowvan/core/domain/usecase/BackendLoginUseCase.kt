@@ -23,6 +23,7 @@ class BackendLoginUseCase(
     private val session: SessionStore,
     private val deviceIdentity: DeviceIdentityProvider,
     private val location: LocationProvider,
+    private val locationGate: LocationGate,
 ) {
     @OptIn(ExperimentalTime::class)
     suspend operator fun invoke(userNumber: String, password: String): Result<User> {
@@ -95,9 +96,24 @@ class BackendLoginUseCase(
             // The session is written first and deliberately: the token is what the
             // tracking service needs, and tearing it down would leave the handset
             // silent. Signing in is what gets refused, not the device's identity.
-            if (requireLocation && !location.hasPermission()) {
+            // Through the GATE, not a second copy of the rule. Sign-in used to
+            // test the permission alone, so a rep who had allowed location and
+            // then switched the device's location service off signed in
+            // perfectly and wrote documents all day — with the office believing
+            // the requirement was in force. The gate knows about both halves,
+            // and which one it was decides where the screen can send them.
+            val block = locationGate.check()
+            if (block != LocationBlock.NONE) {
                 session.clear()
-                return Result.failure(AuthException(CashFlowError.Auth.LocationRequired))
+                return Result.failure(
+                    AuthException(
+                        if (block == LocationBlock.SERVICE_OFF) {
+                            CashFlowError.Auth.LocationServiceOff
+                        } else {
+                            CashFlowError.Auth.LocationRequired
+                        },
+                    ),
+                )
             }
             Result.success(user)
         } catch (e: NetworkException) {

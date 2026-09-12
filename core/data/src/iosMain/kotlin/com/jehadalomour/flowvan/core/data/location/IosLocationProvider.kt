@@ -31,4 +31,7 @@ class IosLocationProvider : LocationProvider {
         return status == kCLAuthorizationStatusAuthorizedWhenInUse ||
             status == kCLAuthorizationStatusAuthorizedAlways
     }
+
+    /** Whether Location Services is on for the device as a whole. */
+    override fun isServiceEnabled(): Boolean = CLLocationManager.locationServicesEnabled()
 }

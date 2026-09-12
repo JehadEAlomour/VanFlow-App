@@ -187,7 +187,7 @@ fun sharedModule(): Module = module {
     single { LocationGate(get(), get()) }
     factory { EndShiftUseCase(get()) }
     factory { StartShiftUseCase(get(), get()) }
-    factory { BackendLoginUseCase(get(), get(), get(), get(), get()) }
+    factory { BackendLoginUseCase(get(), get(), get(), get(), get(), get()) }
     factory { BackupDatabaseUseCase(get()) }
     factory { RefreshCatalogUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     // Its own HttpClient: the shared one has a 15s request timeout that would cut
