@@ -31,7 +31,13 @@ fun App() {
                         .fillMaxSize()
                         .systemBarsPadding(),
                 ) {
-                    FlowVanNavHost()
+                    // Everything the app can do sits behind this. A rep the
+                    // office has locked to location gets the lock screen and
+                    // nothing else — see LocationLock for why the check cannot
+                    // live at sign-in.
+                    LocationLock {
+                        FlowVanNavHost()
+                    }
                 }
             }
         }

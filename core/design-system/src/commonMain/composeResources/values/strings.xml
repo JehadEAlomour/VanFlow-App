@@ -29,6 +29,10 @@
     <string name="login_password">كلمة المرور</string>
     <string name="login_button">تسجيل الدخول</string>
     <string name="login_open_location_settings">فتح الإعدادات لتشغيل الموقع</string>
+    <string name="location_lock_title">يجب تشغيل الموقع</string>
+    <string name="location_lock_body_permission">الإدارة تطلب تشغيل الموقع لهذا المندوب. افتح إعدادات التطبيق واسمح بالوصول إلى الموقع لمتابعة العمل.</string>
+    <string name="location_lock_body_off">خدمة الموقع مغلقة في الجهاز. شغّل الموقع من إعدادات الجهاز لمتابعة العمل.</string>
+    <string name="location_lock_recheck">تحققت — أعد المحاولة</string>
     <string name="login_loading">جاري تسجيل الدخول…</string>
     <string name="login_error_invalid">اسم المستخدم أو كلمة المرور غير صحيحة</string>
     <string name="login_error_empty">يرجى إدخال بيانات تسجيل الدخول</string>
