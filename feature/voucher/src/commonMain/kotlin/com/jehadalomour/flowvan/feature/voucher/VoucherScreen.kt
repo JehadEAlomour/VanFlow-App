@@ -1412,104 +1412,124 @@ private fun ChooseFreeItemSheet(
         onDismissRequest = {},
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        // The sheet is capped and the LIST scrolls inside it.
+        //
+        // It used to be one unbounded Column: an offer with six gift choices — the
+        // شامبو and جل شعر groups both have six — grew taller than the screen, so the
+        // items at the bottom could not be reached and the progress footer was pushed
+        // off entirely. And because the sheet is deliberately not dismissible until
+        // every quota is filled, a rep who could not reach the item they had to pick
+        // was stuck on it with no way forward and no way out.
+        BoxWithConstraints(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            // Never taller than most of the screen, so the sheet always reads as a
+            // sheet and the footer always has somewhere to sit.
+            val sheetMaxHeight = maxHeight * 0.9f
             Surface(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().heightIn(max = sheetMaxHeight),
                 shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
                 color = Color.White,
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("اختر الهدية", color = Fv.TextHigh, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(12.dp))
-                    choices.forEach { choice ->
-                        val picks = picksFor(choice)
-                        val atQuota = picks >= choice.qty
-                        Text(
-                            "اختر ${choice.qty} ($picks/${choice.qty})",
-                            color = if (atQuota) Fv.Green else Fv.TextMid,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(bottom = 6.dp, top = 2.dp),
-                        )
-                        choice.choices.forEach { itemNumber ->
-                            val count = selectedItems.count { it == itemNumber }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (count > 0) Fv.Green.copy(alpha = 0.10f) else Fv.Surface)
-                                    .border(
-                                        1.dp,
-                                        if (count > 0) Fv.Green else Fv.Border,
-                                        RoundedCornerShape(6.dp),
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween,
+                    // weight(fill = false): takes the space left over from the title and
+                    // the footer, but only as much as it needs — two gifts still show a
+                    // short sheet rather than a tall one with a gap.
+                    Column(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        choices.forEach { choice ->
+                            val picks = picksFor(choice)
+                            val atQuota = picks >= choice.qty
+                            Text(
+                                "اختر ${choice.qty} ($picks/${choice.qty})",
+                                color = if (atQuota) Fv.Green else Fv.TextMid,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(bottom = 6.dp, top = 2.dp),
+                            )
+                            choice.choices.forEach { itemNumber ->
+                                val count = selectedItems.count { it == itemNumber }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (count > 0) Fv.Green.copy(alpha = 0.10f) else Fv.Surface)
+                                        .border(
+                                            1.dp,
+                                            if (count > 0) Fv.Green else Fv.Border,
+                                            RoundedCornerShape(6.dp),
+                                        )
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
                                 ) {
                                     Row(
-                                        modifier = Modifier.weight(1f),
+                                        modifier = Modifier.fillMaxWidth(),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .background(Fv.Green.copy(alpha = 0.12f), RoundedCornerShape(4.dp))
-                                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                                        Row(
+                                            modifier = Modifier.weight(1f),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         ) {
-                                            Text(
-                                                stringResource(Res.string.voucher_gift_tag),
-                                                color = Fv.Green,
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold,
-                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .background(Fv.Green.copy(alpha = 0.12f), RoundedCornerShape(4.dp))
+                                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                                            ) {
+                                                Text(
+                                                    stringResource(Res.string.voucher_gift_tag),
+                                                    color = Fv.Green,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                )
+                                            }
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    productNameFor(itemNumber),
+                                                    color = Fv.TextHigh,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                )
+                                                // What the van can still spare of this item. A
+                                                // gift comes out of the same stock as the sale,
+                                                // so a pool item at zero is one the rep hasn't
+                                                // got to give — read in red rather than hidden,
+                                                // because the pick itself stays open.
+                                                val left = stockLeftFor(itemNumber)
+                                                Text(
+                                                    stringResource(Res.string.voucher_gift_stock_left, left),
+                                                    color = if (left > 0) Fv.TextMid else Fv.Red,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                )
+                                            }
                                         }
-                                        Column(modifier = Modifier.weight(1f)) {
+                                        // Quantity stepper: − count + (so a single-item pool like
+                                        // "3 free water" can be picked as water ×3).
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        ) {
+                                            StepperButton(symbol = "−", enabled = count > 0) {
+                                                onRemove(choice.offerId, itemNumber)
+                                            }
                                             Text(
-                                                productNameFor(itemNumber),
+                                                "$count",
                                                 color = Fv.TextHigh,
-                                                fontSize = 14.sp,
+                                                fontSize = 15.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.widthIn(min = 16.dp),
+                                                textAlign = TextAlign.Center,
                                             )
-                                            // What the van can still spare of this item. A
-                                            // gift comes out of the same stock as the sale,
-                                            // so a pool item at zero is one the rep hasn't
-                                            // got to give — read in red rather than hidden,
-                                            // because the pick itself stays open.
-                                            val left = stockLeftFor(itemNumber)
-                                            Text(
-                                                stringResource(Res.string.voucher_gift_stock_left, left),
-                                                color = if (left > 0) Fv.TextMid else Fv.Red,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                            )
-                                        }
-                                    }
-                                    // Quantity stepper: − count + (so a single-item pool like
-                                    // "3 free water" can be picked as water ×3).
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    ) {
-                                        StepperButton(symbol = "−", enabled = count > 0) {
-                                            onRemove(choice.offerId, itemNumber)
-                                        }
-                                        Text(
-                                            "$count",
-                                            color = Fv.TextHigh,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.widthIn(min = 16.dp),
-                                            textAlign = TextAlign.Center,
-                                        )
-                                        StepperButton(symbol = "+", enabled = !atQuota) {
-                                            onAdd(choice.offerId, itemNumber)
+                                            StepperButton(symbol = "+", enabled = !atQuota) {
+                                                onAdd(choice.offerId, itemNumber)
+                                            }
                                         }
                                     }
                                 }
@@ -1517,7 +1537,9 @@ private fun ChooseFreeItemSheet(
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    // Progress hint. The sheet closes on its own once this reaches the quota.
+                    // Progress hint. Pinned below the scrolling list, so the rep can always
+                    // see how many picks are left however long the gift list is.
+                    // The sheet closes on its own once this reaches the quota.
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
