@@ -43,6 +43,7 @@ import com.jehadalomour.flowvan.core.domain.usecase.LocationBlock
 import com.jehadalomour.flowvan.core.domain.usecase.LocationGate
 import com.jehadalomour.flowvan.core.domain.usecase.LogoutUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.RefreshLocationRequirementUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.RequirementAnswer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -78,9 +79,36 @@ fun LocationLock(content: @Composable () -> Unit) {
     val logout = koinInject<LogoutUseCase>()
     val scope = rememberCoroutineScope()
 
-    var block by remember { mutableStateOf(gate.check()) }
+    /**
+     * The lock is shown ONLY on a confirmed yes from the server.
+     *
+     * It used to be shown from `gate.check()` alone, which reads the requirement
+     * out of the session cache — and a cache cannot tell "the office requires
+     * this" from "the office required it the last time anybody managed to ask".
+     * A rep whose requirement had been switched off stayed locked out, because
+     * the only thing that could have told them otherwise was a refresh that had
+     * to succeed first, and any failure left the stale yes standing.
+     *
+     * So the default is UNLOCKED and the screen appears only once the server has
+     * actually said the words. Fail-open is deliberate here: this screen is a
+     * courtesy that explains and offers a fix, not the enforcement. The
+     * enforcement is LocationGate on every document — sale, return, order,
+     * collection — which is unchanged and still refuses to write without
+     * location. Being wrongly shut out of the whole app costs a rep their day;
+     * being wrongly let into a screen they cannot write from costs nothing.
+     */
+    var required by remember { mutableStateOf(false) }
+    var device by remember { mutableStateOf(gate.deviceBlock()) }
+    val block = if (required) device else LocationBlock.NONE
 
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { block = gate.check() }
+    // Ask immediately rather than after the first interval, so a rep who really
+    // is locked finds out at the door instead of five seconds into the app.
+    LaunchedEffect(Unit) {
+        required = refreshRequirement() == RequirementAnswer.REQUIRED
+        device = gate.deviceBlock()
+    }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { device = gate.deviceBlock() }
 
     if (block != LocationBlock.NONE) {
         /**
@@ -97,8 +125,15 @@ fun LocationLock(content: @Composable () -> Unit) {
         LaunchedEffect(Unit) {
             while (true) {
                 delay(RECHECK_MS)
-                refreshRequirement()
-                block = gate.check()
+                // UNKNOWN leaves `required` alone rather than forcing it either
+                // way: a van that drove out of signal mid-lock should neither be
+                // released nor have the lock confirmed by silence.
+                when (refreshRequirement()) {
+                    RequirementAnswer.REQUIRED -> required = true
+                    RequirementAnswer.NOT_REQUIRED -> required = false
+                    RequirementAnswer.UNKNOWN -> Unit
+                }
+                device = gate.deviceBlock()
             }
         }
         LocationBlockedScreen(
@@ -112,8 +147,12 @@ fun LocationLock(content: @Composable () -> Unit) {
             },
             onRecheck = {
                 scope.launch {
-                    refreshRequirement()
-                    block = gate.check()
+                    when (refreshRequirement()) {
+                        RequirementAnswer.REQUIRED -> required = true
+                        RequirementAnswer.NOT_REQUIRED -> required = false
+                        RequirementAnswer.UNKNOWN -> Unit
+                    }
+                    device = gate.deviceBlock()
                 }
             },
             onSignOut = {
@@ -129,7 +168,7 @@ fun LocationLock(content: @Composable () -> Unit) {
                 // can do nothing; signing back in runs the same check again.
                 scope.launch {
                     logout()
-                    block = gate.check()
+                    required = false
                 }
             },
         )

@@ -113,3 +113,62 @@ class LocationGateTest {
         indoors.require()
     }
 }
+
+/**
+ * What the DEVICE is refusing, asked separately from whether this rep must comply.
+ *
+ * The lock screen needs these apart. It decides WHETHER to lock from a fresh
+ * answer off the server — never from the session cache, which cannot tell "the
+ * office requires this" from "the office required it last time anyone asked",
+ * and left a rep shut out of the whole app after the requirement had been
+ * switched off. It then uses this only to say WHICH fault to explain.
+ */
+class LocationDeviceBlockTest {
+
+    private class FakeLocation(
+        private val granted: Boolean,
+        private val serviceOn: Boolean,
+    ) : LocationProvider {
+        override suspend fun lastLocation(): LatLng? = null
+        override fun hasPermission(): Boolean = granted
+        override fun isServiceEnabled(): Boolean = serviceOn
+    }
+
+    private fun gate(granted: Boolean, serviceOn: Boolean, locked: Boolean = false) =
+        LocationGate(
+            SessionStore(MapSettings()).apply { requireLocation = locked },
+            FakeLocation(granted, serviceOn),
+        )
+
+    @Test
+    fun `reports nothing wrong when location is on`() {
+        assertEquals(LocationBlock.NONE, gate(granted = true, serviceOn = true).deviceBlock())
+    }
+
+    @Test
+    fun `reports a denied permission`() {
+        assertEquals(
+            LocationBlock.PERMISSION_DENIED,
+            gate(granted = false, serviceOn = true).deviceBlock(),
+        )
+    }
+
+    @Test
+    fun `reports a switched-off service`() {
+        assertEquals(
+            LocationBlock.SERVICE_OFF,
+            gate(granted = true, serviceOn = false).deviceBlock(),
+        )
+    }
+
+    @Test
+    fun `answers the same whatever the session says`() {
+        // The whole point of it being separate: this one describes the PHONE.
+        // Whether the rep has to do anything about it is the server's to say,
+        // and reading it from the session here is what trapped people.
+        assertEquals(
+            gate(granted = false, serviceOn = true, locked = false).deviceBlock(),
+            gate(granted = false, serviceOn = true, locked = true).deviceBlock(),
+        )
+    }
+}

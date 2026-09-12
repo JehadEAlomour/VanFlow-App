@@ -68,6 +68,17 @@ class LocationGate(
         else -> LocationBlock.NONE
     }
 
+    /**
+     * What the DEVICE is refusing, ignoring whether this rep is required to
+     * comply. For a caller that has already established the requirement from the
+     * server and only needs to know which fault to explain.
+     */
+    fun deviceBlock(): LocationBlock = when {
+        !location.hasPermission() -> LocationBlock.PERMISSION_DENIED
+        !location.isServiceEnabled() -> LocationBlock.SERVICE_OFF
+        else -> LocationBlock.NONE
+    }
+
     /** True when this rep may write right now. */
     fun allowed(): Boolean = check() == LocationBlock.NONE
 
