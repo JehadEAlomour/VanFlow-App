@@ -61,6 +61,7 @@ import com.jehadalomour.flowvan.core.domain.usecase.EvaluateOffersUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetCurrentUserUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetDailyKpiUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.LogoutUseCase
+import com.jehadalomour.flowvan.core.domain.usecase.LocationGate
 import com.jehadalomour.flowvan.core.domain.usecase.RecordCollectionUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.VoucherNumberGenerator
 import com.jehadalomour.flowvan.core.domain.usecase.BackendLoginUseCase
@@ -168,10 +169,10 @@ fun sharedModule(): Module = module {
     factory { LogoutUseCase(get(), get(), get()) }
     factory { GetDailyKpiUseCase(get(), get(), get()) }
     factory { VoucherNumberGenerator(get(), get()) }
-    factory { CreateSaleVoucherUseCase(get(), get(), get(), get(), get(), get(), get(), get()) }
+    factory { CreateSaleVoucherUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { EvaluateOffersOfflineUseCase(get(), get(), get(), get(), get()) }
     factory { EvaluateOffersUseCase(get(), get()) }
-    factory { CreateReturnVoucherUseCase(get(), get(), get(), get(), get(), get(), get(), get()) }
+    factory { CreateReturnVoucherUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { RequestReturnApprovalUseCase(get(), get(), get()) }
     factory { PollApprovalUseCase(get()) }
     factory { CancelApprovalUseCase(get()) }
@@ -179,11 +180,14 @@ fun sharedModule(): Module = module {
     factory { RequestDiscountApprovalUseCase(get(), get(), get()) }
     factory { CommitApprovedSaleUseCase(get(), get(), get(), get(), get()) }
     factory { GetCustomerSalesUseCase(get()) }
-    factory { CreateRequestVoucherUseCase(get(), get(), get(), get(), get()) }
-    factory { RecordCollectionUseCase(get(), get(), get(), get()) }
+    factory { CreateRequestVoucherUseCase(get(), get(), get(), get(), get(), get()) }
+    factory { RecordCollectionUseCase(get(), get(), get(), get(), get()) }
+    // One rule for every document: a location-locked rep writes nothing while
+    // the phone denies location.
+    single { LocationGate(get(), get()) }
     factory { EndShiftUseCase(get()) }
     factory { StartShiftUseCase(get(), get()) }
-    factory { BackendLoginUseCase(get(), get(), get(), get()) }
+    factory { BackendLoginUseCase(get(), get(), get(), get(), get()) }
     factory { BackupDatabaseUseCase(get()) }
     factory { RefreshCatalogUseCase(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     // Its own HttpClient: the shared one has a 15s request timeout that would cut

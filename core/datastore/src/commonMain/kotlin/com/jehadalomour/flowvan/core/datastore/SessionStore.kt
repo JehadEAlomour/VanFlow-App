@@ -105,6 +105,17 @@ class SessionStore(private val settings: Settings) {
         set(value) = settings.putBoolean(SettingsKeys.ROUTES_ONLY, value)
 
     /**
+     * This rep may not sign in, and may not write any document, while the phone
+     * denies location (permissions.requireLocation).
+     *
+     * Defaults FALSE, and stays false on a server that does not send the key —
+     * an older backend must not silently lock every rep out of the app.
+     */
+    var requireLocation: Boolean
+        get() = settings.getBoolean(SettingsKeys.REQUIRE_LOCATION, false)
+        set(value) = settings.putBoolean(SettingsKeys.REQUIRE_LOCATION, value)
+
+    /**
      * The three customer-dashboard action gates (permissions.canCreateSale /
      * canCreateReturn / canMakeCollection). Selling, returning and collecting were
      * always allowed, so these DEFAULT TRUE (opt-out): the tile hides only when the
@@ -176,6 +187,8 @@ class SessionStore(private val settings: Settings) {
         settings.remove(SettingsKeys.CAN_ADD_CUSTOMER)
         settings.remove(SettingsKeys.CAN_FIND_CUSTOMERS)
         settings.remove(SettingsKeys.ROUTES_ONLY)
+        // Belongs to the account that just left; the next rep brings their own.
+        settings.remove(SettingsKeys.REQUIRE_LOCATION)
     }
 
     /** Forgets the tracking credential too — only for a released/reset device. */

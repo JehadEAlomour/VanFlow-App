@@ -50,6 +50,9 @@ object SettingsKeys {
     /** Hide the Customers list; reach customers via the route only (permissions.routesOnly). */
     const val ROUTES_ONLY = "routes_only"
 
+    /** The rep may not sign in or write anything while the phone denies location. */
+    const val REQUIRE_LOCATION = "require_location"
+
     /** Show the Sale action on the customer dashboard (permissions.canCreateSale). */
     const val CAN_CREATE_SALE = "can_create_sale"
 

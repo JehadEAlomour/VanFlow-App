@@ -22,6 +22,7 @@ class CreateRequestVoucherUseCase(
     private val syncScheduler: SyncScheduler,
     private val voucherNumbers: VoucherNumberGenerator,
     private val location: LocationProvider,
+    private val locationGate: LocationGate,
 ) {
     @OptIn(ExperimentalTime::class)
     suspend operator fun invoke(
@@ -48,6 +49,9 @@ class CreateRequestVoucherUseCase(
         /** Per-offer breakdown, frozen for the printed footer. */
         appliedOffers: List<InvoiceAppliedOffer> = emptyList(),
     ): Result<InvoiceEntity> = runCatching {
+        // A location-locked rep writes nothing while the phone denies location.
+        // Before the empty-cart check so the reason given is the real one.
+        locationGate.require()
         if (cart.isEmpty()) throw EmptyCartException()
 
         // Offers applied when a DISTINCT offer-adjusted cart came in. The display

@@ -16,6 +16,7 @@ class RecordCollectionUseCase(
     private val customers: CustomerRepository,
     private val syncScheduler: SyncScheduler,
     private val location: LocationProvider,
+    private val locationGate: LocationGate,
 ) {
     @OptIn(ExperimentalTime::class)
     suspend operator fun invoke(
@@ -29,6 +30,8 @@ class RecordCollectionUseCase(
         transferRef: String?,
         notes: String?,
     ): Result<PaymentEntity> = runCatching {
+        // A location-locked rep collects nothing while the phone denies location.
+        locationGate.require()
         if (amount <= 0.0) throw CollectionValidationException("المبلغ يجب أن يكون أكبر من صفر")
         when (method) {
             PaymentMethod.CHEQUE -> {

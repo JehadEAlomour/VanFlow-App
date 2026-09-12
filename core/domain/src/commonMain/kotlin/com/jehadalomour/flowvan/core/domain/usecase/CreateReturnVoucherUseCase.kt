@@ -26,6 +26,7 @@ class CreateReturnVoucherUseCase(
     private val syncScheduler: SyncScheduler,
     private val voucherNumbers: VoucherNumberGenerator,
     private val location: LocationProvider,
+    private val locationGate: LocationGate,
 ) {
     @OptIn(ExperimentalTime::class)
     suspend operator fun invoke(
@@ -41,6 +42,9 @@ class CreateReturnVoucherUseCase(
         taxExempt: Boolean = false,
         taxExemptionNumber: String? = null,
     ): Result<InvoiceEntity> = runCatching {
+        // A location-locked rep writes nothing while the phone denies location.
+        // Before the empty-cart check so the reason given is the real one.
+        locationGate.require()
         if (cart.isEmpty()) throw EmptyCartException()
         require(reason.isNotBlank()) { "reason required" }
 

@@ -4,6 +4,7 @@ import com.jehadalomour.flowvan.core.database.entity.UserEntity
 import com.jehadalomour.flowvan.core.network.api.AuthApi
 import com.jehadalomour.flowvan.core.network.mapper.toUser
 import com.jehadalomour.flowvan.core.network.http.NetworkException
+import com.jehadalomour.flowvan.core.data.location.LocationProvider
 import com.jehadalomour.flowvan.core.data.repository.UserRepository
 import com.jehadalomour.flowvan.core.data.device.DeviceIdentityProvider
 import com.jehadalomour.flowvan.core.datastore.SessionStore
@@ -21,6 +22,7 @@ class BackendLoginUseCase(
     private val users: UserRepository,
     private val session: SessionStore,
     private val deviceIdentity: DeviceIdentityProvider,
+    private val location: LocationProvider,
 ) {
     @OptIn(ExperimentalTime::class)
     suspend operator fun invoke(userNumber: String, password: String): Result<User> {
@@ -69,6 +71,10 @@ class BackendLoginUseCase(
             session.canPrintLineDiscount = resp.user.permissions["canPrintLineDiscount"] == true
             session.canFindCustomers = resp.user.permissions["canFindCustomers"] == true
             session.routesOnly = resp.user.permissions["routesOnly"] == true
+            // A requirement, not a capability. Missing key (older server) = false,
+            // so an out-of-date backend can never lock a rep out of their own app.
+            val requireLocation = resp.user.permissions["requireLocation"] == true
+            session.requireLocation = requireLocation
             // Opt-out: sale/return/collection were always allowed, so a missing key
             // (older server) stays allowed and only an explicit false hides the tile.
             session.canCreateSale = resp.user.permissions["canCreateSale"] != false
@@ -80,6 +86,18 @@ class BackendLoginUseCase(
             resp.trackingToken?.let {
                 session.trackingToken = it
                 session.trackingRepId = resp.user.repId
+            }
+            // Checked here, after the server has spoken, because only the server
+            // knows whether THIS rep is location-locked — and refused before the
+            // session is usable rather than at the first sale, so the rep finds out
+            // at the door instead of in front of a customer.
+            //
+            // The session is written first and deliberately: the token is what the
+            // tracking service needs, and tearing it down would leave the handset
+            // silent. Signing in is what gets refused, not the device's identity.
+            if (requireLocation && !location.hasPermission()) {
+                session.clear()
+                return Result.failure(AuthException(CashFlowError.Auth.LocationRequired))
             }
             Result.success(user)
         } catch (e: NetworkException) {

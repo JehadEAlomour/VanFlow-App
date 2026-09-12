@@ -11,6 +11,7 @@ import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.domain.usecase.CreateRequestVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.EmptyCartException
+import com.jehadalomour.flowvan.core.domain.usecase.LocationRequiredException
 import com.jehadalomour.flowvan.feature.voucher.VoucherView
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -115,7 +116,12 @@ class RequestVoucherViewModel(
                     _state.update { it.copy(isSaving = false, savedNumber = entity.number) }
                 },
                 onFailure = { ex ->
-                    val msg = if (ex is EmptyCartException) "السلة فارغة" else "حدث خطأ غير متوقع"
+                    val msg = when (ex) {
+                        is LocationRequiredException ->
+                            "يجب تشغيل الموقع للمتابعة — افتح إعدادات الجهاز واسمح بالوصول للموقع"
+                        is EmptyCartException -> "السلة فارغة"
+                        else -> "حدث خطأ غير متوقع"
+                    }
                     _state.update { it.copy(isSaving = false, errorAr = msg) }
                 },
             )

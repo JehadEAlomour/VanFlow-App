@@ -741,6 +741,7 @@
     <!-- Voucher / collection errors -->
     <string name="err_unexpected">An unexpected error occurred</string>
     <string name="err_cart_empty">The cart is empty</string>
+    <string name="err_location_required">Location must be on to continue — allow it for this app in the device settings</string>
     <string name="err_select_source_invoice">Select the reference sale invoice first</string>
     <string name="err_select_return_reason">Select a return reason</string>
     <string name="err_source_invoice_not_found">No sale invoice found with this number for this customer</string>

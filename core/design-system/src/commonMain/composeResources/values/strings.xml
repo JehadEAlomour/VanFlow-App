@@ -741,6 +741,7 @@
     <!-- Voucher / collection errors -->
     <string name="err_unexpected">حدث خطأ غير متوقع</string>
     <string name="err_cart_empty">السلة فارغة</string>
+    <string name="err_location_required">يجب تشغيل الموقع للمتابعة — افتح إعدادات الجهاز واسمح بالوصول للموقع</string>
     <string name="err_select_source_invoice">اختر فاتورة البيع المرجعية أولاً</string>
     <string name="err_select_return_reason">اختر سبب الإرجاع</string>
     <string name="err_source_invoice_not_found">لم يتم العثور على فاتورة بيع بهذا الرقم لهذا العميل</string>

@@ -24,4 +24,11 @@ class IosLocationProvider : LocationProvider {
         val loc = manager.location ?: return null
         return loc.coordinate.useContents { LatLng(latitude, longitude) }
     }
+
+    /** Authorised while in use, or always — anything else counts as denied. */
+    override fun hasPermission(): Boolean {
+        val status: CLAuthorizationStatus = CLLocationManager.authorizationStatus()
+        return status == kCLAuthorizationStatusAuthorizedWhenInUse ||
+            status == kCLAuthorizationStatusAuthorizedAlways
+    }
 }

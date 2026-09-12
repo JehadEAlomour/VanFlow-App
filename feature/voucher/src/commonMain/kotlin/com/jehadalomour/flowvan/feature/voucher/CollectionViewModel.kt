@@ -6,6 +6,7 @@ import com.jehadalomour.flowvan.core.data.repository.CustomerRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
 import com.jehadalomour.flowvan.core.model.PaymentMethod
 import com.jehadalomour.flowvan.core.domain.usecase.CollectionValidationException
+import com.jehadalomour.flowvan.core.domain.usecase.LocationRequiredException
 import com.jehadalomour.flowvan.core.domain.usecase.RecordCollectionUseCase
 import com.jehadalomour.flowvan.core.designsystem.resources.Res
 import com.jehadalomour.flowvan.core.designsystem.resources.*
@@ -127,7 +128,11 @@ class CollectionViewModel(
         result.fold(
             onSuccess = { entity -> _state.update { it.copy(isSaving = false, savedNumber = entity.number, savedPaymentId = entity.id) } },
             onFailure = { ex ->
-                val msg = (ex as? CollectionValidationException)?.messageAr ?: getString(Res.string.err_unexpected)
+                val msg = when (ex) {
+                    is LocationRequiredException -> getString(Res.string.err_location_required)
+                    is CollectionValidationException -> ex.messageAr
+                    else -> getString(Res.string.err_unexpected)
+                }
                 _state.update { it.copy(isSaving = false, errorAr = msg) }
             },
         )
@@ -166,7 +171,11 @@ class CollectionViewModel(
             result.fold(
                 onSuccess = { lastNumber = it.number; lastId = it.id },
                 onFailure = { ex ->
-                    val msg = (ex as? CollectionValidationException)?.messageAr ?: getString(Res.string.err_unexpected)
+                    val msg = when (ex) {
+                    is LocationRequiredException -> getString(Res.string.err_location_required)
+                    is CollectionValidationException -> ex.messageAr
+                    else -> getString(Res.string.err_unexpected)
+                }
                     _state.update { it.copy(isSaving = false, errorAr = msg) }; return
                 },
             )

@@ -18,6 +18,8 @@ dependencies {
     "commonMainImplementation"(libs.kermit)
     "commonMainImplementation"(libs.multiplatform.settings)
     "commonTestImplementation"(libs.kotlin.test)
+    "commonTestImplementation"(projects.core.datastore)
+    "commonTestImplementation"(libs.multiplatform.settings.test)
     // Evaluator tests assert on the network EvaluationResultDto shape it returns.
     "commonTestImplementation"(projects.core.network)
     "commonTestImplementation"(projects.core.database)

@@ -255,6 +255,10 @@ class RefreshCatalogUseCase(
             session.canCreateCustomerDirect = me.permissions["canCreateCustomerDirect"] == true
             session.canFindCustomers = me.permissions["canFindCustomers"] == true
             session.routesOnly = me.permissions["routesOnly"] == true
+            // Kept current on every catalogue refresh, so turning the requirement
+            // on in the dashboard reaches a rep who is already signed in — without
+            // it the rule would only start applying at their next login.
+            session.requireLocation = me.permissions["requireLocation"] == true
             session.canPrintLineDiscount = me.permissions["canPrintLineDiscount"] == true
             // Opt-out like login: absent key stays allowed, explicit false hides the tile.
             session.canCreateSale = me.permissions["canCreateSale"] != false

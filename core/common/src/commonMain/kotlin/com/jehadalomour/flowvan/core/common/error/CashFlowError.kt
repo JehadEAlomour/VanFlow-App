@@ -34,6 +34,18 @@ sealed class CashFlowError(open val messageAr: String, open val messageEn: Strin
         )
 
         /**
+         * The office requires this rep's phone to report its location, and the
+         * phone is refusing. Distinct from [LocationDenied], which is the
+         * best-effort case that carries on without a fix: this one stops the
+         * action, so the message has to say what to do about it rather than
+         * describe what happened.
+         */
+        data object LocationRequired : Auth(
+            messageAr = "يجب تشغيل الموقع للمتابعة — افتح إعدادات الجهاز واسمح بالوصول للموقع لتطبيق فان فلو",
+            messageEn = "Location must be on to continue — allow location for VanFlow in the device settings",
+        )
+
+        /**
          * This handset already belongs to someone else. Carries the owner's
          * name because a rep told only "refused" has nowhere to go, whereas a
          * name sends them to the right desk. Only the office can release it.

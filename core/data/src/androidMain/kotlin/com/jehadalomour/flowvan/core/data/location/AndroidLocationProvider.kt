@@ -107,7 +107,7 @@ class AndroidLocationProvider(private val context: Context) : LocationProvider {
 
     private fun Location.toLatLng() = LatLng(latitude, longitude)
 
-    private fun hasPermission(): Boolean {
+    override fun hasPermission(): Boolean {
         val fine = ContextCompat.checkSelfPermission(
             context, Manifest.permission.ACCESS_FINE_LOCATION,
         ) == PackageManager.PERMISSION_GRANTED

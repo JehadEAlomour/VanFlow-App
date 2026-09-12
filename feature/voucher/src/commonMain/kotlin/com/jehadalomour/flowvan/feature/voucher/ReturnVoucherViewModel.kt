@@ -11,6 +11,7 @@ import com.jehadalomour.flowvan.core.model.CartLine
 import com.jehadalomour.flowvan.core.model.Product
 import com.jehadalomour.flowvan.core.domain.usecase.CreateReturnVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.EmptyCartException
+import com.jehadalomour.flowvan.core.domain.usecase.LocationRequiredException
 import com.jehadalomour.flowvan.feature.voucher.VoucherView
 import com.jehadalomour.flowvan.core.designsystem.resources.Res
 import com.jehadalomour.flowvan.core.designsystem.resources.*
@@ -139,7 +140,11 @@ class ReturnVoucherViewModel(
                     }
                 },
                 onFailure = { ex ->
-                    val msg = if (ex is EmptyCartException) getString(Res.string.err_cart_empty) else getString(Res.string.err_unexpected)
+                    val msg = when (ex) {
+                        is LocationRequiredException -> getString(Res.string.err_location_required)
+                        is EmptyCartException -> getString(Res.string.err_cart_empty)
+                        else -> getString(Res.string.err_unexpected)
+                    }
                     _state.update { it.copy(isSaving = false, showSaveSheet = false, errorAr = msg) }
                 },
             )

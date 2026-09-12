@@ -41,6 +41,7 @@ import com.jehadalomour.flowvan.core.domain.usecase.CreateSaleVoucherUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.CreditLimitExceededException
 import com.jehadalomour.flowvan.core.domain.usecase.NoCreditLimitException
 import com.jehadalomour.flowvan.core.domain.usecase.EmptyCartException
+import com.jehadalomour.flowvan.core.domain.usecase.LocationRequiredException
 import com.jehadalomour.flowvan.core.domain.usecase.EvaluateOffersUseCase
 import com.jehadalomour.flowvan.core.domain.usecase.GetCustomerSalesUseCase
 import com.jehadalomour.flowvan.core.model.PaymentMethod
@@ -928,6 +929,8 @@ class VoucherViewModel(
                     val msg = when (ex) {
                         is StockShortageException ->
                             getString(Res.string.err_stock_unavailable, ex.available, ex.requested)
+                        is LocationRequiredException ->
+                            getString(Res.string.err_location_required)
                         is EmptyCartException -> getString(Res.string.err_cart_empty)
                         is NoCreditLimitException -> getString(Res.string.err_no_credit_limit)
                         is CreditLimitExceededException ->
