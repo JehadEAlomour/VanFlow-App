@@ -10,6 +10,7 @@ import com.jehadalomour.flowvan.core.network.api.CustomerApi
 import com.jehadalomour.flowvan.core.network.api.VoucherApi
 import com.jehadalomour.flowvan.core.network.dto.CollectionDto
 import com.jehadalomour.flowvan.core.network.dto.ErpStatementDto
+import com.jehadalomour.flowvan.core.model.ledger.CashVoucherCollapse
 import com.jehadalomour.flowvan.core.network.dto.ErpStatementLineDto
 import com.jehadalomour.flowvan.core.network.dto.VoucherSummaryDto
 import kotlinx.coroutines.async
@@ -121,7 +122,14 @@ class CustomerStatementRepository(
         }
         return StatementSnapshot(
             openingBalance = dto.openingBalance ?: 0.0,
-            movements = dto.lines.mapNotNull { it.toMovement() }.sortedBy { it.createdAt },
+            // A counter sale is ONE transaction. The ERP posts it as an invoice plus
+            // the receipt that settles it, both under the invoice's own number, and
+            // rendered literally that is a debit immediately cancelled by a credit —
+            // the shop reads it as being billed and then credited for money that never
+            // became a debt. See CashVoucherCollapse for what is deliberately NOT
+            // folded: a later or partial payment is a real event on the account.
+            movements = CashVoucherCollapse
+                .apply(dto.lines.mapNotNull { it.toMovement() }.sortedBy { it.createdAt }),
             isLive = true,
         )
     }
