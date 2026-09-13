@@ -41,18 +41,31 @@ class CashVoucherCollapseTest {
     }
 
     @Test
-    fun `a receipt on a LATER day stays its own row — the shop must see when they paid`() {
+    fun `a receipt naming the sale joins its line whatever day it was taken`() {
+        // The rule is the reference, as the ERP states it: a receipt that names this
+        // document belongs on this document's line.
         val out = CashVoucherCollapse.apply(
             listOf(sale("INV-1", 100.0), receipt("INV-1", 100.0, at = nextNoon)),
         )
-        assertEquals(2, out.size)
+        assertEquals(1, out.size)
+        assertEquals(0.0, out.single().movement)
     }
 
     @Test
-    fun `a PART payment stays its own row — there is a real balance left`() {
+    fun `a PART payment joins the line and leaves the balance it really leaves`() {
         val out = CashVoucherCollapse.apply(listOf(sale("INV-1", 100.0), receipt("INV-1", 40.0)))
-        assertEquals(2, out.size)
+        assertEquals(1, out.size)
+        assertEquals(100.0, out.single().debit)
+        assertEquals(40.0, out.single().credit)
+        // Still owed: 60. Folding changed the row count, never the money.
         assertEquals(60.0, out.sumOf { it.movement })
+    }
+
+    @Test
+    fun `a payment on account, naming no sale here, keeps its own row`() {
+        val out = CashVoucherCollapse.apply(listOf(sale("INV-1", 100.0), receipt("INV-9", 30.0)))
+        assertEquals(2, out.size)
+        assertEquals(70.0, out.sumOf { it.movement })
     }
 
     @Test
@@ -97,6 +110,19 @@ class CashVoucherCollapseTest {
         )
         assertEquals(rows.sumOf { it.movement }, CashVoucherCollapse.apply(rows).sumOf { it.movement })
         assertEquals(200.0, CashVoucherCollapse.apply(rows).sumOf { it.movement })
+        // Two sales, each carrying its own receipt.
+        assertEquals(2, CashVoucherCollapse.apply(rows).size)
+    }
+
+    @Test
+    fun `a JOURNAL row is left exactly as the ERP sent it`() {
+        val journal = StatementMovement(
+            id = "jrn-1", number = "JV-9", createdAt = noon,
+            docType = StatementDocType.JOURNAL, debit = 15.0,
+        )
+        val out = CashVoucherCollapse.apply(listOf(journal, receipt("INV-1", 5.0)))
+        assertEquals(2, out.size)
+        assertEquals(StatementDocType.JOURNAL, out.first().docType)
     }
 
     @Test
@@ -106,11 +132,15 @@ class CashVoucherCollapseTest {
     }
 
     @Test
-    fun `rounding to the last fils still counts as settled in full`() {
-        // 100.0 vs a value that came back through a division.
-        val out = CashVoucherCollapse.apply(
-            listOf(sale("INV-1", 100.0), receipt("INV-1", 100_000.0 / 1000.0)),
+    fun `a JOURNAL that names a receipt's reference can absorb it too`() {
+        // Any debit row is a document that can be paid — the ERP decides what the
+        // receipt names, and this only honours it.
+        val journal = StatementMovement(
+            id = "jrn-1", number = "JV-9", createdAt = noon,
+            docType = StatementDocType.JOURNAL, debit = 20.0,
         )
+        val out = CashVoucherCollapse.apply(listOf(journal, receipt("JV-9", 20.0)))
         assertEquals(1, out.size)
+        assertEquals(0.0, out.single().movement)
     }
 }

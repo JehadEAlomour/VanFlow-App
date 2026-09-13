@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.core.designsystem.resources.Res
+import com.jehadalomour.flowvan.core.designsystem.resources.statement_journal
 import com.jehadalomour.flowvan.core.designsystem.resources.*
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
 import kotlinx.coroutines.Dispatchers
@@ -571,6 +572,8 @@ private fun StatementPaperRow(row: StatementRow) {
     val label = when (row.docType) {
         "SALE" -> stringResource(Res.string.print_voucher_type_sale)
         "RETURN" -> stringResource(Res.string.print_voucher_type_return)
+        // The thermal roll needs the label too — see StatementA4Document.
+        "JOURNAL" -> stringResource(Res.string.statement_journal)
         "PAYMENT" -> when (row.method) {
             "CASH" -> stringResource(Res.string.method_cash_label)
             "CHEQUE" -> stringResource(Res.string.method_cheque_label)

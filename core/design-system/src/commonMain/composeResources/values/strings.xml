@@ -306,6 +306,7 @@
     <string name="voucher_status_confirmed">مؤكدة</string>
     <string name="voucher_status_draft">مسودة</string>
     <string name="voucher_status_cancelled">ملغاة</string>
+    <string name="statement_journal">قيد</string>
     <string name="voucher_type_sale">بيع</string>
     <string name="voucher_type_return">مرتجع</string>
     <string name="voucher_type_request">طلب</string>

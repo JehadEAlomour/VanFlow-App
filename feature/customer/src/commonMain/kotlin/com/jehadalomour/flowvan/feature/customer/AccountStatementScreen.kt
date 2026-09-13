@@ -28,6 +28,7 @@ import com.jehadalomour.flowvan.core.common.i18n.AppLanguage
 import com.jehadalomour.flowvan.core.model.ledger.StatementDocType
 import com.jehadalomour.flowvan.core.designsystem.components.*
 import com.jehadalomour.flowvan.core.designsystem.resources.Res
+import com.jehadalomour.flowvan.core.designsystem.resources.statement_journal
 import com.jehadalomour.flowvan.core.designsystem.resources.*
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -214,6 +215,13 @@ private fun StatementRow(line: StatementLine, onClick: (() -> Unit)?) {
 
         StatementDocType.RETURN -> {
             badge = stringResource(Res.string.voucher_type_return); color = Fv.Green
+        }
+
+        // An ERP-kept account can carry a manual journal against the customer — an
+        // adjustment the office made. It is neither a sale nor a receipt, and
+        // labelling it as either would put a word on the row the ERP never said.
+        StatementDocType.JOURNAL -> {
+            badge = stringResource(Res.string.statement_journal); color = Fv.Amber
         }
 
         StatementDocType.PAYMENT -> {

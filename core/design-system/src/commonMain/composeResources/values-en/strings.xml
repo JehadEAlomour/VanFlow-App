@@ -306,6 +306,7 @@
     <string name="voucher_status_confirmed">Confirmed</string>
     <string name="voucher_status_draft">Draft</string>
     <string name="voucher_status_cancelled">Cancelled</string>
+    <string name="statement_journal">Journal</string>
     <string name="voucher_type_sale">Sale</string>
     <string name="voucher_type_return">Return</string>
     <string name="voucher_type_request">Request</string>

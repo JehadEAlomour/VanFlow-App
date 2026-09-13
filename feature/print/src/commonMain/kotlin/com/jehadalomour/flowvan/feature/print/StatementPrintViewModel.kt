@@ -164,6 +164,7 @@ class StatementPrintViewModel(
                     StatementDocType.SALE -> CustomerStatement.TYPE_SALE
                     StatementDocType.RETURN -> CustomerStatement.TYPE_RETURN
                     StatementDocType.PAYMENT -> DOC_PAYMENT
+                    StatementDocType.JOURNAL -> DOC_JOURNAL
                 },
                 method = m.method,
                 debit = m.debit,
@@ -326,5 +327,7 @@ class StatementPrintViewModel(
         const val SUCCESS_MESSAGE = "تمت الطباعة بنجاح"
         /** [StatementRow.docType] for a receipt; vouchers use CustomerStatement's names. */
         const val DOC_PAYMENT = "PAYMENT"
+        /** A manual ERP journal against the customer — neither a sale nor a receipt. */
+        const val DOC_JOURNAL = "JOURNAL"
     }
 }

@@ -1,7 +1,14 @@
 package com.jehadalomour.flowvan.core.model.ledger
 
-/** What produced a statement line. Orders never reach here — see CustomerStatement. */
-enum class StatementDocType { SALE, RETURN, PAYMENT }
+/**
+ * What produced a statement line. Orders never reach here — see CustomerStatement.
+ *
+ * [JOURNAL] exists so an ERP-kept account can be shown exactly as the ERP shows it.
+ * The ERP posts three kinds — INVOICE, PAYMENT and JOURNAL — and a manual journal
+ * against a customer was previously flattened to SALE, which labelled a credit
+ * adjustment as a sale. The figures were right either way; the word was not.
+ */
+enum class StatementDocType { SALE, RETURN, PAYMENT, JOURNAL }
 
 /**
  * One movement on a customer's account, with no trace of where it came from.

@@ -281,10 +281,13 @@ private fun ErpStatementLineDto.toMovement(): StatementMovement? {
         id = "ERP-$reference-$millis",
         number = reference.ifBlank { description },
         createdAt = millis,
-        docType = if (type.equals("PAYMENT", ignoreCase = true)) {
-            StatementDocType.PAYMENT
-        } else {
-            StatementDocType.SALE
+        // The ERP's own kind, carried through rather than flattened. It posts
+        // INVOICE, PAYMENT and JOURNAL; calling a manual journal a SALE put a word
+        // on the row that the ERP never said.
+        docType = when {
+            type.equals("PAYMENT", ignoreCase = true) -> StatementDocType.PAYMENT
+            type.equals("JOURNAL", ignoreCase = true) -> StatementDocType.JOURNAL
+            else -> StatementDocType.SALE
         },
         debit = debit,
         credit = credit,

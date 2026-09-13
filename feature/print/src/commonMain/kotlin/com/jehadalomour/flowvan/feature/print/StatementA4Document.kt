@@ -59,6 +59,7 @@ import com.jehadalomour.flowvan.core.designsystem.resources.statement_local_only
 import com.jehadalomour.flowvan.core.designsystem.resources.statement_local_only_title
 import com.jehadalomour.flowvan.core.designsystem.resources.statement_opening_balance
 import com.jehadalomour.flowvan.core.designsystem.resources.statement_page_of
+import com.jehadalomour.flowvan.core.designsystem.resources.statement_journal
 import com.jehadalomour.flowvan.core.designsystem.resources.statement_payment
 import com.jehadalomour.flowvan.core.designsystem.resources.statement_period
 import com.jehadalomour.flowvan.core.designsystem.resources.statement_phone
@@ -363,6 +364,9 @@ private fun MovementRow(row: StatementRow, striped: Boolean) {
     val label = when (row.docType) {
         "SALE" -> stringResource(Res.string.print_voucher_type_sale)
         "RETURN" -> stringResource(Res.string.print_voucher_type_return)
+        // An ERP adjustment against the customer. Without this it printed the raw
+        // word "JOURNAL" on an otherwise Arabic sheet.
+        "JOURNAL" -> stringResource(Res.string.statement_journal)
         "PAYMENT" -> when (row.method) {
             "CASH" -> stringResource(Res.string.method_cash_label)
             "CHEQUE" -> stringResource(Res.string.method_cheque_label)
