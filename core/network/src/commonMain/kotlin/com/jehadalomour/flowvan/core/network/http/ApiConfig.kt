@@ -43,7 +43,8 @@ class ApiConfig(private val settings: Settings) {
         //     be told to allow it.
         //
         //     Local dev: "http://10.0.2.2:3100/api/v1" for the Android emulator.
-        const val DEFAULT_BASE_URL = "https://app-dev.7softwarejo.com/api/v1"
+//        const val DEFAULT_BASE_URL = "https://app-dev.7softwarejo.com/api/v1"
 //        const val DEFAULT_BASE_URL = "http://94.142.51.91:3100/api/v1"
+        const val DEFAULT_BASE_URL = "http://77.245.5.113:3002/api/v1"
     }
 }
