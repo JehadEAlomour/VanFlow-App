@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -187,14 +188,18 @@ fun CashFlowPrintScreen(
             )
         }
 
+        // The paper is a FIXED width — see requiredWidth below — so a screen
+        // narrower than it pans rather than clipping a column off the edge.
         Column(
-            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .horizontalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
                 modifier = Modifier
                     .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .widthIn(max = TxnPaperWidth)
+                    .requiredWidth(TxnPaperWidth)
                     .shadow(8.dp, RoundedCornerShape(4.dp))
                     .background(TxnPaperBg, RoundedCornerShape(4.dp))
                     .drawWithContent {

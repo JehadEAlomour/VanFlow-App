@@ -309,14 +309,18 @@ fun VoucherPrintScreen(
 
         // Scrollable receipt — the visible view IS the thermal receipt (old style), and its
         // layer is what thermal printing captures. Sharing uses the off-screen A4 below.
+        // Fixed-width paper — see requiredWidth below — so a screen narrower
+        // than it pans rather than clipping a column off the edge.
         Column(
-            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .horizontalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
                 modifier = Modifier
                     .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .widthIn(max = 320.dp)
+                    .requiredWidth(320.dp)
                     .shadow(8.dp, RoundedCornerShape(4.dp))
                     .background(RcBg, RoundedCornerShape(4.dp))
                     .drawWithContent {

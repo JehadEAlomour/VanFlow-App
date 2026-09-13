@@ -3,6 +3,7 @@ package com.jehadalomour.flowvan.feature.print
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -169,14 +170,18 @@ fun ReceiptDetailScreen(
                 entity == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(stringResource(Res.string.receipt_detail_not_found), color = Fv.TextMid)
                 }
+                // Fixed-width paper — see requiredWidth below — so a screen narrower
+                // than it pans rather than clipping a column off the edge.
                 else -> Column(
-                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                    modifier = Modifier.fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .horizontalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Box(
                         modifier = Modifier
                             .padding(16.dp)
-                            .widthIn(max = 340.dp)
+                            .requiredWidth(340.dp)
                             .background(PaperBg, RoundedCornerShape(4.dp))
                             .drawWithContent {
                                 thermalLayer.record { this@drawWithContent.drawContent() }
