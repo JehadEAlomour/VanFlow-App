@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    // gms / nogms — see ServiceFlavorsConventionPlugin.
+    id("flowvan.service.flavors")
 }
 
 kotlin {
@@ -30,9 +32,6 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.koin.android)
-            implementation(libs.maps.compose)
-            implementation(libs.play.services.maps)
-            implementation(libs.play.services.location)
             // XPrinter / POS thermal printer SDK (USB / Bluetooth / Serial / Network) — ESC/POS
             implementation(files("libs/printer-sdk.aar"))
             // Zebra Link-OS SDK — CPCL mobile Bluetooth printers (the ESC/POS SDK can't drive them)
@@ -97,6 +96,21 @@ android {
             excludes += "**/libserial_port.so"
         }
     }
+    sourceSets {
+        // Point the flavour manifests at the same directory as the flavour's Kotlin,
+        // so everything that makes a build the `gms` or `nogms` one sits together.
+        //
+        // Needed because the two plugins disagree about where a flavour lives and
+        // each is only half-right: the Kotlin plugin remaps these source sets to
+        // src/androidGms, but not until after AGP has already taken its snapshot of
+        // where manifests are — so AGP goes on looking in AGP's own src/gms, finds
+        // nothing, and merges no overlay at all. That failure is silent: the build
+        // succeeds and the APK is simply missing the permissions and the service.
+        // Setting the path here happens while the build script is read, which is
+        // early enough for AGP to see it.
+        getByName("gms").manifest.srcFile("src/androidGms/AndroidManifest.xml")
+        getByName("nogms").manifest.srcFile("src/androidNogms/AndroidManifest.xml")
+    }
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
@@ -116,5 +130,12 @@ android {
 dependencies {
     debugImplementation(libs.compose.uiTooling)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
+
+    // Google, in the only build that has any. Nothing here is referenced from
+    // commonMain, so `nogms` compiles with the Play Services / Maps artifacts
+    // simply absent rather than stubbed.
+    "gmsImplementation"(libs.maps.compose)
+    "gmsImplementation"(libs.play.services.maps)
+    "gmsImplementation"(libs.play.services.location)
 }
 

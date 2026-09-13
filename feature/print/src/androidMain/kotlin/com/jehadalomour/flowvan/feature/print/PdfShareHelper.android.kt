@@ -44,7 +44,7 @@ private class AndroidPdfShareHelper(private val context: Context) : PdfShareHelp
         val document = PdfDocument()
         val dest = android.graphics.RectF(0f, 0f, A4_POINTS_WIDE, A4_POINTS_TALL)
         bitmaps.forEachIndexed { index, bitmap ->
-            val soft = bitmap.toSoftware()
+            val soft = bitmap.toSoftwareBitmap()
             val pageInfo = PdfDocument.PageInfo
                 .Builder(A4_POINTS_WIDE.toInt(), A4_POINTS_TALL.toInt(), index + 1)
                 .create()
@@ -69,17 +69,9 @@ private class AndroidPdfShareHelper(private val context: Context) : PdfShareHelp
         context.startActivity(Intent.createChooser(intent, "مشاركة الكشف"))
     }
 
-    /** GraphicsLayer hands back a hardware bitmap; a PDF canvas cannot draw one. */
-    private fun Bitmap.toSoftware(): Bitmap =
-        if (config == Bitmap.Config.HARDWARE) copy(Bitmap.Config.ARGB_8888, false) else this
-
     private fun writePdf(bitmap: Bitmap, fileName: String, a4: Boolean): File {
-        // GraphicsLayer returns a hardware-backed bitmap; PDF canvas needs software rendering.
-        val soft = if (bitmap.config == Bitmap.Config.HARDWARE) {
-            bitmap.copy(Bitmap.Config.ARGB_8888, false)
-        } else {
-            bitmap
-        }
+        // GraphicsLayer can return a hardware-backed bitmap; a PDF canvas needs the pixels.
+        val soft = bitmap.toSoftwareBitmap()
         val document = PdfDocument()
         if (a4) {
             // Portrait A4 in PostScript points (1/72"): 595×842. The captured image is

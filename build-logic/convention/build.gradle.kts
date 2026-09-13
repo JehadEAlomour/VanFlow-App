@@ -40,6 +40,10 @@ gradlePlugin {
             id = "flowvan.compose"
             implementationClass = "ComposeConventionPlugin"
         }
+        register("serviceFlavors") {
+            id = "flowvan.service.flavors"
+            implementationClass = "ServiceFlavorsConventionPlugin"
+        }
         register("room") {
             id = "flowvan.room"
             implementationClass = "RoomConventionPlugin"

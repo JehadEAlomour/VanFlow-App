@@ -22,10 +22,11 @@ dependencies {
     "commonMainImplementation"(projects.core.data)
     "commonMainImplementation"(projects.core.designSystem)
 
-    // PlatformMapContent.android uses Google Maps Compose + Play Services
-    "androidMainImplementation"(libs.maps.compose)
-    "androidMainImplementation"(libs.play.services.maps)
-    "androidMainImplementation"(libs.play.services.location)
+    // The `gms` PlatformMapContent draws a Google map; the `nogms` one says there
+    // isn't one, and needs none of this.
+    "gmsImplementation"(libs.maps.compose)
+    "gmsImplementation"(libs.play.services.maps)
+    "gmsImplementation"(libs.play.services.location)
     "androidMainImplementation"(libs.androidx.core.ktx)
     "androidMainImplementation"(libs.kotlinx.coroutines.android)
 }

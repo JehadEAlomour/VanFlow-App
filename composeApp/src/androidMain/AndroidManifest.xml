@@ -4,12 +4,9 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Location permissions and the tracking service are declared by the `gms`
+         flavour manifest; the `nogms` build has neither. -->
 
     <!-- Thermal printer (XPrinter SDK): Bluetooth / USB connectivity -->
     <uses-permission android:name="android.permission.BLUETOOTH"
@@ -34,14 +31,6 @@
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyDOwMjpgT_7d_W2g6j7J_fLRRH1EPZMYpQ" />
-        <service
-            android:name=".service.TrackingForegroundService"
-            android:exported="false"
-            android:foregroundServiceType="location" />
-
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Everything location, in one place.
+
+  These entries are in the `gms` flavour rather than the main manifest so the
+  `nogms` APK does not merely avoid CALLING them — it does not DECLARE them. A
+  permission listed in the manifest is what the store page shows and what a
+  customer's security review reads, so a build that says it wants the rep's
+  location while never using it is worse than useless: it fails the review and
+  tells the rep the opposite of the truth.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <application>
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyDOwMjpgT_7d_W2g6j7J_fLRRH1EPZMYpQ" />
+        <service
+            android:name=".service.TrackingForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+    </application>
+
+</manifest>

@@ -49,6 +49,7 @@ class KmpLibraryConventionPlugin : Plugin<Project> {
             defaultConfig {
                 minSdk = libs.findVersion("android-minSdk").get().requiredVersion.toInt()
             }
+            applyServiceFlavors()
             compileOptions {
                 sourceCompatibility = JavaVersion.VERSION_11
                 targetCompatibility = JavaVersion.VERSION_11

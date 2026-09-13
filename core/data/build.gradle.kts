@@ -19,6 +19,8 @@ dependencies {
     "commonTestImplementation"(libs.kotlin.test)
     "androidMainImplementation"(libs.androidx.core.ktx)
     "androidMainImplementation"(libs.kotlinx.coroutines.android)
-    "androidMainImplementation"(libs.kotlinx.coroutines.play.services)
-    "androidMainImplementation"(libs.play.services.location)
+    // Play Services only exists in the `gms` build; `androidNogms` answers the same
+    // LocationProvider/LocationTracker interfaces with implementations that do nothing.
+    "gmsImplementation"(libs.kotlinx.coroutines.play.services)
+    "gmsImplementation"(libs.play.services.location)
 }

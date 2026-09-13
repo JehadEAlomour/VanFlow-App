@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Takes location back OUT.
+
+  Not declaring a permission is not enough to be rid of it: the XPrinter SDK's
+  own manifest asks for ACCESS_FINE_LOCATION and ACCESS_COARSE_LOCATION — a
+  legacy of Android 6-11, where scanning for unpaired Bluetooth devices required
+  location — and the merger adds a library's permissions to the app whether the
+  app wants them or not. Left alone, the "no location" build would install asking
+  the rep for their location, which is the one thing it exists not to do.
+
+  Removing them costs this app nothing: the printer picker lists BONDED devices
+  (AndroidReceiptPrinter reads `adapter.bondedDevices`) and never starts a
+  discovery scan, and pairing itself happens in the system Bluetooth settings.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"
+        tools:node="remove" />
+
+</manifest>
