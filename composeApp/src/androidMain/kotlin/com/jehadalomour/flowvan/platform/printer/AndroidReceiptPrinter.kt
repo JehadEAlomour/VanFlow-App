@@ -5,7 +5,6 @@ import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.os.Build
 import com.jehadalomour.flowvan.core.domain.printer.BarcodeType
 import com.jehadalomour.flowvan.core.domain.printer.PaperWidth
 import com.jehadalomour.flowvan.core.domain.printer.PrintAlign
@@ -230,56 +229,32 @@ class AndroidReceiptPrinter(appContext: Context) : ReceiptPrinter {
             runCatching {
                 val decoded = BitmapFactory.decodeByteArray(png, 0, png.size)
                     ?: error("صورة غير صالحة")
-                // Fit the raster to the head, then flatten it to one bit per dot.
+                // Fit to the head, then send the dots ourselves.
                 //
-                // Two separate things were wrong here, and each on its own is
-                // enough to turn a receipt into the speckle that came off the roll.
+                // The bitmap arrives at the capture's dp width times the
+                // SCREEN's density, so its pixel width is whatever the device
+                // happens to produce. Shrink it when it is wider than the head;
+                // never enlarge it when it is narrower, because enlarging adds
+                // no detail and only smears each glyph over more dots — a
+                // narrow capture prints one pixel to one dot on a slightly
+                // narrower column of paper, which is crisp, and correct.
                 //
-                // 1. IT WAS BEING ENLARGED. The capture is the paper's dp width
-                //    times the SCREEN's density, so a low-density terminal hands
-                //    us 384px of a 384dp receipt — and that was then stretched up
-                //    to an 80mm head's 576 dots. Enlarging cannot add detail; it
-                //    only smears each glyph across more dots. So we never enlarge
-                //    now: a capture narrower than the head prints at its own width,
-                //    one pixel to one dot, crisp, on a slightly narrower column of
-                //    paper. Only an oversized capture is resized, downward, where
-                //    there is real detail to give up.
-                //
-                // 2. IT WAS ARRIVING GREY. The head has no grey: a dot is burned
-                //    or it is not, and the firmware resolves everything in between
-                //    by DITHERING it into scattered dots. Antialiased Arabic at
-                //    this size is mostly soft edges, so nearly every glyph was
-                //    being dithered into noise — while the horizontal rules came
-                //    through straight and full width, because solid black was the
-                //    one thing with no decision to make. Thresholding here, after
-                //    any resize, leaves the firmware nothing to dither.
-                //
-                // The width handed to the SDK is always a multiple of 8, because a
-                // thermal raster packs 8 dots to a byte; a width that does not
-                // divide by 8 leaves each row a fraction out of step with the next.
+                // From there [EscPosRaster] takes over: threshold, pack, send.
+                // The SDK's own printBitmap is not in this path any more — see
+                // that file for why.
                 val target = printTargetWidth(decoded.width, dotsFor.dots)
-                val bitmap = toMonochrome(fitWidth(decoded, target))
+                val bitmap = fitWidth(decoded, target)
 
-                // Sent in bands rather than as one command. A day's report is
-                // thousands of raster rows, and a printer that cannot absorb the
-                // whole stream drops bytes out of the middle of it. Each band is a
-                // complete raster in its own right and they abut exactly, so the
-                // page is identical either way — only the pacing differs. Cheap
-                // insurance on a long receipt.
-                var top = 0
-                p.initializePrinter()
-                while (top < bitmap.height) {
-                    val h = minOf(BAND_ROWS, bitmap.height - top)
-                    val band = Bitmap.createBitmap(bitmap, 0, top, bitmap.width, h)
-                    // `target`, not the head's full width: this argument is the width
-                    // the SDK scales the bitmap to, so passing the head's width here
-                    // would enlarge the band right back again.
-                    p.printBitmap(band, align.toSdk(), target)
-                    if (band !== bitmap) band.recycle()
-                    top += h
-                }
-                p.feedLine(3)
-                if (cut) p.cutPaper(POSConst.CUT_HALF)
+                val payload = ArrayList<ByteArray>()
+                payload += EscPosRaster.init()
+                payload += EscPosRaster.align(align.toEscPos())
+                payload += EscPosRaster.rasterCommands(bitmap)
+                payload += EscPosRaster.feed(3)
+                if (cut) payload += EscPosRaster.cut()
+                // One call, in order. The SDK writes the list to the connection
+                // as a single stream, which is what keeps the slices abutting.
+                p.sendData(payload)
+                bitmap.recycle()
             }.fold(
                 onSuccess = { PrintResult.Success },
                 onFailure = { PrintResult.Failure(it.message ?: "فشلت طباعة الصورة") },
@@ -390,6 +365,15 @@ class AndroidReceiptPrinter(appContext: Context) : ReceiptPrinter {
 
     private fun notConnected() = PrintResult.Failure("الطابعة غير متصلة")
 
+    // ESC a n, the alignment the raster path uses. Same three values as the
+    // SDK's own constants happen to be, but named against the spec rather than
+    // against a jar we no longer trust to agree with it.
+    private fun PrintAlign.toEscPos(): Int = when (this) {
+        PrintAlign.LEFT -> 0
+        PrintAlign.CENTER -> 1
+        PrintAlign.RIGHT -> 2
+    }
+
     private fun PrintAlign.toSdk(): Int = when (this) {
         PrintAlign.LEFT -> POSConst.ALIGNMENT_LEFT
         PrintAlign.CENTER -> POSConst.ALIGNMENT_CENTER
@@ -463,28 +447,10 @@ class AndroidReceiptPrinter(appContext: Context) : ReceiptPrinter {
     }
 
     /** Defaults to 80mm — what every call site assumed before this was settable. */
-    /**
-     * The head's width: the admin's saved choice, or a guess from the hardware.
-     *
-     * The guess is asymmetric on purpose. A 384-dot image on an 80mm head prints
-     * perfectly, just leaving a margin; a 576-dot image on a 58mm head does not
-     * fit and comes out as garbage. Sunmi's built-in heads are 58mm, so guessing
-     * 80mm there is the one guess that produces an unreadable receipt — and it
-     * was the guess we were making.
-     *
-     * Everything else keeps the 80mm default it has always printed correctly on.
-     * Either way this is only the default: the printer dialog's paper setting
-     * overrides it, and that choice is what gets persisted.
-     */
-    private fun loadPaperWidth(): PaperWidth {
-        val saved = prefs.getString(KEY_PAPER, null)
-        if (saved != null) {
-            runCatching { return PaperWidth.valueOf(saved) }
-        }
-        val builtInIs58mm = listOf(Build.MANUFACTURER, Build.BRAND)
-            .any { it.contains("SUNMI", ignoreCase = true) }
-        return if (builtInIs58mm) PaperWidth.MM58 else PaperWidth.MM80
-    }
+    private fun loadPaperWidth(): PaperWidth =
+        runCatching { PaperWidth.valueOf(prefs.getString(KEY_PAPER, "MM80") ?: "MM80") }
+            .getOrDefault(PaperWidth.MM80)
+
 
     private fun loadLanguage(): PrinterLanguage =
         runCatching { PrinterLanguage.valueOf(prefs.getString(KEY_LANG, "ESCPOS") ?: "ESCPOS") }
@@ -513,11 +479,5 @@ class AndroidReceiptPrinter(appContext: Context) : ReceiptPrinter {
         const val KEY_LANG = "lang"
         const val KEY_PAPER = "paper_width"
 
-        /**
-         * Raster rows per printBitmap. Small enough that the printer's buffer
-         * absorbs each band without dropping bytes, large enough that a long
-         * report is not thousands of round trips.
-         */
-        const val BAND_ROWS = 128
     }
 }
