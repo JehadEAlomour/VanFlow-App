@@ -51,6 +51,7 @@ class EndOfDayViewModel(
             connectType = printer.lastTarget?.type ?: PrinterType.BLUETOOTH,
             connectAddress = printer.lastTarget?.address.orEmpty(),
             printerLanguage = printer.language,
+            paperWidth = printer.paperWidth,
         ),
     )
     val state: StateFlow<EndOfDayState> = _state.asStateFlow()
@@ -83,6 +84,13 @@ class EndOfDayViewModel(
             is EndOfDayEvent.ConnectTypeSelected -> {
                 _state.update { it.copy(connectType = event.type) }
                 refreshDevices()
+            }
+
+            is EndOfDayEvent.PaperWidthSelected -> {
+                // Device-wide and persisted by the printer itself, so every
+                // other print screen picks it up without being told.
+                printer.paperWidth = event.width
+                _state.update { it.copy(paperWidth = event.width) }
             }
 
             is EndOfDayEvent.PrinterLanguageSelected -> {
@@ -212,7 +220,7 @@ class EndOfDayViewModel(
         if (_state.value.printerState !is PrinterState.Connected) return
         _state.update { it.copy(isPrinting = true, pendingPrint = false, printMessageAr = null) }
         viewModelScope.launch {
-            val result = printer.printImage(png, PaperWidth.MM80)
+            val result = printer.printImage(png)
             _state.update {
                 it.copy(
                     isPrinting = false,

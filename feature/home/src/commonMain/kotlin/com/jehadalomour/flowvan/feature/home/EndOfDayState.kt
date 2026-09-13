@@ -4,6 +4,7 @@ import com.jehadalomour.flowvan.core.model.DailyKpi
 import com.jehadalomour.flowvan.core.model.Shift
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
 import com.jehadalomour.flowvan.core.domain.printer.PrinterTarget
+import com.jehadalomour.flowvan.core.domain.printer.PaperWidth
 import com.jehadalomour.flowvan.core.domain.printer.PrinterLanguage
 import com.jehadalomour.flowvan.core.domain.printer.PrinterType
 
@@ -41,6 +42,9 @@ data class EndOfDayState(
     val pendingPrint: Boolean = false,
     val connectType: PrinterType = PrinterType.BLUETOOTH,
     val printerLanguage: PrinterLanguage = PrinterLanguage.ESCPOS,
+    /** The roll this device's head covers — device-wide, so setting it here
+     *  applies to every print in the app. */
+    val paperWidth: PaperWidth = PaperWidth.MM80,
     val connectAddress: String = "",
     val discoveredDevices: List<PrinterTarget> = emptyList(),
 ) {

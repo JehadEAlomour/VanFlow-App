@@ -184,7 +184,7 @@ class CashFlowPrintViewModel(
         if (_state.value.printerState !is PrinterState.Connected) return
         _state.update { it.copy(isPrinting = true, pendingPrint = false, printMessageAr = null) }
         viewModelScope.launch {
-            val result = printer.printImage(png, PaperWidth.MM80)
+            val result = printer.printImage(png)
             _state.update {
                 it.copy(
                     isPrinting = false,

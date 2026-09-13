@@ -59,6 +59,14 @@ class AndroidReceiptPrinter(appContext: Context) : ReceiptPrinter {
             prefs.edit().putString(KEY_LANG, value.name).apply()
         }
 
+    // The roll this head actually covers. Persisted like the language, and for the
+    // same reason: it is a property of the device, chosen once.
+    override var paperWidth: PaperWidth = loadPaperWidth()
+        set(value) {
+            field = value
+            prefs.edit().putString(KEY_PAPER, value.name).apply()
+        }
+
     private var printer: POSPrinter? = null
     private var pendingTarget: PrinterTarget? = null
     private var pendingConnect: CompletableDeferred<PrintResult>? = null
@@ -198,10 +206,13 @@ class AndroidReceiptPrinter(appContext: Context) : ReceiptPrinter {
 
     override suspend fun printImage(
         png: ByteArray,
-        paperWidth: PaperWidth,
+        paperWidth: PaperWidth?,
         align: PrintAlign,
         cut: Boolean,
     ): PrintResult {
+        // Null means "whatever this printer is set to", which is what every caller
+        // wants: the head's width is a fact about the device, not about the document.
+        val dotsFor = paperWidth ?: this.paperWidth
         // CPCL (Zebra) path — the GraphicsUtil renders the same PNG to the printer's
         // language. No paper cut: mobile CPCL printers tear off, they don't cut.
         if (isCpcl()) {
@@ -216,10 +227,25 @@ class AndroidReceiptPrinter(appContext: Context) : ReceiptPrinter {
         val p = ensureReady() ?: return notConnected()
         return withContext(Dispatchers.IO) {
             runCatching {
-                val bitmap = BitmapFactory.decodeByteArray(png, 0, png.size)
+                val decoded = BitmapFactory.decodeByteArray(png, 0, png.size)
                     ?: error("صورة غير صالحة")
+                // Hand the head EXACTLY its own dot width.
+                //
+                // The bitmap arrives at the capture's dp width times the SCREEN's
+                // density, so its pixel width is whatever that device happens to
+                // produce — 384 on one, 1008 on another, and on a 1.33-density
+                // terminal a number that is not even a multiple of 8. A thermal
+                // raster is packed 8 dots to a byte, so a width that does not
+                // divide by 8 leaves every row a fraction out of step with the
+                // next and the sheet prints as a diagonal smear: recognisably the
+                // right document, not one word of it readable.
+                //
+                // Scaling here rather than trusting the SDK's own resize also
+                // settles the aspect: height moves with width, so the receipt keeps
+                // its proportions instead of being stretched to fill the roll.
+                val bitmap = scaleToPrintWidth(decoded, dotsFor.dots)
                 p.initializePrinter()
-                    .printBitmap(bitmap, align.toSdk(), paperWidth.dots)
+                    .printBitmap(bitmap, align.toSdk(), dotsFor.dots)
                     .feedLine(3)
                 if (cut) p.cutPaper(POSConst.CUT_HALF)
             }.fold(
@@ -227,6 +253,19 @@ class AndroidReceiptPrinter(appContext: Context) : ReceiptPrinter {
                 onFailure = { PrintResult.Failure(it.message ?: "فشلت طباعة الصورة") },
             )
         }
+    }
+
+    /**
+     * The image at exactly [dots] wide, height scaled to match.
+     *
+     * Already-correct bitmaps are returned untouched — the common case on a phone
+     * whose density happens to land on the right number, and there is no reason to
+     * copy a bitmap to change nothing.
+     */
+    private fun scaleToPrintWidth(src: Bitmap, dots: Int): Bitmap {
+        if (src.width == dots) return src
+        val height = (src.height.toLong() * dots / src.width).toInt().coerceAtLeast(1)
+        return Bitmap.createScaledBitmap(src, dots, height, true)
     }
 
     override suspend fun openCashDrawer(): PrintResult {
@@ -342,6 +381,11 @@ class AndroidReceiptPrinter(appContext: Context) : ReceiptPrinter {
             .apply()
     }
 
+    /** Defaults to 80mm — what every call site assumed before this was settable. */
+    private fun loadPaperWidth(): PaperWidth =
+        runCatching { PaperWidth.valueOf(prefs.getString(KEY_PAPER, "MM80") ?: "MM80") }
+            .getOrDefault(PaperWidth.MM80)
+
     private fun loadLanguage(): PrinterLanguage =
         runCatching { PrinterLanguage.valueOf(prefs.getString(KEY_LANG, "ESCPOS") ?: "ESCPOS") }
             .getOrDefault(PrinterLanguage.ESCPOS)
@@ -367,5 +411,6 @@ class AndroidReceiptPrinter(appContext: Context) : ReceiptPrinter {
         const val KEY_NAME = "name"
         const val KEY_BAUD = "baud"
         const val KEY_LANG = "lang"
+        const val KEY_PAPER = "paper_width"
     }
 }

@@ -68,6 +68,18 @@ interface ReceiptPrinter {
      */
     var language: PrinterLanguage
 
+    /**
+     * The width of the roll this device's print head actually covers — 58mm (384
+     * dots) or 80mm (576). Device-wide and persisted, like [language], because it
+     * is a property of the hardware, not of any one document.
+     *
+     * It was hard-coded to 80mm at every call site. A head that is really 58mm then
+     * received a raster 192 dots too wide for it and wrapped every row onto the
+     * next, printing a diagonal smear rather than a receipt — which looks like a
+     * rendering bug and is not one.
+     */
+    var paperWidth: PaperWidth
+
     /** Open a connection. Safe to call when already connected to the same target. */
     suspend fun connect(target: PrinterTarget): PrintResult
 
@@ -80,9 +92,14 @@ interface ReceiptPrinter {
      * Print a PNG image scaled to the paper width — the recommended path for Arabic receipts,
      * since printer firmware cannot shape Arabic glyphs.
      */
+    /**
+     * `paperWidth` defaults to null, meaning "the width this printer is configured
+     * for" — the right answer for every caller. It stays overridable for a caller
+     * that genuinely knows better about one document.
+     */
     suspend fun printImage(
         png: ByteArray,
-        paperWidth: PaperWidth = PaperWidth.MM80,
+        paperWidth: PaperWidth? = null,
         align: PrintAlign = PrintAlign.CENTER,
         cut: Boolean = true,
     ): PrintResult

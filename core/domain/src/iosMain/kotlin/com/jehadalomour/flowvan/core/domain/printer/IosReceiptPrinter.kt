@@ -20,7 +20,7 @@ class IosReceiptPrinter : ReceiptPrinter {
     override suspend fun print(content: PrintContent): PrintResult = unsupported
     override suspend fun printImage(
         png: ByteArray,
-        paperWidth: PaperWidth,
+        paperWidth: PaperWidth?,
         align: PrintAlign,
         cut: Boolean,
     ): PrintResult = unsupported

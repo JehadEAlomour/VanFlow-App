@@ -694,6 +694,9 @@
     <string name="printer_type_bluetooth">Bluetooth</string>
     <string name="printer_type_serial">Serial</string>
     <string name="printer_type_network">Network</string>
+    <string name="printer_paper_width">Paper width</string>
+    <string name="printer_paper_58">58 mm</string>
+    <string name="printer_paper_80">80 mm</string>
     <string name="printer_language">Printer language</string>
     <string name="printer_language_escpos">ESC/POS</string>
     <string name="printer_language_cpcl">CPCL (Zebra)</string>

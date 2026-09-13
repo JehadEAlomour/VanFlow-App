@@ -694,6 +694,9 @@
     <string name="printer_type_bluetooth">بلوتوث</string>
     <string name="printer_type_serial">منفذ تسلسلي</string>
     <string name="printer_type_network">شبكة</string>
+    <string name="printer_paper_width">عرض الورق</string>
+    <string name="printer_paper_58">٥٨ ملم</string>
+    <string name="printer_paper_80">٨٠ ملم</string>
     <string name="printer_language">لغة الطابعة</string>
     <string name="printer_language_escpos">ESC/POS</string>
     <string name="printer_language_cpcl">CPCL (زيبرا)</string>

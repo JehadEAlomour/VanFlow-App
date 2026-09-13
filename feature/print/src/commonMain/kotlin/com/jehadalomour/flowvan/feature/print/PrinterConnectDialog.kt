@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jehadalomour.flowvan.core.domain.printer.PaperWidth
 import com.jehadalomour.flowvan.core.domain.printer.PrinterLanguage
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
 import com.jehadalomour.flowvan.core.domain.printer.PrinterTarget
@@ -55,6 +56,10 @@ fun PrinterConnectDialog(
     // SETUP screen shows the choice; the per-print screens inherit the saved setting.
     connectLanguage: PrinterLanguage? = null,
     onLanguageSelected: ((PrinterLanguage) -> Unit)? = null,
+    // The roll this head covers. Same shape as the language above: device-wide,
+    // chosen once, and only rendered where a screen wires it.
+    paperWidth: PaperWidth? = null,
+    onPaperWidthSelected: ((PaperWidth) -> Unit)? = null,
 ) {
     val connecting = printerState is PrinterState.Connecting
 
@@ -103,6 +108,27 @@ fun PrinterConnectDialog(
                             selected = connectLanguage == PrinterLanguage.CPCL,
                             onClick = { onLanguageSelected(PrinterLanguage.CPCL) },
                             label = { Text(stringResource(Res.string.printer_language_cpcl), fontSize = 12.sp) },
+                        )
+                    }
+                }
+
+                // Paper width. A head that is really 58mm, handed an 80mm raster,
+                // wraps every row and prints a diagonal smear — so this has to be
+                // reachable in the field, not compiled in.
+                if (paperWidth != null && onPaperWidthSelected != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(stringResource(Res.string.printer_paper_width), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(
+                            selected = paperWidth == PaperWidth.MM58,
+                            onClick = { onPaperWidthSelected(PaperWidth.MM58) },
+                            label = { Text(stringResource(Res.string.printer_paper_58), fontSize = 12.sp) },
+                        )
+                        FilterChip(
+                            selected = paperWidth == PaperWidth.MM80,
+                            onClick = { onPaperWidthSelected(PaperWidth.MM80) },
+                            label = { Text(stringResource(Res.string.printer_paper_80), fontSize = 12.sp) },
                         )
                     }
                 }

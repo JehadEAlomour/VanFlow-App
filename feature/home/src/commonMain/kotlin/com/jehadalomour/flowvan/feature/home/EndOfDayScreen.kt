@@ -381,6 +381,8 @@ private fun EodPrintPreviewDialog(
                 onDismiss = { onEvent(EndOfDayEvent.DismissConnectDialog) },
                 connectLanguage = state.printerLanguage,
                 onLanguageSelected = { onEvent(EndOfDayEvent.PrinterLanguageSelected(it)) },
+                paperWidth = state.paperWidth,
+                onPaperWidthSelected = { onEvent(EndOfDayEvent.PaperWidthSelected(it)) },
             )
         }
     }

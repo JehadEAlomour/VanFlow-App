@@ -236,7 +236,7 @@ class SalesBulkPrintViewModel(
             return
         }
         viewModelScope.launch {
-            when (val result = printer.printImage(png, PaperWidth.MM80)) {
+            when (val result = printer.printImage(png)) {
                 is PrintResult.Success -> {
                     _state.update { it.copy(printedCount = it.printedCount + 1) }
                     advance()
