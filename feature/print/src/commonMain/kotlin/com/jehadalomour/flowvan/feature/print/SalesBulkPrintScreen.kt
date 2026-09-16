@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -24,12 +23,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.rememberGraphicsLayer
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jehadalomour.flowvan.core.designsystem.resources.Res
@@ -125,27 +121,23 @@ fun SalesBulkPrintScreen(
             }
         }
 
-        // Off-screen render of the current invoice — drawn at full size into the
-        // layer but reported as 0×0 so it never appears on screen.
+        // Off-screen render of the current invoice, at head resolution.
+        //
+        // ThermalCapture does what the hand-rolled wrapper here used to do — measure
+        // the paper at its natural size, report 0×0 so it never reaches the screen,
+        // record it into the layer — and adds the one thing that was missing: it pins
+        // the density, so 320.dp of paper is the same number of dots on the Sunmi
+        // terminal as on a modern phone instead of a third as many. 320.dp is the
+        // width ReceiptBody's layout was drawn against; it stays 320.dp.
+        //
+        // The tear edges are deliberately not in here. They are grey saw teeth, and
+        // grey is the one mark a 1-bit head cannot make — it dithers it into speckle
+        // at the top and bottom of every invoice in the batch. They were decoration
+        // for a preview, and this screen has no preview: nothing it renders is ever
+        // looked at, only printed.
         state.current?.let { cur ->
-            Box(
-                modifier = Modifier.layout { measurable, _ ->
-                    val placeable = measurable.measure(Constraints())
-                    layout(0, 0) { placeable.place(0, 0) }
-                },
-            ) {
-                Box(
-                    modifier = Modifier
-                        .requiredWidth(320.dp)
-                        .background(RcBg)
-                        .drawWithContent { thermalLayer.record { this@drawWithContent.drawContent() } },
-                ) {
-                    Column {
-                        ReceiptTear()
-                        ReceiptBody(cur, cur.lines)
-                        ReceiptTear(flipped = true)
-                    }
-                }
+            ThermalCapture(layer = thermalLayer, paperDp = 320.dp) {
+                ReceiptBody(cur, cur.lines)
             }
         }
 

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -41,7 +40,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
@@ -89,45 +87,57 @@ private val TearGray = Color(0xFFD1D5DB)
 // Pure black ink. Hierarchy comes from weight, size and rules — never colour:
 // a 1-bit thermal head dithers any grey into a stipple, and the Jordan rollout
 // standardised on monochrome paper.
-private val Ink = Color.Black
+private val Ink = ThermalInk.Ink
 
 // Force Western digits and LTR on every number, so ASCII digits do not shape as
 // Arabic-Indic (٠١٢…) under an Arabic locale and a balance stays readable.
 private val LtrNum = TextStyle(textDirection = TextDirection.Ltr, localeList = LocaleList("en-US"))
 
 // ── Type scale ───────────────────────────────────────────────────────────────
-// One place, because this is the thing that gets tuned against real paper.
+// Aliases onto the shared thermal scale in ThermalPaper.kt, which is now the one
+// place these get tuned against real paper.
 //
-// What matters on a thermal roll is the ratio of text size to CAPTURE WIDTH: the
-// printer scales the bitmap to the head's 576 dots regardless, so enlarging both
-// together changes nothing on paper. The width below went up 20% for a sharper
-// raster and the type went up ~30%, which is the part that actually lands bigger
-// in the customer's hand.
+// They used to be tuned here, and every one of them sat between 12 and 20sp —
+// legible on the phone they were tuned on, and on a 58mm head about 8 dots of
+// letter height, which is not enough dots to tell one Arabic letter from
+// another. The ratio of type to CAPTURE WIDTH is what lands on paper, and the
+// capture is now pinned to the head (see ThermalCapture below), so these sizes
+// mean the same thing on every device in the fleet.
 
-/** Capture width. Wider = more source pixels for the printer to scale down. */
+/** The dp width this layout is designed against; the capture renders it at THERMAL_DOTS. */
 private val PaperWidth = 384.dp
 
-private const val FS_COMPANY = 26      // matches the voucher receipt exactly
-private const val FS_COMPANY_SUB = 15  // latin name, tax number
-private const val FS_TITLE = 20        // "كشف الحساب" in its inverted bar
-private const val FS_INFO = 15         // customer / period / footer lines
-private const val FS_TOTAL_LABEL = 16
-private const val FS_TOTAL_VALUE = 18
-private const val FS_HEAD = 14         // table column headings
-private const val FS_ROW = 14          // table body
-private const val FS_ROW_SUB = 12      // document number, on its own line
-private const val FS_CLOSING_LABEL = 17
-private const val FS_CLOSING_VALUE = 26 // the number the page exists to state
-private const val FS_SIGN = 13
-private const val FS_FOOTER = 14
+private const val FS_COMPANY = ThermalInk.FS_COMPANY
+private const val FS_COMPANY_SUB = ThermalInk.FS_SUB   // latin name, tax number
+private const val FS_TITLE = ThermalInk.FS_TITLE       // "كشف الحساب" in its inverted bar
+private const val FS_INFO = ThermalInk.FS_ROW          // customer / period / footer lines
+private const val FS_TOTAL_LABEL = ThermalInk.FS_SECTION
+private const val FS_TOTAL_VALUE = ThermalInk.FS_TOTAL
+private const val FS_HEAD = ThermalInk.FS_HEAD         // table column headings
+private const val FS_ROW = ThermalInk.FS_ROW           // table body
+private const val FS_ROW_SUB = ThermalInk.FS_MIN       // document number, on its own line
+private const val FS_CLOSING_LABEL = ThermalInk.FS_SECTION
 
 /**
- * Logo box, sized to the voucher receipt's 250dp AT ITS 320dp paper — scaled to
- * this page's wider capture so the mark lands the same size in the hand. Both
- * bitmaps are squeezed to the head's 576 dots, so only the ratio to paper width
- * survives; copying 250dp verbatim onto wider paper would print it smaller.
+ * The number the page exists to state, and the one line a shopkeeper reads from
+ * arm's length. Company-name size deliberately: it is knocked out white on a
+ * black band, and a knockout's counters are the first thing ink bleed closes up,
+ * so it needs more dots than any other figure on the roll, not fewer.
  */
-private val LogoSize = 300.dp
+private const val FS_CLOSING_VALUE = ThermalInk.FS_COMPANY
+private const val FS_SIGN = ThermalInk.FS_MIN
+private const val FS_FOOTER = ThermalInk.FS_ROW
+
+/**
+ * Logo box.
+ *
+ * Was 300dp on 384dp paper — 78% of the roll handed to a 1-bit head as a
+ * continuous-tone JPEG, which is the single largest patch of dithered speckle
+ * the printer was being asked to produce. Capped at 110dp: a customer's
+ * uploaded mark is a photograph, and the only thing that makes a photograph
+ * printable here is giving it less of the page.
+ */
+private val LogoSize = 110.dp
 
 /** Everything on the paper is bold. A thermal head lays down a thin, slightly
  *  fibrous line, and regular weight at this size greys out under shop lighting —
@@ -314,6 +324,14 @@ fun StatementPrintScreen(
 
         // The paper is a FIXED width — see requiredWidth below — so a screen
         // narrower than it pans rather than clipping a column off the edge.
+        //
+        // This is the PREVIEW ONLY. It no longer records into the print layer:
+        // recording here tied the printed bitmap to the phone's density, so the
+        // same roll went to the printer at 1008 pixels from a modern handset and
+        // 384 from the Sunmi terminal it is actually used on. The print source is
+        // the ThermalCapture below, at head resolution. The shadow, the rounded
+        // corners and the torn edges stay here for the same reason they can:
+        // nothing in this subtree reaches the head any more.
         Column(
             modifier = Modifier.fillMaxWidth()
                 .verticalScroll(rememberScrollState())
@@ -325,11 +343,7 @@ fun StatementPrintScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .requiredWidth(PaperWidth)
                     .shadow(8.dp, RoundedCornerShape(4.dp))
-                    .background(PaperBg, RoundedCornerShape(4.dp))
-                    .drawWithContent {
-                        graphicsLayer.record { this@drawWithContent.drawContent() }
-                        drawLayer(graphicsLayer)
-                    },
+                    .background(PaperBg, RoundedCornerShape(4.dp)),
             ) {
                 Column {
                     PaperTear()
@@ -338,6 +352,16 @@ fun StatementPrintScreen(
                 }
             }
             Spacer(Modifier.height(32.dp))
+        }
+
+        // ── The thermal roll, drawn off-screen at the head's own resolution ──
+        //
+        // Same body as the preview above, same 384dp layout, but composed at a
+        // pinned density so PaperWidth is exactly THERMAL_DOTS pixels wherever
+        // the app runs — and with the decorative torn edges left behind, because
+        // they are grey strips and grey is the one thing the head cannot print.
+        ThermalCapture(layer = graphicsLayer, paperDp = PaperWidth) {
+            StatementBody(state)
         }
 
         // ── The A4 sheets, drawn off-screen and captured for "share as PDF" ──
@@ -393,7 +417,10 @@ private fun StatementBody(state: StatementPrintState) {
     // The paper is laid out RTL like the rest of the app, but every numeric
     // column inside is pinned LTR so the digits read left-to-right.
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp)) {
+        // 10dp side margin rather than 14: on 384dp paper that is about 2mm, and
+        // the 8dp it gives back went into the money columns, which at the larger
+        // type are the only part of the page that can actually run out of room.
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 12.dp)) {
 
             // ── Header ────────────────────────────────────────────────────────
             val logo = remember(state.companyLogo) { decodeBase64Image(state.companyLogo) }
@@ -405,6 +432,11 @@ private fun StatementBody(state: StatementPrintState) {
                     // rectangle and print a solid black box where the mark
                     // should be. Only the bundled vector below is tinted,
                     // because it is a monochrome shape drawn for exactly that.
+                    //
+                    // Tinting would not make it 1-bit anyway: a tint multiplies
+                    // colour and leaves alpha alone, so every soft edge still
+                    // arrives at the head as partial coverage. The only lever
+                    // that helps a photograph here is LogoSize.
                     Image(
                         bitmap = logo,
                         contentDescription = null,
@@ -434,14 +466,14 @@ private fun StatementBody(state: StatementPrintState) {
             Box(
                 modifier = Modifier.fillMaxWidth()
                     .background(Ink)
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 6.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     stringResource(Res.string.statement_title),
                     color = PaperBg,
                     fontSize = FS_TITLE.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -479,11 +511,19 @@ private fun StatementBody(state: StatementPrintState) {
                 // Weights match line 1 of a row. The document number is no
                 // longer a column — it has its own line underneath — so the
                 // money columns get the width the larger type needs.
-                HeadCell(stringResource(Res.string.statement_col_date), weight = 0.9f)
-                HeadCell(stringResource(Res.string.statement_col_doc), weight = 1.1f)
-                HeadCell(stringResource(Res.string.statement_col_debit), weight = 1.25f)
-                HeadCell(stringResource(Res.string.statement_col_credit), weight = 1.25f)
-                HeadCell(stringResource(Res.string.statement_col_balance), weight = 1.5f)
+                //
+                // Re-cut for the bigger type. The type column only ever holds a
+                // short word (بيع، مرتجع، قيد، نقد، شيك، حوالة), so it gave
+                // width to the three figure columns, which at FS_ROW need about
+                // 77dp to hold "1234.567" without clipping; the balance gets the
+                // most because it is the only column that routinely runs to five
+                // digits. These are deliberately tight — if a column ever starts
+                // clipping, take the dp from the type column, not from a figure.
+                HeadCell(stringResource(Res.string.statement_col_date), weight = 1.0f)
+                HeadCell(stringResource(Res.string.statement_col_doc), weight = 0.85f)
+                HeadCell(stringResource(Res.string.statement_col_debit), weight = 1.3f)
+                HeadCell(stringResource(Res.string.statement_col_credit), weight = 1.3f)
+                HeadCell(stringResource(Res.string.statement_col_balance), weight = 1.55f)
             }
             Rule()
 
@@ -492,9 +532,12 @@ private fun StatementBody(state: StatementPrintState) {
                 CenterLine(stringResource(Res.string.statement_empty), size = FS_INFO)
                 Spacer(Modifier.height(10.dp))
             } else {
-                state.rows.forEach { row ->
+                state.rows.forEachIndexed { index, row ->
                     StatementPaperRow(row)
-                    ThinRule()
+                    // Nothing under the last row: the section rule below already
+                    // closes the table, and two 2dp rules 6dp apart read as a
+                    // printing fault rather than as a boundary.
+                    if (index < state.rows.lastIndex) Rule()
                 }
             }
 
@@ -521,6 +564,9 @@ private fun StatementBody(state: StatementPrintState) {
                 ) {
                     Text(
                         stringResource(Res.string.statement_closing_balance),
+                        // Weighted, fill = false: the label wraps if it has to,
+                        // rather than squeezing the figure it is labelling.
+                        modifier = Modifier.weight(1f, fill = false),
                         color = PaperBg,
                         fontSize = FS_CLOSING_LABEL.sp,
                         fontWeight = FontWeight.Bold,
@@ -529,7 +575,7 @@ private fun StatementBody(state: StatementPrintState) {
                         state.closingBalance.jod(),
                         color = PaperBg,
                         fontSize = FS_CLOSING_VALUE.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         style = LtrNum,
                     )
                 }
@@ -589,12 +635,13 @@ private fun StatementPaperRow(row: StatementRow) {
     }
     Column(modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp)) {
         // Line 1 — the money. Everything a reader scans down the page for.
+        // Weights must stay in step with the heading row above — see the note there.
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            BodyCell(row.createdAt.dayMonth(), weight = 0.9f, numeric = true)
-            BodyCell(label, weight = 1.1f)
-            BodyCell(if (row.debit > 0) row.debit.jod() else "-", weight = 1.25f, numeric = true)
-            BodyCell(if (row.credit > 0) row.credit.jod() else "-", weight = 1.25f, numeric = true)
-            BodyCell(row.balance.jod(), weight = 1.5f, numeric = true, bold = true)
+            BodyCell(row.createdAt.dayMonth(), weight = 1.0f, numeric = true)
+            BodyCell(label, weight = 0.85f)
+            BodyCell(if (row.debit > 0) row.debit.jod() else "-", weight = 1.3f, numeric = true)
+            BodyCell(if (row.credit > 0) row.credit.jod() else "-", weight = 1.3f, numeric = true)
+            BodyCell(row.balance.jod(), weight = 1.55f, numeric = true, bold = true)
         }
         // Line 2 — the document number, on its own line beneath the amounts and
         // running LEFT TO RIGHT. It used to sit stacked under the type in a
@@ -631,13 +678,28 @@ private fun CenterLine(text: String, size: Int, bold: Boolean = false) {
     )
 }
 
+/**
+ * A label and its value on one line.
+ *
+ * The label is weighted with `fill = false` and the value is not: a long
+ * customer name or a full period range now needs most of the line at this size,
+ * and if anything has to give it is the label — which can wrap — rather than the
+ * value, which would otherwise be squeezed until it wrapped mid-number.
+ */
 @Composable
 private fun InfoLine(label: String, value: String, numeric: Boolean = false) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, color = Ink, fontSize = FS_INFO.sp, fontWeight = PaperWeight)
+        Text(
+            label,
+            modifier = Modifier.weight(1f, fill = false),
+            color = Ink,
+            fontSize = FS_INFO.sp,
+            fontWeight = PaperWeight,
+        )
+        Spacer(Modifier.size(8.dp))
         Text(
             value,
             color = Ink,
@@ -654,7 +716,15 @@ private fun TotalLine(label: String, value: String, bold: Boolean = true) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, color = Ink, fontSize = FS_TOTAL_LABEL.sp, fontWeight = PaperWeight)
+        // Same reasoning as InfoLine: the label yields, the figure never does.
+        Text(
+            label,
+            modifier = Modifier.weight(1f, fill = false),
+            color = Ink,
+            fontSize = FS_TOTAL_LABEL.sp,
+            fontWeight = PaperWeight,
+        )
+        Spacer(Modifier.size(8.dp))
         Text(
             value,
             color = Ink,
@@ -719,21 +789,26 @@ private fun androidx.compose.foundation.layout.RowScope.BodyCell(
 @Composable
 private fun SignatureSlot(label: String, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
-        Spacer(Modifier.height(18.dp))
-        Box(Modifier.fillMaxWidth().height(1.dp).background(Ink))
-        Spacer(Modifier.height(3.dp))
+        Spacer(Modifier.height(20.dp))
+        Box(Modifier.fillMaxWidth().height(ThermalInk.RuleThickness).background(Ink))
+        Spacer(Modifier.height(4.dp))
         Text(label, color = Ink, fontSize = FS_SIGN.sp, fontWeight = PaperWeight, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
     }
 }
 
+/**
+ * The only divider on the paper: solid black, 2dp, edge to edge.
+ *
+ * There used to be a second one — a 0.5dp rule at 35% alpha between table rows,
+ * which is about the least printable mark it is possible to ask a thermal head
+ * for: sub-dot thickness AND a tone it has to dither. It printed as an
+ * intermittent smear or as nothing. Row separators now use this same rule, so
+ * the table reads as a table; hierarchy between a section break and a row break
+ * comes from the space around it, not from the weight of the line.
+ */
 @Composable
 private fun Rule() {
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Ink))
-}
-
-@Composable
-private fun ThinRule() {
-    Box(Modifier.fillMaxWidth().height(0.5.dp).background(Ink.copy(alpha = 0.35f)))
+    Box(Modifier.fillMaxWidth().height(ThermalInk.RuleThickness).background(Ink))
 }
 
 /** The torn edge that makes the block read as a till roll rather than a card. */

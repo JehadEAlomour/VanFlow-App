@@ -40,35 +40,85 @@ import kotlin.math.abs
 // than shared with it because these two papers are allowed to diverge later —
 // what must not happen is one drifting by accident while nobody is comparing.
 
-internal val TxnPaperBg  = Color.White
+// Three screens draw their paper through this kit — the transaction report, the
+// sales report and the daily cash flow — so everything here that ends up on
+// paper is written for a thermal head rather than for a screen: one bit per dot,
+// black or white, and no grey to carry hierarchy with, which leaves size, weight
+// and rules to carry it. See ThermalInk for where the numbers come from. The
+// handful of coloured constants below are screen chrome and stay as they are.
+
+/** Paper ink. Two colours, and they are the only two a head can print. */
+internal val TxnPaperBg  = ThermalInk.Paper
+internal val TxnInk      = ThermalInk.Ink
+
+/**
+ * Secondary text on the printer status line. Screen chrome, not paper — its
+ * three call sites all sit in the action bar — so it keeps its slate grey.
+ */
+internal val TxnSubText  = Color(0xFF637181)
+
+/**
+ * The torn edge drawn above and below the paper PREVIEW. It is decoration on
+ * screen and is deliberately not inside the capture, so it may stay grey — a
+ * torn edge rendered in black would print as two solid bars if it ever were.
+ */
+internal val TxnTearGray = Color(0xFFD1D5DB)
+
+/** Screen chrome only — none of these ever touch paper. */
 internal val TxnScreenBg = Color(0xFFD1D5DB)
 internal val TxnDarkBlue = Color(0xFF1A2A3A)
 internal val TxnBlue     = Color(0xFF185FA5)
 internal val TxnGreen    = Color(0xFF1D9E75)
 internal val TxnAmber    = Color(0xFFC97B1A)
-internal val TxnSubText  = Color(0xFF637181)
-internal val TxnTearGray = Color(0xFFD1D5DB)
-internal val TxnInk      = Color.Black
 
 /** Latin digits, LTR — so figures never shape as ٠١٢ under the Arabic locale. */
 internal val TxnLtr = TextStyle(textDirection = TextDirection.Ltr, localeList = LocaleList("en-US"))
 
+/**
+ * The dp width this paper's layout is designed against, and the number
+ * `ThermalCapture(paperDp = …)` has to be given: the capture pins its density so
+ * that this many dp comes out as exactly one head's worth of dots, and handing
+ * it a different width would rescale every column on the page.
+ */
 internal val TxnPaperWidth = 384.dp
-internal val TxnLogoSize = 300.dp
+
+/**
+ * A customer's uploaded logo is a continuous-tone photograph, and it was drawn
+ * 300dp wide on a 384dp roll — four fifths of the page handed to a head that can
+ * only answer it by scattering dots. Capped so the photograph is a mark at the
+ * top of the receipt instead of the receipt.
+ */
+internal val TxnLogoSize = 110.dp
+
+/** The lightest weight allowed on paper: under Bold the stems fall below a dot. */
 internal val TxnWeight = FontWeight.Bold
 
-internal const val TXN_FS_COMPANY = 26
-internal const val TXN_FS_SUB = 15
-internal const val TXN_FS_TITLE = 20
-internal const val TXN_FS_INFO = 15
-internal const val TXN_FS_TOTAL_LABEL = 16
-internal const val TXN_FS_TOTAL_VALUE = 18
-internal const val TXN_FS_HEAD = 14
-internal const val TXN_FS_ROW = 14
-internal const val TXN_FS_SUB_ROW = 12
-internal const val TXN_FS_BOX_LABEL = 15
-internal const val TXN_FS_BOX_VALUE = 22
-internal const val TXN_FS_FOOTER = 14
+// Type sizes come from ThermalInk rather than from taste. They read large for a
+// screen and are meant to: 80mm of roll is about 384dp, so the old 12sp sub-row
+// landed at roughly 2.5mm of letter height — not enough dots to keep the marks
+// that tell one Arabic letter from another. The names stay because all three
+// screens type them.
+internal const val TXN_FS_COMPANY = ThermalInk.FS_COMPANY
+internal const val TXN_FS_SUB = ThermalInk.FS_SUB
+internal const val TXN_FS_TITLE = ThermalInk.FS_TITLE
+
+/**
+ * A section heading inside the body. Kept separate from [TXN_FS_HEAD], which
+ * sizes the column headings of a table: a heading has to be visibly larger than
+ * the rows under it, while a column heading has to fit inside a column.
+ */
+internal const val TXN_FS_SECTION = ThermalInk.FS_SECTION
+internal const val TXN_FS_INFO = ThermalInk.FS_ROW
+internal const val TXN_FS_TOTAL_LABEL = ThermalInk.FS_ROW
+internal const val TXN_FS_TOTAL_VALUE = ThermalInk.FS_TOTAL
+internal const val TXN_FS_HEAD = ThermalInk.FS_HEAD
+internal const val TXN_FS_ROW = ThermalInk.FS_ROW
+internal const val TXN_FS_SUB_ROW = ThermalInk.FS_MIN
+internal const val TXN_FS_BOX_LABEL = ThermalInk.FS_SECTION
+
+/** Two points over a total row: it is the figure the paper is read for. */
+internal const val TXN_FS_BOX_VALUE = ThermalInk.FS_TOTAL + 2
+internal const val TXN_FS_FOOTER = ThermalInk.FS_SUB
 
 /** Money: three decimals, Latin digits, sign dropped (the label carries meaning). */
 internal fun Double.txnJod(): String {
@@ -104,13 +154,28 @@ internal fun TxnCenter(text: String, size: Int, bold: Boolean = false) {
     )
 }
 
+/**
+ * A label and its figure. Both black — the label used to be told apart from the
+ * value by being the lighter grey of the two, which is a distinction a head
+ * cannot draw, so it is carried by weight now: Bold label, ExtraBold value.
+ *
+ * The label is weighted so that at receipt type sizes a long Arabic label wraps
+ * onto a second line instead of squeezing the figure off the edge; `fill = false`
+ * keeps a short label short, so the row still reads as label-then-figure.
+ */
 @Composable
 internal fun TxnInfo(label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, color = TxnInk, fontSize = TXN_FS_INFO.sp, fontWeight = TxnWeight)
+        Text(
+            label,
+            modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp),
+            color = TxnInk,
+            fontSize = TXN_FS_INFO.sp,
+            fontWeight = TxnWeight,
+        )
         Text(
             value,
             color = TxnInk,
@@ -124,10 +189,16 @@ internal fun TxnInfo(label: String, value: String) {
 @Composable
 internal fun TxnTotal(label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, color = TxnInk, fontSize = TXN_FS_TOTAL_LABEL.sp, fontWeight = TxnWeight)
+        Text(
+            label,
+            modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp),
+            color = TxnInk,
+            fontSize = TXN_FS_TOTAL_LABEL.sp,
+            fontWeight = TxnWeight,
+        )
         Text(
             value,
             color = TxnInk,
@@ -138,16 +209,30 @@ internal fun TxnTotal(label: String, value: String) {
     }
 }
 
-/** A figure important enough to be read before anything else on the page. */
+/**
+ * A figure important enough to be read before anything else on the page.
+ *
+ * A solid black band with the text knocked out white is the one panel treatment
+ * a head prints cleanly — both halves are 1-bit. Knocked-out type does need more
+ * room than type on white, though: the letters are the gaps left in a fully
+ * burned band, and a thin gap closes up. Hence the label at section size rather
+ * than row size, and square corners — a rounded corner is a grey arc.
+ */
 @Composable
 internal fun TxnBoxedTotal(label: String, value: String) {
-    Box(modifier = Modifier.fillMaxWidth().background(TxnInk).padding(horizontal = 8.dp, vertical = 6.dp)) {
+    Box(modifier = Modifier.fillMaxWidth().background(TxnInk).padding(horizontal = 8.dp, vertical = 8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(label, color = TxnPaperBg, fontSize = TXN_FS_BOX_LABEL.sp, fontWeight = FontWeight.Bold)
+            Text(
+                label,
+                modifier = Modifier.weight(1f, fill = false).padding(end = 8.dp),
+                color = TxnPaperBg,
+                fontSize = TXN_FS_BOX_LABEL.sp,
+                fontWeight = FontWeight.Bold,
+            )
             Text(
                 value,
                 color = TxnPaperBg,
@@ -173,7 +258,10 @@ internal fun RowScope.TxnHead(text: String, weight: Float) {
         fontSize = TXN_FS_HEAD.sp,
         fontWeight = FontWeight.ExtraBold,
         textAlign = TextAlign.Right,
-        maxLines = 1,
+        // Two lines, because a heading is now wider than its column may be and a
+        // clipped heading loses a word outright. The header row grows taller; the
+        // columns stay where they are.
+        maxLines = 2,
     )
 }
 
@@ -187,20 +275,38 @@ internal fun RowScope.TxnCell(text: String, weight: Float, bold: Boolean = false
         fontWeight = if (bold) FontWeight.ExtraBold else TxnWeight,
         textAlign = TextAlign.Right,
         style = TxnLtr,
-        maxLines = 1,
+        // Same reason, and it matters more here: at this size a three-decimal
+        // figure can outgrow the narrowest column, and a money cell that clips or
+        // ellipsises has silently dropped digits. Wrapping keeps all of them.
+        maxLines = 2,
     )
 }
 
 @Composable
 internal fun TxnRule() {
-    Box(Modifier.fillMaxWidth().height(1.dp).background(TxnInk))
+    Box(Modifier.fillMaxWidth().height(ThermalInk.RuleThickness).background(TxnInk))
 }
 
+/**
+ * Was a half-dot hairline at 35% alpha, which is about the least printable mark
+ * there is. A head has nothing thinner than a rule to offer, so this is now the
+ * same rule as [TxnRule] — the name stays because the screens separate table rows
+ * with it, and the hierarchy they want comes from the spacing they leave around
+ * the major rules, not from a weight difference the paper cannot hold.
+ */
 @Composable
 internal fun TxnThinRule() {
-    Box(Modifier.fillMaxWidth().height(0.5.dp).background(TxnInk.copy(alpha = 0.35f)))
+    Box(Modifier.fillMaxWidth().height(ThermalInk.RuleThickness).background(TxnInk))
 }
 
+/**
+ * The torn edge drawn above and below the paper on screen.
+ *
+ * Decoration, and it belongs in the preview only — outside [ThermalCapture].
+ * It used to fill its 6dp strip with #D1D5DB, which a head can answer only by
+ * scattering dots, so it is drawn in ink now: if it ever does end up inside a
+ * capture the result is a clean black sawtooth rather than a band of speckle.
+ */
 @Composable
 internal fun TxnTear(flipped: Boolean = false) {
     Canvas(modifier = Modifier.fillMaxWidth().height(6.dp)) {

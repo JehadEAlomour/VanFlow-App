@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -34,7 +33,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.foundation.horizontalScroll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -47,7 +45,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -92,58 +89,23 @@ private val Dark        = Color(0xFF0F1923)
 private val Blue        = Color(0xFF185FA5)
 private val DarkBlue    = Color(0xFF1A2A3A)
 private val Green       = Color(0xFF1D9E75)
-private val Red         = Color(0xFFD94040)
-private val Amber       = Color(0xFFC97B1A)
 private val SubText     = Color(0xFF637181)
-private val DivLight    = Color(0xFFAAB5C6)
 private val DivItem     = Color(0xFFE5E7EB)
 private val TearGray    = Color(0xFFD1D5DB)
 
-// ── Receipt palette ────────────────────────────────────────────────────────────
-// Every ink/line/border in the receipt resolves through this palette so a single flag
-// (VoucherTemplate.monochrome) swaps the whole voucher between colored and pure black/white.
-// Monochrome conveys emphasis via weight/size/boxes only — no hue, ever (Jordan rollout).
-
-private data class RcPalette(
-    val ink: Color,        // primary text, solid rules, box borders
-    val muted: Color,      // secondary labels (neutral grey, no hue)
-    val faint: Color,      // faintest decorative rules / placeholders (neutral grey)
-    val accent: Color,     // emphasised numbers (voucher #, grand total)
-    val negative: Color,   // discount
-    val warn: Color,       // tax
-    val sale: Color,
-    val ret: Color,
-    val request: Color,
-)
-
-// Pure black on white: every ink role is #000000. Hierarchy comes from font weight/size and
-// boxes/rules — never color (spec §3, a hard constraint for the Jordan market). Solid black also
-// rasterises cleanly on 1-bit thermal heads, where any grey would dither into a stipple.
-private val MonoPalette = RcPalette(
-    ink = Color.Black,
-    muted = Color.Black,
-    faint = Color.Black,
-    accent = Color.Black,
-    negative = Color.Black,
-    warn = Color.Black,
-    sale = Color.Black,
-    ret = Color.Black,
-    request = Color.Black,
-)
-
-private val ColorPalette = RcPalette(
-    ink = Dark,
-    muted = SubText,
-    faint = DivLight,
-    accent = Blue,
-    negative = Red,
-    warn = Amber,
-    sale = Green,
-    ret = Red,
-    request = Blue,
-)
-
-private val LocalRc = staticCompositionLocalOf { MonoPalette }
+// ── Receipt ink ───────────────────────────────────────────────────────────────
+// One ink, because the head has one: it burns a dot or it leaves the paper white. Everything
+// this receipt used to carry its hierarchy in — a #637181 label, a #AAB5C6 hairline, the blue
+// on the grand total — had no way to reach the roll, so the printer approximated each tone by
+// scattering dots and the voucher came back as speckle with the solid rules still running
+// through it. So the paper no longer resolves ink through a palette at all: label-vs-value is
+// weight, section-vs-row is size, and blocks are fenced by rules.
+//
+// VoucherTemplate.monochrome therefore selects nothing here; the coloured voucher lives on in
+// VoucherA4Document, which is read on a phone or printed by a real printer. The roles that
+// used to be muted/faint/accent/negative/warn are all this one value now — do not reintroduce
+// a hue or a grey on this paper to get an emphasis back, reach for weight or size instead.
+private val RcInk = ThermalInk.Ink
 
 // Force Western (Latin) digits + LTR for every number on the voucher, even under an Arabic
 // locale where ASCII digits would otherwise shape as Arabic-Indic (٠١٢…).
@@ -162,7 +124,8 @@ fun VoucherPrintScreen(
     val state by viewModel.state.collectAsState()
     // The A4 document is rendered off-screen; this layer captures it for "Share as PDF".
     val graphicsLayer = rememberGraphicsLayer()
-    // The visible voucher view IS the thermal receipt (old style); this layer captures it for printing.
+    // The thermal receipt is captured off-screen at head resolution (see ThermalCapture below);
+    // this layer holds that bitmap. The on-screen preview is the same paper, but is not the source.
     val thermalLayer = rememberGraphicsLayer()
     val scope = rememberCoroutineScope()
     val pdfHelper = rememberPdfShareHelper()
@@ -189,10 +152,10 @@ fun VoucherPrintScreen(
         }
     }
 
-    // Capture the on-screen receipt and send it to the ViewModel as PNG bytes.
+    // Capture the receipt and send it to the ViewModel as PNG bytes.
     // Bitmap capture is the one piece that must live in the UI; all logic stays in the VM.
     suspend fun captureAndPrint() {
-        // Thermal print uses the on-screen receipt (the old receipt style), NOT the A4 document.
+        // Thermal print uses the off-screen receipt capture, NOT the A4 document.
         val bitmap = thermalLayer.toImageBitmap()
         val png = withContext(Dispatchers.Default) { bitmap.toPngBytes() }
         viewModel.onEvent(VoucherPrintEvent.Print(png))
@@ -307,8 +270,10 @@ fun VoucherPrintScreen(
             )
         }
 
-        // Scrollable receipt — the visible view IS the thermal receipt (old style), and its
-        // layer is what thermal printing captures. Sharing uses the off-screen A4 below.
+        // Scrollable receipt preview — what the rep looks at, drawn at the screen's density. It
+        // is no longer the print source: the bitmap now comes from the off-screen ThermalCapture
+        // below, so the printed resolution stops depending on which phone or terminal is running
+        // the app. Sharing still uses the off-screen A4 further down.
         // Fixed-width paper — see requiredWidth below — so a screen narrower
         // than it pans rather than clipping a column off the edge.
         Column(
@@ -322,18 +287,25 @@ fun VoucherPrintScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .requiredWidth(320.dp)
                     .shadow(8.dp, RoundedCornerShape(4.dp))
-                    .background(RcBg, RoundedCornerShape(4.dp))
-                    .drawWithContent {
-                        thermalLayer.record { this@drawWithContent.drawContent() }
-                        drawLayer(thermalLayer)
-                    },
+                    .background(RcBg, RoundedCornerShape(4.dp)),
             ) {
                 Column {
+                    // Decorative torn edges stay in the preview only. They are grey strips, which
+                    // is the one thing a 1-bit head cannot print, and the capture below takes the
+                    // body alone.
                     ReceiptTear()
                     ReceiptBody(state, shownLines)
                     ReceiptTear(flipped = true)
                 }
             }
+
+            // The print source: the same paper, rendered off-screen at head resolution and
+            // recorded into the layer thermal printing reads. 320.dp is the width this
+            // receipt's layout was designed against — keep it, or every column reflows.
+            ThermalCapture(layer = thermalLayer, paperDp = 320.dp) {
+                ReceiptBody(state, shownLines)
+            }
+
             Spacer(Modifier.height(32.dp))
         }
 
@@ -417,14 +389,11 @@ internal fun ReceiptBody(
     shownLines: List<InvoiceLine> = state.lines,
 ) {
     val t = state.template
-    val palette = if (t.monochrome) MonoPalette else ColorPalette
     // The printed voucher is Arabic-first and must always lay out right-to-left, no matter the
     // device/app locale — labels sit on the right, values on the left. Numbers stay LTR via LtrNum.
     CompositionLocalProvider(
-        LocalRc provides palette,
         LocalLayoutDirection provides LayoutDirection.Rtl,
     ) {
-        val c = LocalRc.current
         val isArabic = Locale.current.language.startsWith("ar")
         val paymentType = PaymentType.fromPaymentMethod(state.paymentMethod)
         val paymentValue = if (isArabic) paymentType.labelAr else paymentType.labelEn
@@ -442,28 +411,35 @@ internal fun ReceiptBody(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // Logo at the top — the company's own logo (cached from /company-info) when
-                // available, else the bundled default (tinted black for the 1-bit print).
+                // available, else the bundled default (tinted to the one ink).
+                //
+                // 110.dp, not the 250.dp this used to be: an uploaded logo is a continuous-tone
+                // photograph, and at 250.dp on 320.dp of paper the head was being handed a
+                // greyscale image across 78% of the page, which it can only dither. Small keeps
+                // the dithering down to a mark instead of a field of noise. The tint on the
+                // bundled vector does NOT make it 1-bit either — it multiplies colour and leaves
+                // the alpha channel — so the cap applies to both.
                 val logoBitmap = remember(state.companyLogo) { decodeBase64Image(state.companyLogo) }
                 if (logoBitmap != null) {
                     Image(
                         bitmap = logoBitmap,
                         contentDescription = null,
-                        modifier = Modifier.size(250.dp).padding(bottom = 8.dp),
+                        modifier = Modifier.size(110.dp).padding(bottom = 8.dp),
                     )
                 } else {
                     Image(
                         painter = painterResource(Res.drawable.voucher_logo),
                         contentDescription = null,
-                        colorFilter = ColorFilter.tint(c.ink),
-                        modifier = Modifier.size(250.dp).padding(bottom = 8.dp),
+                        colorFilter = ColorFilter.tint(RcInk),
+                        modifier = Modifier.size(110.dp).padding(bottom = 8.dp),
                     )
                 }
                 if (companyName.isNotBlank()) {
                     Text(
                         text = companyName,
                         fontWeight = FontWeight.ExtraBold,
-                        fontSize = 26.sp,
-                        color = c.ink,
+                        fontSize = ThermalInk.FS_COMPANY.sp,
+                        color = RcInk,
                         textAlign = TextAlign.Center,
                         letterSpacing = 0.5.sp,
                     )
@@ -478,11 +454,11 @@ internal fun ReceiptBody(
                 if (subLine.isNotBlank()) {
                     Text(
                         text = subLine,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = c.muted,
+                        fontSize = ThermalInk.FS_SUB.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = RcInk,
                         textAlign = TextAlign.Center,
-                        lineHeight = 16.sp,
+                        lineHeight = 22.sp,
                         style = RtlNum,
                     )
                 }
@@ -496,13 +472,13 @@ internal fun ReceiptBody(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TypeTag(label = typeLabel(state.type), color = typeColor(state.type))
+                TypeTag(label = typeLabel(state.type))
             }
 
             SepDash()
 
             // Invoice meta
-            KvRow(stringResource(Res.string.voucher_detail_number), "#${state.number}", valueColor = c.accent)
+            KvRow(stringResource(Res.string.voucher_detail_number), "#${state.number}")
             KvRow(stringResource(Res.string.voucher_detail_date), state.createdAt.toReceiptDateStr())
             KvRow(stringResource(Res.string.print_salesman), state.salesmanNameAr)
 
@@ -545,23 +521,25 @@ internal fun ReceiptBody(
             // then a total-offer-discount row, and drop the generic aggregate rows — for a SALE
             // the offers ARE the discount, so the generic rows would just duplicate the total.
             // No offers (or a RETURN/ORDER) → fall back to the generic line/total discount rows.
+            // A discount used to be red and the tax amber. On paper the sign carries it: the
+            // leading "-" and "+" are already in the value string, and they print.
             if (state.appliedOffers.isNotEmpty()) {
                 state.appliedOffers.forEach { offer ->
-                    TotRow(offer.name, "- ${money(offer.discountAmount, t)}", valueColor = c.negative)
+                    TotRow(offer.name, "- ${money(offer.discountAmount, t)}")
                 }
                 val offersTotal = state.appliedOffers.sumOf { it.discountAmount }
-                TotRow(stringResource(Res.string.print_offers_total), "- ${money(offersTotal, t)}", valueColor = c.negative)
+                TotRow(stringResource(Res.string.print_offers_total), "- ${money(offersTotal, t)}")
             } else {
                 val lineDiscount = shownLines.sumOf { it.qty * it.unitPrice * it.discountPct } + freeGross
                 if (lineDiscount > 0.0005) {
-                    TotRow(stringResource(Res.string.print_line_discount), "- ${money(lineDiscount, t)}", valueColor = c.negative)
+                    TotRow(stringResource(Res.string.print_line_discount), "- ${money(lineDiscount, t)}")
                 }
                 if (state.discountAmount > 0.0005) {
-                    TotRow(stringResource(Res.string.print_total_discount), "- ${money(state.discountAmount, t)}", valueColor = c.negative)
+                    TotRow(stringResource(Res.string.print_total_discount), "- ${money(state.discountAmount, t)}")
                 }
             }
             if (state.taxAmount > 0.0) {
-                TotRow(taxTotalLabel(shownLines), "+ ${money(state.taxAmount, t)}", valueColor = c.warn)
+                TotRow(taxTotalLabel(shownLines), "+ ${money(state.taxAmount, t)}")
             }
             TotRow(
                 stringResource(Res.string.print_item_count),
@@ -582,23 +560,27 @@ internal fun ReceiptBody(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 6.dp)
-                    .border(2.dp, c.ink),
+                    .border(ThermalInk.RuleThickness, RcInk),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(Res.string.voucher_detail_total),
-                    modifier = Modifier.padding(horizontal = 10.dp),
+                    // Wraps rather than squeezing the number: the total is what the paper
+                    // exists to state, and it must never be the part that gets clipped.
+                    modifier = Modifier.weight(1f, fill = false).padding(horizontal = 10.dp),
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 22.sp,
-                    color = c.ink,
+                    fontSize = ThermalInk.FS_TOTAL.sp,
+                    color = RcInk,
                 )
                 Text(
                     text = money(state.total, t),
                     modifier = Modifier.padding(horizontal = 10.dp),
                     fontWeight = FontWeight.ExtraBold,
+                    // Already 24 — the one place the old design was big enough. Left as it is
+                    // because it is the biggest number on the paper and it fits at 320.dp.
                     fontSize = 24.sp,
-                    color = c.accent,
+                    color = RcInk,
                     style = LtrNum,
                 )
             }
@@ -608,9 +590,10 @@ internal fun ReceiptBody(
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = stringResource(Res.string.print_notes_prefix, notes),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = c.muted,
+                    fontSize = ThermalInk.FS_MIN.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RcInk,
+                    lineHeight = 20.sp,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -636,10 +619,10 @@ internal fun ReceiptBody(
                     text = t.qrCaption,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = c.muted,
-                    lineHeight = 14.sp,
+                    fontSize = ThermalInk.FS_MIN.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RcInk,
+                    lineHeight = 20.sp,
                 )
             }
 
@@ -649,9 +632,9 @@ internal fun ReceiptBody(
                 text = "* * * * * * * *",
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = c.faint,
+                fontSize = ThermalInk.FS_ROW.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = RcInk,
                 letterSpacing = 3.sp,
             )
 
@@ -661,9 +644,14 @@ internal fun ReceiptBody(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(stringResource(Res.string.print_footer_thanks), fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, color = c.muted)
+                Text(
+                    text = stringResource(Res.string.print_footer_thanks),
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = ThermalInk.FS_ROW.sp,
+                    color = RcInk,
+                )
                 Spacer(Modifier.height(2.dp))
-                Text("Powered by 7Software", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = c.muted, lineHeight = 14.sp)
+                Text("Powered by 7Software", fontSize = ThermalInk.FS_MIN.sp, fontWeight = FontWeight.Bold, color = RcInk, lineHeight = 20.sp)
             }
             Spacer(Modifier.height(4.dp))
         }
@@ -672,14 +660,45 @@ internal fun ReceiptBody(
 
 // ── Item row ──────────────────────────────────────────────────────────────────
 
+/**
+ * Column weights for the item grid, in the order the cells are built. Used by BOTH the heading
+ * row and the data rows, so the two stay in register.
+ *
+ * Equal weights were fine at 11sp. At the 16sp floor they are not: the columns share 292.dp of
+ * paper (320 less the body's padding), and an even six-way split gives each about 48.dp — which
+ * holds neither "1234.500" nor the heading "الإجمالي". So each column gets roughly what its
+ * WIDEST occupant needs, heading or cell: the money columns are wide because of their numbers,
+ * the tax column because of its heading, qty and unit because six Arabic headings all want
+ * about the same room.
+ *
+ * Worth knowing: six columns only happens when a voucher shows per-line tax AND the salesman
+ * may print per-line discounts. That configuration is at the edge of what 80mm can carry at the
+ * 16sp floor. If it starts clipping, drop a column — that is a product decision. Do not answer
+ * it by taking the grid back under 16sp: that is what made these receipts print as speckle.
+ */
+private const val W_QTY = 0.95f
+private const val W_UNIT = 0.95f
+private const val W_TAX = 1.0f
+private const val W_PRICE = 1.1f
+private const val W_DISCOUNT = 1.0f
+private const val W_TOTAL = 1.25f
+
+private fun itemColWeights(showLineDiscount: Boolean, showTax: Boolean): List<Float> = buildList {
+    add(W_QTY); add(W_UNIT)
+    if (showTax) add(W_TAX)
+    add(W_PRICE)
+    if (showLineDiscount) add(W_DISCOUNT)
+    add(W_TOTAL)
+}
+
 @Composable
 private fun ItemColHeader(showLineDiscount: Boolean = false, showTax: Boolean = true) {
-    val c = LocalRc.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 3.dp),
     ) {
+        val weights = itemColWeights(showLineDiscount, showTax)
         buildList {
             add(stringResource(Res.string.print_col_qty))
             add(stringResource(Res.string.print_col_unit))
@@ -689,21 +708,26 @@ private fun ItemColHeader(showLineDiscount: Boolean = false, showTax: Boolean = 
             // Sits BEFORE the total, so the eye reads price -> discount -> total.
             if (showLineDiscount) add("خصم")
             add(stringResource(Res.string.print_col_total))
-        }.forEach { label ->
+        }.forEachIndexed { idx, label ->
             Text(
                 text = label,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(weights[idx]),
                 textAlign = TextAlign.Center,
-                fontSize = 11.sp,
+                fontSize = ThermalInk.FS_HEAD.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = c.muted,
+                color = RcInk,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
     }
-    Canvas(Modifier.fillMaxWidth().height(1.5.dp)) {
-        drawLine(c.ink, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1.5.dp.toPx())
+    // The heavy rule under the headings — 2.dp solid, which is the thinnest mark a head prints
+    // as a line rather than as a broken row of dots. Drawn down the middle of the Canvas, not
+    // along y=0: a stroke centred on the top edge loses its upper half to the clip, and half of
+    // 2.dp is back to the hairline this is replacing.
+    Canvas(Modifier.fillMaxWidth().height(ThermalInk.RuleThickness)) {
+        val y = size.height / 2f
+        drawLine(RcInk, Offset(0f, y), Offset(size.width, y), strokeWidth = ThermalInk.RuleThickness.toPx())
     }
     Spacer(Modifier.height(2.dp))
 }
@@ -719,7 +743,6 @@ private fun ReceiptItemRow(
     /** False on a tax-exempt voucher — the per-line tax column is dropped. */
     showTax: Boolean = true,
 ) {
-    val c = LocalRc.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -731,8 +754,8 @@ private fun ReceiptItemRow(
             // it prints as a normal item the customer appears to have bought.
             text = if (isGift) "${line.nameAr} (gift . هدية)" else line.nameAr,
             fontWeight = FontWeight.ExtraBold,
-            fontSize = 15.sp,
-            color = c.ink,
+            fontSize = ThermalInk.FS_ROW.sp,
+            color = RcInk,
             textAlign = TextAlign.Right,
             style = TextStyle(textDirection = TextDirection.Rtl),
             modifier = Modifier.fillMaxWidth().padding(bottom = 3.dp),
@@ -769,24 +792,25 @@ private fun ReceiptItemRow(
                 if (showLineDiscount) add(discount)
                 add(total)
             }.let { cells ->
+              val weights = itemColWeights(showLineDiscount, showTax)
               val lastIdx = cells.lastIndex
               cells.forEachIndexed { idx, cell ->
                 Text(
                     text = cell,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(weights[idx]),
                     textAlign = TextAlign.Center,
-                    fontSize = 11.sp,
-                    // Bold the LAST cell (the total), not index 4 — the optional
+                    // The grid is the one place held at the floor: six columns have to share
+                    // 292.dp of paper, and FS_MIN is where Arabic and the decimals still resolve.
+                    fontSize = ThermalInk.FS_MIN.sp,
+                    // Emphasise the LAST cell (the total), not index 4 — the optional
                     // discount column shifts the total from 4 to 5, and a hardcoded
-                    // index would bold the discount instead.
-                    // Column 1 is the unit: bold, because with colour units it is what
+                    // index would emphasise the discount instead.
+                    // Column 1 is the unit, emphasised too: with colour units it is what
                     // tells the customer WHICH variant this line is — the sku repeats.
-                    fontWeight = when (idx) {
-                        lastIdx -> FontWeight.ExtraBold
-                        1 -> FontWeight.Bold
-                        else -> FontWeight.SemiBold
-                    },
-                    color = c.ink,
+                    // The rest is Bold and nothing is lighter: SemiBold stems are thinner
+                    // than a dot and came off the roll as broken letters.
+                    fontWeight = if (idx == lastIdx || idx == 1) FontWeight.ExtraBold else FontWeight.Bold,
+                    color = RcInk,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = LtrNum,
@@ -797,16 +821,26 @@ private fun ReceiptItemRow(
         // SKU
         Text(
             text = line.sku,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            color = c.faint,
+            fontSize = ThermalInk.FS_MIN.sp,
+            fontWeight = FontWeight.Bold,
+            color = RcInk,
         )
     }
-    Canvas(Modifier.fillMaxWidth().height(1.dp)) {
-        val dashLen = 4.dp.toPx(); val gap = 4.dp.toPx()
+    // Between items. Still dashed, because that is what separates one item from the section
+    // rules around the table — but in pure black at 2.dp with a coarse 6/4 pattern. The old
+    // 1.dp grey dash at 4/4 was the least printable mark on the page: every dot of it was a
+    // decision the head had to guess at.
+    Canvas(Modifier.fillMaxWidth().height(ThermalInk.RuleThickness)) {
+        val dashLen = 6.dp.toPx(); val gap = 4.dp.toPx()
+        val y = size.height / 2f
         var x = 0f
         while (x < size.width) {
-            drawLine(c.faint, Offset(x, 0f), Offset((x + dashLen).coerceAtMost(size.width), 0f), strokeWidth = 1.dp.toPx())
+            drawLine(
+                RcInk,
+                Offset(x, y),
+                Offset((x + dashLen).coerceAtMost(size.width), y),
+                strokeWidth = ThermalInk.RuleThickness.toPx(),
+            )
             x += dashLen + gap
         }
     }
@@ -814,95 +848,126 @@ private fun ReceiptItemRow(
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
 
+/** The heavy divider: a solid black rule, edge to edge, fencing the big blocks of the paper. */
 @Composable
 private fun SepSolid() {
-    val c = LocalRc.current
     Spacer(Modifier.height(8.dp))
-    Canvas(Modifier.fillMaxWidth().height(1.dp)) {
-        drawLine(c.ink, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1.dp.toPx())
+    Canvas(Modifier.fillMaxWidth().height(ThermalInk.RuleThickness)) {
+        val y = size.height / 2f
+        drawLine(RcInk, Offset(0f, y), Offset(size.width, y), strokeWidth = ThermalInk.RuleThickness.toPx())
     }
     Spacer(Modifier.height(8.dp))
 }
 
+/**
+ * The light divider between the meta blocks. It stays dashed — solid everywhere would flatten
+ * the block structure that SepSolid is carrying — but the lightness now comes from the gaps,
+ * not from grey: pure black, 2.dp, a coarse 6-on/4-off pattern the head can actually resolve.
+ */
 @Composable
 private fun SepDash() {
-    val c = LocalRc.current
     Spacer(Modifier.height(7.dp))
-    Canvas(Modifier.fillMaxWidth().height(1.dp)) {
-        val dash = 4.dp.toPx(); val gap = 4.dp.toPx()
+    Canvas(Modifier.fillMaxWidth().height(ThermalInk.RuleThickness)) {
+        val dash = 6.dp.toPx(); val gap = 4.dp.toPx()
+        val y = size.height / 2f
         var x = 0f
         while (x < size.width) {
-            drawLine(c.faint, Offset(x, 0f), Offset((x + dash).coerceAtMost(size.width), 0f), strokeWidth = 1.dp.toPx())
+            drawLine(
+                RcInk,
+                Offset(x, y),
+                Offset((x + dash).coerceAtMost(size.width), y),
+                strokeWidth = ThermalInk.RuleThickness.toPx(),
+            )
             x += dash + gap
         }
     }
     Spacer(Modifier.height(7.dp))
 }
 
+// Label-vs-value used to be grey-vs-black. It is Bold-vs-ExtraBold now, and both are black.
+// The label takes weight(fill = false) so that at 18sp it wraps instead of squeezing the value:
+// a wrapped Arabic label still reads, a clipped number does not.
 @Composable
-private fun KvRow(key: String, value: String, valueColor: Color? = null) {
-    val c = LocalRc.current
+private fun KvRow(key: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = key, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = c.muted)
+        Text(
+            text = key,
+            modifier = Modifier.weight(1f, fill = false),
+            fontSize = ThermalInk.FS_ROW.sp,
+            fontWeight = FontWeight.Bold,
+            color = RcInk,
+        )
         Text(
             text = value,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
-            color = valueColor ?: c.ink,
+            fontSize = ThermalInk.FS_ROW.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = RcInk,
             style = LtrNum,
         )
     }
 }
 
 @Composable
-private fun TotRow(label: String, value: String, valueColor: Color? = null) {
-    val c = LocalRc.current
+private fun TotRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(text = label, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = c.muted)
+        // Offer names arrive here and can be long — this is the row most likely to need the wrap.
+        Text(
+            text = label,
+            modifier = Modifier.weight(1f, fill = false),
+            fontSize = ThermalInk.FS_ROW.sp,
+            fontWeight = FontWeight.Bold,
+            color = RcInk,
+        )
         Text(
             text = value,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
-            color = valueColor ?: c.ink,
+            fontSize = ThermalInk.FS_ROW.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = RcInk,
             style = LtrNum,
         )
     }
 }
 
+/** The document's title tag: square black box, black text. A rounded corner is a grey arc. */
 @Composable
-private fun TypeTag(label: String, color: Color) {
+private fun TypeTag(label: String) {
     Box(
         modifier = Modifier
-            .border(2.dp, color, RoundedCornerShape(4.dp))
+            .border(ThermalInk.RuleThickness, RcInk)
             .padding(horizontal = 14.dp, vertical = 4.dp),
     ) {
-        Text(label, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = color)
+        Text(label, fontWeight = FontWeight.ExtraBold, fontSize = ThermalInk.FS_TITLE.sp, color = RcInk)
     }
 }
 
-/** Payment type in the header info block: label right, value in a 1.5px outlined box (no fill). */
+/** Payment type in the header info block: label right, value in a square outlined box (no fill). */
 @Composable
 private fun PaymentTypeHeaderRow(label: String, value: String) {
-    val c = LocalRc.current
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = c.muted)
+        Text(
+            text = label,
+            modifier = Modifier.weight(1f, fill = false),
+            fontSize = ThermalInk.FS_ROW.sp,
+            fontWeight = FontWeight.Bold,
+            color = RcInk,
+        )
         Box(
             modifier = Modifier
-                .border(2.dp, c.ink, RoundedCornerShape(4.dp))
+                .border(ThermalInk.RuleThickness, RcInk)
                 .padding(horizontal = 12.dp, vertical = 3.dp),
         ) {
-            Text(value, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, color = c.ink)
+            Text(value, fontWeight = FontWeight.ExtraBold, fontSize = ThermalInk.FS_ROW.sp, color = RcInk)
         }
     }
 }
@@ -910,27 +975,34 @@ private fun PaymentTypeHeaderRow(label: String, value: String) {
 /** Payment type in the totals block: plain bold, no box, to keep the totals calm. */
 @Composable
 private fun PaymentTypeFooterRow(label: String, value: String) {
-    val c = LocalRc.current
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(text = label, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = c.muted)
-        Text(value, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = c.ink)
+        Text(
+            text = label,
+            modifier = Modifier.weight(1f, fill = false),
+            fontSize = ThermalInk.FS_ROW.sp,
+            fontWeight = FontWeight.Bold,
+            color = RcInk,
+        )
+        Text(value, fontSize = ThermalInk.FS_ROW.sp, fontWeight = FontWeight.ExtraBold, color = RcInk)
     }
 }
 
 @Composable
 private fun SignatureBox(label: String) {
-    val c = LocalRc.current
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = c.muted)
+        Text(label, fontSize = ThermalInk.FS_ROW.sp, fontWeight = FontWeight.Bold, color = RcInk)
         Spacer(Modifier.height(16.dp))
-        Canvas(Modifier.fillMaxWidth().height(1.5.dp)) {
-            drawLine(c.faint, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1.5.dp.toPx())
+        // The line the customer signs on: solid black, so there is something on the paper to
+        // sign on. The old 1.5.dp grey hairline printed as a dotted smudge.
+        Canvas(Modifier.fillMaxWidth().height(ThermalInk.RuleThickness)) {
+            val y = size.height / 2f
+            drawLine(RcInk, Offset(0f, y), Offset(size.width, y), strokeWidth = ThermalInk.RuleThickness.toPx())
         }
     }
 }
@@ -951,17 +1023,6 @@ private fun typeLabel(type: String) = when (type) {
     "RETURN"  -> stringResource(Res.string.print_voucher_type_return)
     "REQUEST" -> stringResource(Res.string.print_voucher_type_request)
     else      -> type
-}
-
-@Composable
-private fun typeColor(type: String): Color {
-    val c = LocalRc.current
-    return when (type) {
-        "SALE"    -> c.sale
-        "RETURN"  -> c.ret
-        "REQUEST" -> c.request
-        else      -> c.muted
-    }
 }
 
 /** Tax column shows the rate as a percentage (e.g. "16%"), never the tax type. */

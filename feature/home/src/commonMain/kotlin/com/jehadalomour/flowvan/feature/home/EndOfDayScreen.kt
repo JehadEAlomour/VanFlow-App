@@ -15,8 +15,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -43,13 +43,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
@@ -71,6 +69,8 @@ import com.jehadalomour.flowvan.core.common.format.formatJod
 import com.jehadalomour.flowvan.core.common.i18n.AppLanguage
 import com.jehadalomour.flowvan.core.domain.printer.PrinterState
 import com.jehadalomour.flowvan.feature.print.PrinterConnectDialog
+import com.jehadalomour.flowvan.feature.print.ThermalCapture
+import com.jehadalomour.flowvan.feature.print.ThermalInk
 import com.jehadalomour.flowvan.feature.print.rememberPdfShareHelper
 import com.jehadalomour.flowvan.feature.print.toPngBytes
 import kotlinx.coroutines.Dispatchers
@@ -97,7 +97,8 @@ fun EndOfDayScreen(
     var showPrintPreview by remember { mutableStateOf(false) }
     LaunchedEffect(state.done) { if (state.done) onLoggedOut() }
 
-    // Capture the on-screen receipt preview and hand it to the ViewModel as PNG bytes.
+    // Hand the recorded receipt layer to the ViewModel as PNG bytes. The layer is filled by the
+    // off-screen ThermalCapture in the preview dialog, not by the preview the user sees.
     suspend fun captureAndPrint() {
         val bitmap = graphicsLayer.toImageBitmap()
         val png = withContext(Dispatchers.Default) { bitmap.toPngBytes() }
@@ -344,7 +345,9 @@ private fun EodPrintPreviewDialog(
                 color = if (state.printerState is PrinterState.Connected) PrGreen else PrSubText,
             )
 
-            // Receipt preview — the exact bitmap that gets rasterised and printed.
+            // Receipt preview — what the user looks at, drawn at the screen's density. It is no
+            // longer the print source: the bitmap comes from the off-screen ThermalCapture below,
+            // so the printed resolution stops depending on which phone or terminal is running.
             Column(
                 modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -352,16 +355,20 @@ private fun EodPrintPreviewDialog(
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .widthIn(max = 320.dp)
+                        .requiredWidth(320.dp)
                         .shadow(8.dp, RoundedCornerShape(4.dp))
-                        .background(Color.White, RoundedCornerShape(4.dp))
-                        .drawWithContent {
-                            graphicsLayer.record { this@drawWithContent.drawContent() }
-                            drawLayer(graphicsLayer)
-                        },
+                        .background(Color.White, RoundedCornerShape(4.dp)),
                 ) {
                     EodReceiptBody(state)
                 }
+
+                // The print source: the same paper, rendered off-screen at head resolution and
+                // recorded into the layer that both the thermal print and the shared PDF read.
+                // 320.dp is the width this receipt's layout was designed against; keep it.
+                ThermalCapture(layer = graphicsLayer, paperDp = 320.dp) {
+                    EodReceiptBody(state)
+                }
+
                 Spacer(Modifier.height(32.dp))
             }
         }
@@ -442,11 +449,14 @@ private fun printerStatusLabel(state: PrinterState): String = when (state) {
     PrinterState.Disconnected -> stringResource(Res.string.printer_status_disconnected)
 }
 
-// ── EOD receipt (monochrome, black-on-white — rasterised for the 1-bit thermal head) ─────────
+// ── EOD receipt (1-bit: black ink on white paper, nothing in between) ─────────────────────────
+//
+// There is exactly one ink here. The greys this receipt used to carry its hierarchy in (#444444
+// labels, #888888 dashes) had no way to reach the paper: the head burns a dot or it does not, so
+// the printer approximated them by scattering dots and the report came back as speckle with the
+// solid rules still running through it. Label-vs-value is now weight, heading-vs-row is size.
 
-private val RcInk = Color.Black
-private val RcMuted = Color(0xFF444444)
-private val RcFaint = Color(0xFF888888)
+private val RcInk = ThermalInk.Ink
 
 @Composable
 private fun EodReceiptBody(state: EndOfDayState) {
@@ -455,13 +465,15 @@ private fun EodReceiptBody(state: EndOfDayState) {
     // device/app locale — otherwise labels and their values would flip when printed under an LTR
     // locale. Numbers stay LTR via the LtrNum text style.
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-    Column(modifier = Modifier.fillMaxWidth().background(Color.White).padding(14.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().background(ThermalInk.Paper).padding(14.dp)) {
 
         // Company header
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // Bundled monochrome mark, tinted to pure ink, and small: 54.dp on 320.dp of paper is
+            // well under the 110.dp cap that keeps a logo from becoming a greyscale photograph.
             Image(
                 painter = painterResource(Res.drawable.voucher_logo),
                 contentDescription = null,
@@ -472,7 +484,7 @@ private fun EodReceiptBody(state: EndOfDayState) {
                 Text(
                     text = companyName,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 21.sp,
+                    fontSize = ThermalInk.FS_COMPANY.sp,
                     color = RcInk,
                     textAlign = TextAlign.Center,
                     letterSpacing = 0.5.sp,
@@ -488,11 +500,11 @@ private fun EodReceiptBody(state: EndOfDayState) {
             if (subLine.isNotBlank()) {
                 Text(
                     text = subLine,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = RcMuted,
+                    fontSize = ThermalInk.FS_SUB.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RcInk,
                     textAlign = TextAlign.Center,
-                    lineHeight = 16.sp,
+                    lineHeight = 24.sp,
                 )
             }
         }
@@ -504,15 +516,17 @@ private fun EodReceiptBody(state: EndOfDayState) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
         ) {
+            // Square corners: a rounded corner is an antialiased arc, i.e. a grey the head has to
+            // guess at. The tag's border is a rule like any other — solid and 2.dp.
             Box(
                 modifier = Modifier
-                    .border(2.dp, RcInk, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 14.dp, vertical = 4.dp),
+                    .border(ThermalInk.RuleThickness, RcInk)
+                    .padding(horizontal = 14.dp, vertical = 5.dp),
             ) {
                 Text(
                     stringResource(Res.string.end_of_day_receipt_title),
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 14.sp,
+                    fontSize = ThermalInk.FS_TITLE.sp,
                     color = RcInk,
                 )
             }
@@ -561,65 +575,94 @@ private fun EodReceiptBody(state: EndOfDayState) {
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(stringResource(Res.string.print_footer_thanks), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = RcMuted)
-            Spacer(Modifier.height(2.dp))
-            Text("Powered by 7Software", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = RcMuted, lineHeight = 14.sp)
+            Text(
+                stringResource(Res.string.print_footer_thanks),
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = ThermalInk.FS_ROW.sp,
+                color = RcInk,
+            )
+            Spacer(Modifier.height(3.dp))
+            // The credit line is the smallest thing on the paper, so it sits at the floor (16sp) —
+            // below that Arabic and small Latin caps stop resolving into letters at all.
+            Text(
+                "Powered by 7Software",
+                fontSize = ThermalInk.FS_MIN.sp,
+                fontWeight = FontWeight.Bold,
+                color = RcInk,
+                lineHeight = 20.sp,
+            )
         }
         Spacer(Modifier.height(4.dp))
     }
     }
 }
 
+/** A section heading. Larger than the rows under it, not merely bolder — size is the only
+ *  hierarchy a 1-bit head can reproduce. */
 @Composable
 private fun RcSectionLabel(label: String) {
     Text(
         text = label,
         fontWeight = FontWeight.ExtraBold,
-        fontSize = 13.sp,
+        fontSize = ThermalInk.FS_SECTION.sp,
         color = RcInk,
-        modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
     )
 }
 
 @Composable
 private fun RcKv(key: String, value: String, bold: Boolean = false) {
+    // Totals get the bigger size; every other row sits at FS_ROW. The label/value pair used to be
+    // told apart by grey-vs-black, which the printer cannot do, so it is Bold-vs-ExtraBold now.
+    val fs = if (bold) ThermalInk.FS_TOTAL.sp else ThermalInk.FS_ROW.sp
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = key, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = RcMuted)
+        Text(
+            text = key,
+            fontSize = fs,
+            fontWeight = FontWeight.Bold,
+            color = RcInk,
+            // At this type size a long Arabic label would squeeze the amount off the row; let the
+            // label wrap onto a second line instead and keep the number whole.
+            modifier = Modifier.weight(1f, fill = false),
+        )
         Text(
             text = value,
-            fontSize = 13.sp,
-            fontWeight = if (bold) FontWeight.ExtraBold else FontWeight.Bold,
+            fontSize = fs,
+            fontWeight = FontWeight.ExtraBold,
             color = RcInk,
             style = LtrNum,
         )
     }
 }
 
+/** A major break. Solid black, edge to edge, 2.dp — the one mark on the old receipt that printed. */
 @Composable
 private fun RcSolid() {
-    Spacer(Modifier.height(8.dp))
-    Canvas(Modifier.fillMaxWidth().height(1.dp)) {
-        drawLine(RcInk, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1.dp.toPx())
-    }
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(9.dp))
+    Box(Modifier.fillMaxWidth().height(ThermalInk.RuleThickness).background(RcInk))
+    Spacer(Modifier.height(9.dp))
 }
 
+/** A minor break. The dashes stay — they are what separates a section from a page break — but in
+ *  pure black at 2.dp with a coarse pattern; the old 1dp #888888 dash was the least printable mark
+ *  it is possible to put on thermal paper. */
 @Composable
 private fun RcDash() {
-    Spacer(Modifier.height(7.dp))
-    Canvas(Modifier.fillMaxWidth().height(1.dp)) {
-        val dash = 4.dp.toPx(); val gap = 4.dp.toPx()
+    Spacer(Modifier.height(8.dp))
+    Canvas(Modifier.fillMaxWidth().height(ThermalInk.RuleThickness)) {
+        val dash = 6.dp.toPx(); val gap = 4.dp.toPx()
+        val y = size.height / 2f
         var x = 0f
         while (x < size.width) {
-            drawLine(RcFaint, Offset(x, 0f), Offset((x + dash).coerceAtMost(size.width), 0f), strokeWidth = 1.dp.toPx())
+            drawLine(RcInk, Offset(x, y), Offset((x + dash).coerceAtMost(size.width), y), strokeWidth = size.height)
             x += dash + gap
         }
     }
-    Spacer(Modifier.height(7.dp))
+    Spacer(Modifier.height(8.dp))
 }
 
 private fun Long.toReceiptDateStr(): String {

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -33,11 +32,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
@@ -67,6 +64,11 @@ import org.koin.core.parameter.parametersOf
  * same torn edges — because a shop receiving both should see two documents from
  * one company, not two templates. What differs is what the columns say: this one
  * lists movement and splits it cash/credit; the statement runs a balance.
+ *
+ * The paper is drawn twice: once for the user to look at, and once off-screen
+ * through [ThermalCapture] at the head's own resolution. Everything inside
+ * [TxnReportBody] is therefore 1-bit work — black or white, no grey, no alpha,
+ * nothing under 16sp — while the chrome around it stays an ordinary screen.
  */
 @Composable
 fun TxnReportPrintScreen(
@@ -206,16 +208,14 @@ fun TxnReportPrintScreen(
                 .horizontalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // Preview only. It draws at the phone's density, keeps the shadow and the
+            // torn edges, and records nothing — what gets printed is the capture below.
             Box(
                 modifier = Modifier
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .requiredWidth(TxnPaperWidth)
                     .shadow(8.dp, RoundedCornerShape(4.dp))
-                    .background(TxnPaperBg, RoundedCornerShape(4.dp))
-                    .drawWithContent {
-                        graphicsLayer.record { this@drawWithContent.drawContent() }
-                        drawLayer(graphicsLayer)
-                    },
+                    .background(TxnPaperBg, RoundedCornerShape(4.dp)),
             ) {
                 Column {
                     TxnTear()
@@ -223,12 +223,64 @@ fun TxnReportPrintScreen(
                     TxnTear(flipped = true)
                 }
             }
+
+            // The print source, and the PDF's source too: the same body, drawn
+            // off-screen at the head's own resolution. Pinning the density is what makes
+            // 384dp of paper 576 dots on the Sunmi terminal as well as on a modern phone
+            // — the terminal was handing the printer a third of the detail, and nothing
+            // downstream could add back dots that had never been drawn. The torn edges
+            // are left out on purpose: they are decoration, and a sawtooth strip is not
+            // worth the rows of ink it costs on a roll.
+            ThermalCapture(layer = graphicsLayer, paperDp = TxnPaperWidth) {
+                TxnReportBody(state)
+            }
+
             Spacer(Modifier.height(32.dp))
         }
     }
 }
 
 // ── The paper ─────────────────────────────────────────────────────────────────
+
+/**
+ * How wide a logo is allowed to be on the paper — 110dp of 384, where this used to
+ * draw 300. A customer's upload is a continuous-tone photograph whatever we do to it,
+ * and a photograph reaches a 1-bit head as dithered speckle; the only lever left is
+ * how much of the page that speckle is allowed to cover. Small enough, and the company
+ * name is what gets read at the top of the receipt.
+ *
+ * Kept here rather than taken from the kit, as the sales report and the cash slip keep
+ * theirs: how much of a page goes to a picture is that page's own decision.
+ */
+private val TxnReportLogo = 110.dp
+
+/**
+ * Rules, drawn here instead of through the kit's pair.
+ *
+ * A rule on 1-bit paper cannot be made quieter by fading it — [TxnThinRule] used to be
+ * half a dp at 35% alpha, the least printable mark a head can be handed — and now that
+ * the kit draws both of its rules at the same printable 2dp, nothing is left to tell a
+ * table boundary from a row separator. The only honest lever is thickness, so both
+ * weights here are solid black: 3dp opens and closes the table, 2dp separates one
+ * movement from the next.
+ */
+@Composable
+private fun TxnReportRule(thick: Boolean = false) {
+    Box(
+        Modifier.fillMaxWidth()
+            .height(if (thick) 3.dp else ThermalInk.RuleThickness)
+            .background(ThermalInk.Ink),
+    )
+}
+
+// Column widths, re-budgeted for the larger type and kept identical to the sales
+// report's, so the two tables read as the same table. A three-decimal figure is about
+// 80dp at this size, so the money columns take what the date — five characters — and
+// the movement label can spare.
+private const val TXN_COL_DATE = 0.95f
+private const val TXN_COL_DOC = 0.95f
+private const val TXN_COL_TOTAL = 1.25f
+private const val TXN_COL_CREDIT = 1.20f
 
 @Composable
 private fun TxnReportBody(state: TxnReportPrintState) {
@@ -239,37 +291,42 @@ private fun TxnReportBody(state: TxnReportPrintState) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 if (logo != null) {
                     // Untinted — see StatementPrintScreen: a JPEG logo tinted with
-                    // the ink colour prints as a solid black rectangle.
-                    Image(bitmap = logo, contentDescription = null, modifier = Modifier.size(TxnLogoSize))
+                    // the ink colour prints as a solid black rectangle. Tinting would
+                    // not have made it 1-bit anyway: a tint multiplies colour and leaves
+                    // the alpha channel, so soft edges still arrive as partial coverage.
+                    Image(bitmap = logo, contentDescription = null, modifier = Modifier.size(TxnReportLogo))
                 } else {
                     Image(
                         painter = painterResource(Res.drawable.voucher_logo),
                         contentDescription = null,
-                        modifier = Modifier.size(TxnLogoSize),
-                        colorFilter = ColorFilter.tint(TxnInk),
+                        modifier = Modifier.size(TxnReportLogo),
+                        colorFilter = ColorFilter.tint(ThermalInk.Ink),
                     )
                 }
             }
             Spacer(Modifier.height(6.dp))
-            TxnCenter(state.companyNameAr, TXN_FS_COMPANY, bold = true)
-            if (state.companyNameEn.isNotBlank()) TxnCenter(state.companyNameEn, TXN_FS_SUB)
+            TxnCenter(state.companyNameAr, ThermalInk.FS_COMPANY, bold = true)
+            if (state.companyNameEn.isNotBlank()) TxnCenter(state.companyNameEn, ThermalInk.FS_SUB)
             if (state.companyTaxNumber.isNotBlank()) {
                 TxnCenter(
                     "${stringResource(Res.string.print_customer_tax_number)} ${state.companyTaxNumber}",
-                    TXN_FS_SUB,
+                    ThermalInk.FS_SUB,
                 )
             }
 
             Spacer(Modifier.height(8.dp))
+            // Black band, white knockout — the one filled panel the paper is allowed,
+            // because both halves of it are already 1-bit. Square corners: a rounded one
+            // is a grey arc.
             Box(
-                modifier = Modifier.fillMaxWidth().background(TxnInk).padding(vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().background(ThermalInk.Ink).padding(vertical = 6.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     stringResource(Res.string.txn_report_title),
-                    color = TxnPaperBg,
-                    fontSize = TXN_FS_TITLE.sp,
-                    fontWeight = FontWeight.Bold,
+                    color = ThermalInk.Paper,
+                    fontSize = ThermalInk.FS_TITLE.sp,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -287,28 +344,28 @@ private fun TxnReportBody(state: TxnReportPrintState) {
             )
 
             Spacer(Modifier.height(8.dp))
-            TxnRule()
+            TxnReportRule(thick = true)
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                TxnHead(stringResource(Res.string.txn_report_col_date), 0.95f)
-                TxnHead(stringResource(Res.string.txn_report_col_doc), 1.15f)
-                TxnHead(stringResource(Res.string.txn_report_col_total), 1.45f)
-                TxnHead(stringResource(Res.string.txn_report_col_credit), 1.45f)
+                TxnHead(stringResource(Res.string.txn_report_col_date), TXN_COL_DATE)
+                TxnHead(stringResource(Res.string.txn_report_col_doc), TXN_COL_DOC)
+                TxnHead(stringResource(Res.string.txn_report_col_total), TXN_COL_TOTAL)
+                TxnHead(stringResource(Res.string.txn_report_col_credit), TXN_COL_CREDIT)
             }
-            TxnRule()
+            TxnReportRule(thick = true)
 
             if (state.report.rows.isEmpty()) {
                 Spacer(Modifier.height(10.dp))
-                TxnCenter(stringResource(Res.string.txn_report_empty), TXN_FS_INFO)
+                TxnCenter(stringResource(Res.string.txn_report_empty), ThermalInk.FS_ROW)
                 Spacer(Modifier.height(10.dp))
             } else {
                 state.report.rows.forEach { row ->
                     TxnPaperRow(row)
-                    TxnThinRule()
+                    TxnReportRule()
                 }
             }
 
             Spacer(Modifier.height(6.dp))
-            TxnRule()
+            TxnReportRule(thick = true)
             Spacer(Modifier.height(6.dp))
 
             TxnTotal(stringResource(Res.string.all_sales_total_sales), state.report.salesTotal.txnJod())
@@ -324,7 +381,7 @@ private fun TxnReportBody(state: TxnReportPrintState) {
             TxnBoxedTotal(stringResource(Res.string.txn_report_total_credit), state.report.creditTotal.txnJod())
 
             Spacer(Modifier.height(10.dp))
-            TxnRule()
+            TxnReportRule(thick = true)
             Spacer(Modifier.height(6.dp))
 
             if (state.salesmanNameAr.isNotBlank()) {
@@ -333,7 +390,7 @@ private fun TxnReportBody(state: TxnReportPrintState) {
             TxnInfo(stringResource(Res.string.statement_printed_at), state.printedAt.txnDateTime())
 
             Spacer(Modifier.height(12.dp))
-            TxnCenter(stringResource(Res.string.print_footer_thanks), TXN_FS_FOOTER)
+            TxnCenter(stringResource(Res.string.print_footer_thanks), ThermalInk.FS_MIN)
             Spacer(Modifier.height(4.dp))
         }
     }
@@ -349,18 +406,21 @@ private fun TxnPaperRow(row: CustomerTxn) {
     }
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TxnCell(row.date.takeLast(5), 0.95f)
-            TxnCell(label, 1.15f)
-            TxnCell(row.total.txnJod(), 1.45f, bold = true)
-            TxnCell(if (row.credit > 0) row.credit.txnJod() else "-", 1.45f)
+            TxnCell(row.date.takeLast(5), TXN_COL_DATE)
+            TxnCell(label, TXN_COL_DOC)
+            TxnCell(row.total.txnJod(), TXN_COL_TOTAL, bold = true)
+            TxnCell(if (row.credit > 0) row.credit.txnJod() else "-", TXN_COL_CREDIT)
         }
-        // Document number on its own line, left to right — see the statement.
+        // Document number on its own line, left to right — see the statement. It sits at
+        // the floor of the scale rather than above it: it is the one thing on the row a
+        // reader looks up rather than reads, and the movement above it has to stay the
+        // larger of the two.
         Text(
             text = row.number,
             modifier = Modifier.fillMaxWidth(),
-            color = TxnInk,
-            fontSize = TXN_FS_SUB_ROW.sp,
-            fontWeight = TxnWeight,
+            color = ThermalInk.Ink,
+            fontSize = ThermalInk.FS_MIN.sp,
+            fontWeight = FontWeight.Bold,
             style = TxnLtr,
             textAlign = TextAlign.Left,
             maxLines = 1,

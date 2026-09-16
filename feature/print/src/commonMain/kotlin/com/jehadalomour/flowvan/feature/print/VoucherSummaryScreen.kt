@@ -16,9 +16,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -40,13 +40,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.layer.GraphicsLayer
-import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextStyle
@@ -311,7 +309,8 @@ private fun VsPrintPreviewDialog(
                 color = if (state.printerState is PrinterState.Connected) PrGreen else PrSubText,
             )
 
-            // Receipt preview — the exact bitmap that gets rasterised and printed.
+            // Receipt preview — what the user looks at, drawn at this phone's density. It is no
+            // longer the print source: that is the off-screen capture below.
             Column(
                 modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -319,18 +318,21 @@ private fun VsPrintPreviewDialog(
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .widthIn(max = 320.dp)
+                        .requiredWidth(320.dp)
                         .shadow(8.dp, RoundedCornerShape(4.dp))
-                        .background(Color.White, RoundedCornerShape(4.dp))
-                        .drawWithContent {
-                            graphicsLayer.record { this@drawWithContent.drawContent() }
-                            drawLayer(graphicsLayer)
-                        },
+                        .background(Color.White, RoundedCornerShape(4.dp)),
                 ) {
                     VsReceiptBody(state)
                 }
                 Spacer(Modifier.height(32.dp))
             }
+
+            // The print source: the same paper, recorded off-screen at the thermal head's own
+            // resolution instead of at whatever density this device happens to have. Without this
+            // the Sunmi terminal handed the printer a third of the dots a phone did, for the same
+            // 80mm of roll. paperDp stays 320.dp because that is the width this body was laid out
+            // against — changing it would reflow every row.
+            ThermalCapture(layer = graphicsLayer, paperDp = 320.dp) { VsReceiptBody(state) }
         }
 
         if (state.showConnectDialog) {
@@ -380,11 +382,14 @@ private fun printerStatusLabel(state: PrinterState): String = when (state) {
     PrinterState.Disconnected -> stringResource(Res.string.printer_status_disconnected)
 }
 
-// ── Voucher summary receipt (monochrome, black-on-white — rasterised for the thermal head) ────
+// ── Voucher summary receipt (1-bit, black-on-white — rasterised for the thermal head) ──────────
+//
+// Everything below the preview is drawn for a head that burns a dot or leaves the paper white.
+// There is no grey here on purpose: the old #444444 labels and #888888 sub-lines were resolved by
+// the printer into scattered dots, which is speckle on paper, not text. Hierarchy is carried by
+// size, weight and rules instead — see ThermalInk for the size scale.
 
-private val RcInk = Color.Black
-private val RcMuted = Color(0xFF444444)
-private val RcFaint = Color(0xFF888888)
+private val RcInk = ThermalInk.Ink
 
 @Composable
 private fun VsReceiptBody(state: VoucherSummaryState) {
@@ -392,7 +397,9 @@ private fun VsReceiptBody(state: VoucherSummaryState) {
     // The printed receipt is Arabic-first and always lays out right-to-left, regardless of the
     // device locale. Numbers stay LTR via the LtrNum text style.
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-    Column(modifier = Modifier.fillMaxWidth().background(Color.White).padding(14.dp)) {
+    // 12.dp rather than the old 14.dp: the type is ~40% larger now, and the two dp bought back on
+    // each side are two dp of line length the long Arabic customer names need.
+    Column(modifier = Modifier.fillMaxWidth().background(ThermalInk.Paper).padding(12.dp)) {
 
         // Company header
         Column(
@@ -400,28 +407,36 @@ private fun VsReceiptBody(state: VoucherSummaryState) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // The company's own logo (cached from /company-info) when available, else default.
+            //
+            // Capped at 110.dp wide, down from 140.dp square. An uploaded logo is a continuous-tone
+            // photograph and every dot of it is a decision the printer has to guess at, so the less
+            // of the roll it covers the better; width() rather than size() so nothing is squared off.
+            // The tint stays on the bundled mark — it is already monochrome — but note that a tint
+            // does not make an image 1-bit: it leaves the alpha channel, so soft edges still arrive
+            // as partial coverage. Size is the only real control here.
             val logoBitmap = remember(state.companyLogo) { decodeBase64Image(state.companyLogo) }
             if (logoBitmap != null) {
                 Image(
                     bitmap = logoBitmap,
                     contentDescription = null,
-                    modifier = Modifier.size(140.dp).padding(bottom = 8.dp),
+                    modifier = Modifier.width(110.dp).padding(bottom = 8.dp),
                 )
             } else {
                 Image(
                     painter = painterResource(Res.drawable.voucher_logo),
                     contentDescription = null,
                     colorFilter = ColorFilter.tint(RcInk),
-                    modifier = Modifier.size(140.dp).padding(bottom = 8.dp),
+                    modifier = Modifier.width(110.dp).padding(bottom = 8.dp),
                 )
             }
             if (companyName.isNotBlank()) {
                 Text(
                     text = companyName,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 21.sp,
+                    fontSize = ThermalInk.FS_COMPANY.sp,
                     color = RcInk,
                     textAlign = TextAlign.Center,
+                    lineHeight = 36.sp,
                     letterSpacing = 0.5.sp,
                 )
             }
@@ -435,28 +450,29 @@ private fun VsReceiptBody(state: VoucherSummaryState) {
             if (subLine.isNotBlank()) {
                 Text(
                     text = subLine,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = RcMuted,
+                    fontSize = ThermalInk.FS_SUB.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RcInk,
                     textAlign = TextAlign.Center,
-                    lineHeight = 16.sp,
+                    lineHeight = 24.sp,
                 )
             }
         }
 
         RcSolid()
 
-        // Title tag
+        // Title tag. Square corners: a rounded corner is an antialiased arc, i.e. a grey smear on
+        // the one mark on the page that has to read as a clean box.
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             Box(
                 modifier = Modifier
-                    .border(2.dp, RcInk, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 14.dp, vertical = 4.dp),
+                    .border(ThermalInk.RuleThickness, RcInk)
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
             ) {
                 Text(
                     stringResource(Res.string.voucher_summary_title),
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 14.sp,
+                    fontSize = ThermalInk.FS_TITLE.sp,
                     color = RcInk,
                 )
             }
@@ -481,16 +497,20 @@ private fun VsReceiptBody(state: VoucherSummaryState) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                // fill = false so a long customer name wraps inside its own share of the row
+                // instead of squeezing the amount, which is the line that must stay legible.
                 Text(
                     text = row.customerName.ifBlank { row.number },
-                    fontSize = 13.sp,
+                    fontSize = ThermalInk.FS_ROW.sp,
                     fontWeight = FontWeight.Bold,
                     color = RcInk,
-                    modifier = Modifier.weight(1f),
+                    lineHeight = 24.sp,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
+                Spacer(Modifier.width(8.dp))
                 Text(
                     text = row.total.formatJod(AppLanguage.AR),
-                    fontSize = 13.sp,
+                    fontSize = ThermalInk.FS_ROW.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = RcInk,
                     style = LtrNum,
@@ -500,8 +520,22 @@ private fun VsReceiptBody(state: VoucherSummaryState) {
                 modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(text = row.number, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = RcFaint, style = LtrNum)
-                Text(text = "$typeLabel • ${row.paymentType.labelAr}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = RcMuted)
+                Text(
+                    text = row.number,
+                    fontSize = ThermalInk.FS_MIN.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RcInk,
+                    style = LtrNum,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "$typeLabel • ${row.paymentType.labelAr}",
+                    fontSize = ThermalInk.FS_MIN.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RcInk,
+                    lineHeight = 22.sp,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
             }
         }
 
@@ -523,50 +557,93 @@ private fun VsReceiptBody(state: VoucherSummaryState) {
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(stringResource(Res.string.print_footer_thanks), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = RcMuted)
-            Spacer(Modifier.height(2.dp))
-            Text("Powered by 7Software", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = RcMuted, lineHeight = 14.sp)
+            Text(
+                stringResource(Res.string.print_footer_thanks),
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = ThermalInk.FS_ROW.sp,
+                color = RcInk,
+            )
+            Spacer(Modifier.height(4.dp))
+            // The credit line is the smallest thing on the paper and so sits exactly at FS_MIN;
+            // below 16sp Arabic and Latin both stop resolving into letters.
+            Text(
+                "Powered by 7Software",
+                fontSize = ThermalInk.FS_MIN.sp,
+                fontWeight = FontWeight.Bold,
+                color = RcInk,
+                lineHeight = 20.sp,
+            )
         }
         Spacer(Modifier.height(4.dp))
     }
     }
 }
 
+/**
+ * A label/value line.
+ *
+ * The label used to be grey and the value black; both are black now, and they are told apart by
+ * weight — Bold label, ExtraBold value. [bold] no longer switches the value's weight (there is
+ * nothing above ExtraBold to switch to) but its size instead: the totals rows it is called on are
+ * the lines a driver reads first, so they get FS_TOTAL and stand a size above the rows around them.
+ */
 @Composable
 private fun RcKv(key: String, value: String, bold: Boolean = false) {
+    val size = if (bold) ThermalInk.FS_TOTAL.sp else ThermalInk.FS_ROW.sp
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = key, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = RcMuted)
+        // Wraps rather than pushing the value off the edge now that the type is this large.
+        Text(
+            text = key,
+            fontSize = size,
+            fontWeight = FontWeight.Bold,
+            color = RcInk,
+            // Tied to the size, not fixed: a totals row is FS_TOTAL and a fixed
+            // 26sp would crop the Arabic it is meant to make stand out.
+            lineHeight = size * 1.45f,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        Spacer(Modifier.width(10.dp))
         Text(
             text = value,
-            fontSize = 13.sp,
-            fontWeight = if (bold) FontWeight.ExtraBold else FontWeight.Bold,
+            fontSize = size,
+            fontWeight = FontWeight.ExtraBold,
             color = RcInk,
             style = LtrNum,
         )
     }
 }
 
+/** A section rule: solid black, 2.dp, edge to edge. The one mark the old receipt printed cleanly. */
 @Composable
 private fun RcSolid() {
     Spacer(Modifier.height(8.dp))
-    Canvas(Modifier.fillMaxWidth().height(1.dp)) {
-        drawLine(RcInk, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1.dp.toPx())
+    Canvas(Modifier.fillMaxWidth().height(ThermalInk.RuleThickness)) {
+        drawLine(RcInk, Offset(0f, size.height / 2f), Offset(size.width, size.height / 2f), strokeWidth = size.height)
     }
     Spacer(Modifier.height(8.dp))
 }
 
+/**
+ * A row separator, kept dashed because the distinction is load-bearing: RcSolid closes a section
+ * and RcDash divides rows inside one, and collapsing both into the same rule would lose that.
+ *
+ * Redrawn in pure black at 2.dp with a coarse 6-on-4-off pattern. The old 4/4 hairline in #888888
+ * was about the least printable mark a thermal head can be handed — grey, and thinner than the
+ * dots it would have to be built from.
+ */
 @Composable
 private fun RcDash() {
     Spacer(Modifier.height(6.dp))
-    Canvas(Modifier.fillMaxWidth().height(1.dp)) {
-        val dash = 4.dp.toPx(); val gap = 4.dp.toPx()
+    Canvas(Modifier.fillMaxWidth().height(ThermalInk.RuleThickness)) {
+        val dash = 6.dp.toPx(); val gap = 4.dp.toPx()
+        val y = size.height / 2f
         var x = 0f
         while (x < size.width) {
-            drawLine(RcFaint, Offset(x, 0f), Offset((x + dash).coerceAtMost(size.width), 0f), strokeWidth = 1.dp.toPx())
+            drawLine(RcInk, Offset(x, y), Offset((x + dash).coerceAtMost(size.width), y), strokeWidth = size.height)
             x += dash + gap
         }
     }

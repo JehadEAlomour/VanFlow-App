@@ -56,14 +56,21 @@ internal object EscPosRaster {
     fun rasterCommands(bitmap: Bitmap, threshold: Int = 0xB0): List<ByteArray> {
         val width = bitmap.width
         val height = bitmap.height
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        return pack(pixels, width, height, threshold)
+    }
+
+    /**
+     * The packing itself, over plain ARGB pixels so it can be tested without a
+     * device. Every byte the printer receives for the image is decided here.
+     */
+    fun pack(pixels: IntArray, width: Int, height: Int, threshold: Int = 0xB0): List<ByteArray> {
         // A raster row is whole bytes, 8 dots each. A width that is not a
         // multiple of 8 is padded with white on the right rather than rounded,
         // so nothing shifts: every row must start on the same dot column as the
         // one above it or the page shears.
         val widthBytes = (width + 7) / 8
-
-        val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
 
         val commands = ArrayList<ByteArray>((height + SLICE_ROWS - 1) / SLICE_ROWS)
         var top = 0

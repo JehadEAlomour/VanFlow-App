@@ -36,7 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
@@ -60,11 +59,12 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
-// Print-paper palette (the captured image must be black-on-white for the thermal head).
-private val PaperBg = Color.White
-private val Ink = Color(0xFF111111)
-private val InkMid = Color(0xFF555555)
-private val Hair = Color(0xFFDDDDDD)
+// The thermal slip has no palette of its own any more: black ink on white paper,
+// out of ThermalInk. The greys that used to live here (#111111 ink, #555555 for
+// labels, #DDDDDD hairlines) were carrying the receipt's hierarchy, and a 1-bit
+// head cannot print any of them — it dithers them into speckle. Hierarchy is
+// size, weight and rules from here on. The A4 page below keeps its own colours;
+// it is read on a screen or printed by a real printer.
 
 @Composable
 fun ReceiptDetailScreen(
@@ -74,7 +74,10 @@ fun ReceiptDetailScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val entity = state.entity
-    // The visible slip IS the thermal receipt; this layer is what printing captures.
+    // The thermal slip is captured off-screen at head resolution (see ThermalCapture
+    // below), not read back off the preview. The preview's pixel width is the paper's
+    // dp times whatever density the phone happens to have — a third of the dots on a
+    // Sunmi terminal as on a modern phone, for the same 80mm of roll.
     val thermalLayer = rememberGraphicsLayer()
     // The A4 page is rendered off-screen; this layer captures it for "Share as PDF".
     val a4Layer = rememberGraphicsLayer()
@@ -178,19 +181,25 @@ fun ReceiptDetailScreen(
                         .horizontalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    // On-screen preview only — it records nothing. The rounded corner is
+                    // chrome for the phone; the captured paper below has square corners,
+                    // because a rounded corner is a grey arc to a 1-bit head.
                     Box(
                         modifier = Modifier
                             .padding(16.dp)
                             .requiredWidth(340.dp)
-                            .background(PaperBg, RoundedCornerShape(4.dp))
-                            .drawWithContent {
-                                thermalLayer.record { this@drawWithContent.drawContent() }
-                                drawLayer(thermalLayer)
-                            },
+                            .background(ThermalInk.Paper, RoundedCornerShape(4.dp)),
                     ) {
                         PaymentReceiptDocument(entity, state)
                     }
                     Spacer(Modifier.height(24.dp))
+
+                    // The print source: the same paper, drawn off-screen at 576 dots
+                    // across regardless of this screen's density. 340.dp is the width
+                    // the slip's layout was written against, so it stays 340.dp here.
+                    ThermalCapture(layer = thermalLayer, paperDp = 340.dp) {
+                        PaymentReceiptDocument(entity, state)
+                    }
 
                     // Off-screen A4 page — captured for "Share as PDF" only, never painted.
                     //
@@ -249,35 +258,51 @@ private fun PaymentReceiptDocument(entity: PaymentEntity, state: ReceiptDetailSt
         "TRANSFER" -> "حوالة"
         else -> entity.method
     }
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 20.dp)) {
-        // Header — big company logo (own logo cached from /company-info, else bundled default)
+    // 14dp side margins rather than 18dp: the type is 40% larger than it was and the
+    // rows need the width back. On 340dp of paper that still leaves a clear margin.
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 20.dp)) {
+        // Header — company logo (own logo cached from /company-info, else bundled default).
+        // Capped at 110dp: an uploaded logo is a continuous-tone photograph, and at 140dp
+        // it was handing the head a greyscale image across a third of the roll. The tint
+        // stays on the bundled mark — it is already monochrome — but tinting does not
+        // make an image 1-bit, so the cap applies to both.
         val logoBitmap = remember(state.companyLogo) { decodeBase64Image(state.companyLogo) }
         if (logoBitmap != null) {
             Image(
                 bitmap = logoBitmap,
                 contentDescription = null,
-                modifier = Modifier.align(Alignment.CenterHorizontally).size(140.dp).padding(bottom = 8.dp),
+                modifier = Modifier.align(Alignment.CenterHorizontally).size(110.dp).padding(bottom = 8.dp),
             )
         } else {
             Image(
                 painter = painterResource(Res.drawable.voucher_logo),
                 contentDescription = null,
-                colorFilter = ColorFilter.tint(Ink),
-                modifier = Modifier.align(Alignment.CenterHorizontally).size(140.dp).padding(bottom = 8.dp),
+                colorFilter = ColorFilter.tint(ThermalInk.Ink),
+                modifier = Modifier.align(Alignment.CenterHorizontally).size(110.dp).padding(bottom = 8.dp),
             )
         }
         Text(
             state.companyNameAr.ifBlank { "فان فلو" },
             modifier = Modifier.fillMaxWidth(),
-            color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
+            color = ThermalInk.Ink,
+            fontSize = ThermalInk.FS_COMPANY.sp,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center,
         )
+        Spacer(Modifier.height(8.dp))
+        // The document title was a small grey line, which is the one thing a thermal head
+        // cannot render at all. Knocked out white on a solid black band instead: both
+        // halves are 1-bit, and it reads as a title from across a counter.
         Text(
             "سند قبض",
-            modifier = Modifier.fillMaxWidth(),
-            color = InkMid, fontSize = 12.sp, textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().background(ThermalInk.Ink).padding(vertical = 5.dp),
+            color = ThermalInk.Paper,
+            fontSize = ThermalInk.FS_TITLE.sp,
+            fontWeight = FontWeight.ExtraBold,
+            textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(10.dp))
-        Thick()
+        HeavyRule()
         Spacer(Modifier.height(10.dp))
 
         DocRow("رقم السند", entity.number)
@@ -287,21 +312,37 @@ private fun PaymentReceiptDocument(entity: PaymentEntity, state: ReceiptDetailSt
         DocRow("طريقة الدفع", methodLabel)
 
         Spacer(Modifier.height(10.dp))
-        Dashed()
+        Rule()
         Spacer(Modifier.height(10.dp))
 
         // Amount — the money
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("المبلغ", color = Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Text(entity.amount.formatJod(AppLanguage.AR), color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "المبلغ",
+                color = ThermalInk.Ink,
+                fontSize = ThermalInk.FS_TOTAL.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                entity.amount.formatJod(AppLanguage.AR),
+                modifier = Modifier.padding(start = 8.dp),
+                color = ThermalInk.Ink,
+                fontSize = ThermalInk.FS_TOTAL.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
         }
 
         // Cheque details
         if (entity.method == "CHEQUE") {
             Spacer(Modifier.height(10.dp))
-            Thick()
+            HeavyRule()
             Spacer(Modifier.height(8.dp))
-            Text("بيانات الشيك", color = InkMid, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                "بيانات الشيك",
+                color = ThermalInk.Ink,
+                fontSize = ThermalInk.FS_SECTION.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
             Spacer(Modifier.height(4.dp))
             entity.chequeBank?.let { DocRow("البنك", it) }
             entity.chequeNumber?.let { DocRow("رقم الشيك", it) }
@@ -321,30 +362,56 @@ private fun PaymentReceiptDocument(entity: PaymentEntity, state: ReceiptDetailSt
         }
 
         Spacer(Modifier.height(14.dp))
-        Dashed()
+        Rule()
         Spacer(Modifier.height(10.dp))
+        // The courtesy line sits at the floor of the scale — the smallest type a thermal
+        // head still resolves Arabic at — and is bold like everything else on the paper.
         Text(
             "شكراً لتعاملكم معنا",
             modifier = Modifier.fillMaxWidth(),
-            color = InkMid, fontSize = 11.sp, textAlign = TextAlign.Center,
+            color = ThermalInk.Ink,
+            fontSize = ThermalInk.FS_MIN.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
         )
     }
 }
 
+/**
+ * A label/value line on the slip.
+ *
+ * Label and value used to be told apart by grey against black; now both are black
+ * and the value carries the extra weight. The label takes the slack and wraps, so
+ * a long value is never squeezed into a second line of its own.
+ */
 @Composable
 private fun DocRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, color = InkMid, fontSize = 12.sp)
-        Text(value, color = Ink, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(
+            label,
+            modifier = Modifier.weight(1f, fill = false),
+            color = ThermalInk.Ink,
+            fontSize = ThermalInk.FS_ROW.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            value,
+            modifier = Modifier.padding(start = 8.dp),
+            color = ThermalInk.Ink,
+            fontSize = ThermalInk.FS_ROW.sp,
+            fontWeight = FontWeight.ExtraBold,
+        )
     }
 }
 
+/** The ordinary separator. Was a 1dp #DDDDDD hairline, which printed as nothing at all. */
 @Composable
-private fun Dashed() {
-    HorizontalDivider(color = Hair, thickness = 1.dp)
+private fun Rule() {
+    HorizontalDivider(color = ThermalInk.Ink, thickness = ThermalInk.RuleThickness)
 }
 
+/** The heavier rule that closes the header and opens the cheque block. */
 @Composable
-private fun Thick() {
-    HorizontalDivider(color = Ink, thickness = 3.dp)
+private fun HeavyRule() {
+    HorizontalDivider(color = ThermalInk.Ink, thickness = 3.dp)
 }

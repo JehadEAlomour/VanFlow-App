@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -32,11 +31,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
@@ -59,13 +56,18 @@ import org.koin.core.parameter.parametersOf
  * الكشف اليومي on paper — the slip a rep hands over when closing a round.
  *
  * Same paper as the sales report, the statement and تقرير الحركات: same ink, same
- * type scale, same torn edges, so a shop or an office receiving any of them sees
- * one company's documents rather than four templates.
+ * type scale, same torn edges on screen, so a shop or an office receiving any of
+ * them sees one company's documents rather than four templates.
  *
  * What differs is the shape. The others list documents; this one answers a single
  * question — how much cash should be in the bag — and shows the three movements
  * that produced it. So it prints as totals, not a table, which also keeps it to a
  * short slip that a rep can hand over without a page of rows.
+ *
+ * The paper is drawn twice: once for the user to look at, and once off-screen
+ * through [ThermalCapture] at the head's own resolution. Everything inside
+ * [CashFlowBody] is therefore 1-bit work — black or white, no grey, no alpha,
+ * nothing under 16sp — while the chrome around it stays an ordinary screen.
  */
 @Composable
 fun CashFlowPrintScreen(
@@ -196,16 +198,14 @@ fun CashFlowPrintScreen(
                 .horizontalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // Preview only. It draws at the phone's density, keeps the shadow and the
+            // torn edges, and records nothing — what gets printed is the capture below.
             Box(
                 modifier = Modifier
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .requiredWidth(TxnPaperWidth)
                     .shadow(8.dp, RoundedCornerShape(4.dp))
-                    .background(TxnPaperBg, RoundedCornerShape(4.dp))
-                    .drawWithContent {
-                        graphicsLayer.record { this@drawWithContent.drawContent() }
-                        drawLayer(graphicsLayer)
-                    },
+                    .background(TxnPaperBg, RoundedCornerShape(4.dp)),
             ) {
                 Column {
                     TxnTear()
@@ -213,12 +213,50 @@ fun CashFlowPrintScreen(
                     TxnTear(flipped = true)
                 }
             }
+
+            // The print source, and the PDF's source too: the same body, drawn
+            // off-screen at the head's own resolution. Pinning the density is what makes
+            // 384dp of paper 576 dots on the Sunmi terminal as well as on a modern phone
+            // — the terminal was handing the printer a third of the detail, and nothing
+            // downstream could add back dots that were never drawn. The torn edges stay
+            // out of it: they are grey strips, and grey is the one thing a head cannot
+            // print.
+            ThermalCapture(layer = graphicsLayer, paperDp = TxnPaperWidth) {
+                CashFlowBody(state)
+            }
+
             Spacer(Modifier.height(32.dp))
         }
     }
 }
 
 // ── The paper ─────────────────────────────────────────────────────────────────
+
+/**
+ * How wide a logo is allowed to be on the paper — 110dp of 384, where this used to
+ * draw 300. A customer's upload is a continuous-tone photograph whatever we do to
+ * it, and a photograph reaches a 1-bit head as dithered speckle; the only lever
+ * left is how much of the slip that speckle is allowed to cover. Small enough, and
+ * the company name is what gets read at the top of the page.
+ */
+private val CashPaperLogo = 110.dp
+
+/**
+ * Rules, drawn here instead of through the kit's hairlines.
+ *
+ * A rule on 1-bit paper cannot be made quieter by fading it — [TxnThinRule] is half
+ * a dp at 35% alpha, which is the least printable mark a thermal head can be
+ * handed. The only honest lever is thickness, so both weights are solid black: 3dp
+ * opens and closes a section, 2dp separates a section's rows from its total.
+ */
+@Composable
+private fun CashPaperRule(thick: Boolean = false) {
+    Box(
+        Modifier.fillMaxWidth()
+            .height(if (thick) 3.dp else ThermalInk.RuleThickness)
+            .background(ThermalInk.Ink),
+    )
+}
 
 @Composable
 private fun CashFlowBody(state: CashFlowPrintState) {
@@ -229,37 +267,41 @@ private fun CashFlowBody(state: CashFlowPrintState) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 if (logo != null) {
                     // Untinted — a JPEG logo tinted with the ink colour prints as a
-                    // solid black rectangle. See StatementPrintScreen.
-                    Image(bitmap = logo, contentDescription = null, modifier = Modifier.size(TxnLogoSize))
+                    // solid black rectangle. See StatementPrintScreen. Tinting would not
+                    // have made it 1-bit anyway: a tint multiplies colour and leaves the
+                    // alpha channel, so the soft edges still arrive as partial coverage.
+                    Image(bitmap = logo, contentDescription = null, modifier = Modifier.size(CashPaperLogo))
                 } else {
                     Image(
                         painter = painterResource(Res.drawable.voucher_logo),
                         contentDescription = null,
-                        modifier = Modifier.size(TxnLogoSize),
-                        colorFilter = ColorFilter.tint(TxnInk),
+                        modifier = Modifier.size(CashPaperLogo),
+                        colorFilter = ColorFilter.tint(ThermalInk.Ink),
                     )
                 }
             }
             Spacer(Modifier.height(6.dp))
-            TxnCenter(state.companyNameAr, TXN_FS_COMPANY, bold = true)
-            if (state.companyNameEn.isNotBlank()) TxnCenter(state.companyNameEn, TXN_FS_SUB)
+            TxnCenter(state.companyNameAr, ThermalInk.FS_COMPANY, bold = true)
+            if (state.companyNameEn.isNotBlank()) TxnCenter(state.companyNameEn, ThermalInk.FS_SUB)
             if (state.companyTaxNumber.isNotBlank()) {
                 TxnCenter(
                     "${stringResource(Res.string.print_customer_tax_number)} ${state.companyTaxNumber}",
-                    TXN_FS_SUB,
+                    ThermalInk.FS_SUB,
                 )
             }
 
             Spacer(Modifier.height(8.dp))
+            // Black band, white knockout — the one filled panel the paper is allowed,
+            // because both halves of it are already 1-bit.
             Box(
-                modifier = Modifier.fillMaxWidth().background(TxnInk).padding(vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().background(ThermalInk.Ink).padding(vertical = 6.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     stringResource(Res.string.cash_flow_title),
-                    color = TxnPaperBg,
-                    fontSize = TXN_FS_TITLE.sp,
-                    fontWeight = FontWeight.Bold,
+                    color = ThermalInk.Paper,
+                    fontSize = ThermalInk.FS_TITLE.sp,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -279,9 +321,9 @@ private fun CashFlowBody(state: CashFlowPrintState) {
 
             if (nothingHappened) {
                 Spacer(Modifier.height(10.dp))
-                TxnRule()
+                CashPaperRule(thick = true)
                 Spacer(Modifier.height(10.dp))
-                TxnCenter(stringResource(Res.string.cash_flow_empty), TXN_FS_INFO)
+                TxnCenter(stringResource(Res.string.cash_flow_empty), ThermalInk.FS_ROW)
                 Spacer(Modifier.height(10.dp))
             } else {
                 CashFlowSection(
@@ -341,18 +383,26 @@ private fun CashFlowSection(
     count: Int,
 ) {
     Spacer(Modifier.height(8.dp))
-    TxnRule()
+    CashPaperRule(thick = true)
+    // The heading is a step larger than the rows it opens, not merely bolder: the two
+    // used to be told apart at 14sp against 15sp, which is no difference at all once
+    // every stroke has been forced to a whole dot.
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.Center,
     ) {
-        Text(title, fontSize = TXN_FS_HEAD.sp, fontWeight = FontWeight.Bold, color = TxnInk)
+        Text(
+            title,
+            fontSize = ThermalInk.FS_SECTION.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = ThermalInk.Ink,
+        )
     }
-    TxnRule()
+    CashPaperRule(thick = true)
     Spacer(Modifier.height(4.dp))
     TxnInfo(firstLabel, firstValue.txnJod())
     TxnInfo(secondLabel, secondValue.txnJod())
     TxnInfo(stringResource(Res.string.cash_flow_print_count), count.toString())
-    TxnThinRule()
+    CashPaperRule()
     TxnTotal(totalLabel, totalValue.txnJod())
 }

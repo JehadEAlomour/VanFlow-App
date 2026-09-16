@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -32,11 +31,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
@@ -60,10 +57,15 @@ import org.koin.core.parameter.parametersOf
  * The printable/shareable تقرير المبيعات.
  *
  * Same paper as the statement and تقرير الحركات — same ink, same type scale, same torn
- * edges — because a shop and an office receiving all three should see one company's
- * documents, not three templates. What differs is the columns: this one lists the
- * round's vouchers across customers and settles two questions, what was sold net of
+ * edges on screen — because a shop and an office receiving all three should see one
+ * company's documents, not three templates. What differs is the columns: this one lists
+ * the round's vouchers across customers and settles two questions, what was sold net of
  * returns and how much of it went out on credit.
+ *
+ * The paper is drawn twice: once for the user to look at, and once off-screen through
+ * [ThermalCapture] at the head's own resolution. Everything inside [SalesReportBody] is
+ * therefore 1-bit work — black or white, no grey, no alpha, nothing under 16sp — while
+ * the chrome around it stays an ordinary screen.
  */
 @Composable
 fun SalesReportPrintScreen(
@@ -202,16 +204,14 @@ fun SalesReportPrintScreen(
                 .horizontalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // Preview only. It draws at the phone's density, keeps the shadow and the
+            // torn edges, and records nothing — what gets printed is the capture below.
             Box(
                 modifier = Modifier
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .requiredWidth(TxnPaperWidth)
                     .shadow(8.dp, RoundedCornerShape(4.dp))
-                    .background(TxnPaperBg, RoundedCornerShape(4.dp))
-                    .drawWithContent {
-                        graphicsLayer.record { this@drawWithContent.drawContent() }
-                        drawLayer(graphicsLayer)
-                    },
+                    .background(TxnPaperBg, RoundedCornerShape(4.dp)),
             ) {
                 Column {
                     TxnTear()
@@ -219,12 +219,57 @@ fun SalesReportPrintScreen(
                     TxnTear(flipped = true)
                 }
             }
+
+            // The print source: the same body, drawn off-screen at the head's own
+            // resolution. Pinning the density is what makes 384dp of paper 576 dots on
+            // the Sunmi terminal as well as on a modern phone — previously the terminal
+            // handed the printer a third of the detail and nothing downstream could add
+            // it back. The torn edges are left out on purpose: they are grey strips, and
+            // grey is the one thing a 1-bit head cannot print.
+            ThermalCapture(layer = graphicsLayer, paperDp = TxnPaperWidth) {
+                SalesReportBody(state)
+            }
+
             Spacer(Modifier.height(32.dp))
         }
     }
 }
 
 // ── The paper ─────────────────────────────────────────────────────────────────
+
+/**
+ * How wide a logo is allowed to be on the paper — 110dp of 384, not the 300dp this
+ * used to be. A customer's upload is a continuous-tone photograph whatever we do to
+ * it, and a photograph reaches a 1-bit head as dithered speckle; the only lever left
+ * is how much of the receipt that speckle is allowed to cover. Small enough, and the
+ * company name is what gets read at the top of the page.
+ */
+private val SalesPaperLogo = 110.dp
+
+/**
+ * Rules, drawn here instead of through the kit's hairlines.
+ *
+ * A rule on 1-bit paper cannot be made quieter by fading it — [TxnThinRule] is half a
+ * dp at 35% alpha, which is the least printable mark a thermal head can be handed. The
+ * only honest lever is thickness, so both weights are solid black: 3dp closes a
+ * section, 2dp separates two vouchers.
+ */
+@Composable
+private fun SalesPaperRule(thick: Boolean = false) {
+    Box(
+        Modifier.fillMaxWidth()
+            .height(if (thick) 3.dp else ThermalInk.RuleThickness)
+            .background(ThermalInk.Ink),
+    )
+}
+
+// Column widths, re-budgeted for the larger type. A three-decimal figure is about
+// 80dp at this size, so the credit column — which used to be the narrowest because it
+// is usually just a dash — takes what the date and the movement label can spare.
+private const val SALES_COL_DATE = 0.95f
+private const val SALES_COL_DOC = 0.95f
+private const val SALES_COL_TOTAL = 1.25f
+private const val SALES_COL_CREDIT = 1.20f
 
 @Composable
 private fun SalesReportBody(state: SalesReportPrintState) {
@@ -235,37 +280,41 @@ private fun SalesReportBody(state: SalesReportPrintState) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 if (logo != null) {
                     // Untinted — a JPEG logo tinted with the ink colour prints as a
-                    // solid black rectangle. See StatementPrintScreen.
-                    Image(bitmap = logo, contentDescription = null, modifier = Modifier.size(TxnLogoSize))
+                    // solid black rectangle. See StatementPrintScreen. Tinting would not
+                    // have made it 1-bit anyway: a tint multiplies colour and leaves the
+                    // alpha channel, so the soft edges still arrive as partial coverage.
+                    Image(bitmap = logo, contentDescription = null, modifier = Modifier.size(SalesPaperLogo))
                 } else {
                     Image(
                         painter = painterResource(Res.drawable.voucher_logo),
                         contentDescription = null,
-                        modifier = Modifier.size(TxnLogoSize),
-                        colorFilter = ColorFilter.tint(TxnInk),
+                        modifier = Modifier.size(SalesPaperLogo),
+                        colorFilter = ColorFilter.tint(ThermalInk.Ink),
                     )
                 }
             }
             Spacer(Modifier.height(6.dp))
-            TxnCenter(state.companyNameAr, TXN_FS_COMPANY, bold = true)
-            if (state.companyNameEn.isNotBlank()) TxnCenter(state.companyNameEn, TXN_FS_SUB)
+            TxnCenter(state.companyNameAr, ThermalInk.FS_COMPANY, bold = true)
+            if (state.companyNameEn.isNotBlank()) TxnCenter(state.companyNameEn, ThermalInk.FS_SUB)
             if (state.companyTaxNumber.isNotBlank()) {
                 TxnCenter(
                     "${stringResource(Res.string.print_customer_tax_number)} ${state.companyTaxNumber}",
-                    TXN_FS_SUB,
+                    ThermalInk.FS_SUB,
                 )
             }
 
             Spacer(Modifier.height(8.dp))
+            // Black band, white knockout — the one filled panel the paper is allowed,
+            // because both halves of it are already 1-bit.
             Box(
-                modifier = Modifier.fillMaxWidth().background(TxnInk).padding(vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().background(ThermalInk.Ink).padding(vertical = 6.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     stringResource(Res.string.all_sales_title),
-                    color = TxnPaperBg,
-                    fontSize = TXN_FS_TITLE.sp,
-                    fontWeight = FontWeight.Bold,
+                    color = ThermalInk.Paper,
+                    fontSize = ThermalInk.FS_TITLE.sp,
+                    fontWeight = FontWeight.ExtraBold,
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -280,28 +329,28 @@ private fun SalesReportBody(state: SalesReportPrintState) {
             TxnInfo(stringResource(Res.string.all_sales_count), state.count.toString())
 
             Spacer(Modifier.height(8.dp))
-            TxnRule()
+            SalesPaperRule(thick = true)
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                TxnHead(stringResource(Res.string.txn_report_col_date), 0.95f)
-                TxnHead(stringResource(Res.string.txn_report_col_doc), 1.05f)
-                TxnHead(stringResource(Res.string.txn_report_col_total), 1.35f)
-                TxnHead(stringResource(Res.string.txn_report_col_credit), 0.95f)
+                TxnHead(stringResource(Res.string.txn_report_col_date), SALES_COL_DATE)
+                TxnHead(stringResource(Res.string.txn_report_col_doc), SALES_COL_DOC)
+                TxnHead(stringResource(Res.string.txn_report_col_total), SALES_COL_TOTAL)
+                TxnHead(stringResource(Res.string.txn_report_col_credit), SALES_COL_CREDIT)
             }
-            TxnRule()
+            SalesPaperRule(thick = true)
 
             if (state.rows.isEmpty()) {
                 Spacer(Modifier.height(10.dp))
-                TxnCenter(stringResource(Res.string.report_empty_period), TXN_FS_INFO)
+                TxnCenter(stringResource(Res.string.report_empty_period), ThermalInk.FS_ROW)
                 Spacer(Modifier.height(10.dp))
             } else {
                 state.rows.forEach { row ->
                     SalesPaperRow(row)
-                    TxnThinRule()
+                    SalesPaperRule()
                 }
             }
 
             Spacer(Modifier.height(6.dp))
-            TxnRule()
+            SalesPaperRule(thick = true)
             Spacer(Modifier.height(6.dp))
 
             TxnTotal(stringResource(Res.string.all_sales_total_sales), state.salesTotal.txnJod())
@@ -319,13 +368,13 @@ private fun SalesReportBody(state: SalesReportPrintState) {
             TxnBoxedTotal(stringResource(Res.string.txn_report_total_credit), state.creditTotal.txnJod())
 
             Spacer(Modifier.height(10.dp))
-            TxnRule()
+            SalesPaperRule(thick = true)
             Spacer(Modifier.height(6.dp))
 
             TxnInfo(stringResource(Res.string.statement_printed_at), state.printedAt.txnDateTime())
 
             Spacer(Modifier.height(12.dp))
-            TxnCenter(stringResource(Res.string.print_footer_thanks), TXN_FS_FOOTER)
+            TxnCenter(stringResource(Res.string.print_footer_thanks), ThermalInk.FS_MIN)
             Spacer(Modifier.height(4.dp))
         }
     }
@@ -340,31 +389,34 @@ private fun SalesPaperRow(row: SalesReportPrintRow) {
     }
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TxnCell(row.dateMillis.txnDate().take(5), 0.95f)
-            TxnCell(label, 1.05f)
-            TxnCell(row.total.txnJod(), 1.35f, bold = true)
-            TxnCell(if (row.isCredit) row.total.txnJod() else "-", 0.95f)
+            TxnCell(row.dateMillis.txnDate().take(5), SALES_COL_DATE)
+            TxnCell(label, SALES_COL_DOC)
+            TxnCell(row.total.txnJod(), SALES_COL_TOTAL, bold = true)
+            TxnCell(if (row.isCredit) row.total.txnJod() else "-", SALES_COL_CREDIT)
         }
         // Whose voucher it is, then the number left-to-right — a rep reconciling this
-        // against the office reads down the shop names, not the numbers.
+        // against the office reads down the shop names, not the numbers. That order used
+        // to be carried by nothing at all (both lines were 12sp Bold); at print sizes it
+        // is carried by the name being a step larger and a weight heavier. The name may
+        // take a second line: a shop whose name is cut in half is worse than a wrap.
         if (row.customerNameAr.isNotBlank()) {
             Text(
                 text = row.customerNameAr,
                 modifier = Modifier.fillMaxWidth(),
-                color = TxnInk,
-                fontSize = TXN_FS_SUB_ROW.sp,
-                fontWeight = TxnWeight,
+                color = ThermalInk.Ink,
+                fontSize = ThermalInk.FS_ROW.sp,
+                fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Right,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }
         Text(
             text = row.number,
             modifier = Modifier.fillMaxWidth(),
-            color = TxnInk,
-            fontSize = TXN_FS_SUB_ROW.sp,
-            fontWeight = TxnWeight,
+            color = ThermalInk.Ink,
+            fontSize = ThermalInk.FS_MIN.sp,
+            fontWeight = FontWeight.Bold,
             style = TxnLtr,
             textAlign = TextAlign.Left,
             maxLines = 1,
