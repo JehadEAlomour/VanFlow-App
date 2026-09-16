@@ -619,6 +619,7 @@
     <string name="van_stock_stat_items">Items</string>
     <string name="van_stock_stat_low_stock">Low Stock</string>
     <string name="van_stock_stat_total_value">Stock Value</string>
+    <string name="van_stock_stat_total_qty">Total Qty</string>
     <string name="van_stock_unit">Unit</string>
     <string name="view_all">View All</string>
     <string name="visits_invoice_count">%1$d invoices</string>

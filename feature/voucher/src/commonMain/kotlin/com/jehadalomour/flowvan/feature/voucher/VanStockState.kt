@@ -26,6 +26,16 @@ data class VanStockState(
     val nowMs: Long = 0L,
     val isLoading: Boolean = true,
 ) {
+    /**
+     * Every piece on the van, added up — not how many DIFFERENT items it carries.
+     *
+     * "Items" answers how many lines are on the sheet; a salesman counting his
+     * van against the report needs the pieces. Taken from allProducts, like the
+     * other headline figures, so narrowing to a category does not silently
+     * restate the van's total as that category's.
+     */
+    val totalQty: Int get() = allProducts.sumOf { if (it.vanStock > 0) it.vanStock else 0 }
+
     val categories: List<String> get() =
         allProducts.map { it.category }.filter { it.isNotBlank() }.distinct().sorted()
 

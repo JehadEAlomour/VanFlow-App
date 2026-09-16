@@ -619,6 +619,7 @@
     <string name="van_stock_stat_items">الأصناف</string>
     <string name="van_stock_stat_low_stock">مخزون منخفض</string>
     <string name="van_stock_stat_total_value">قيمة المخزون</string>
+    <string name="van_stock_stat_total_qty">إجمالي الكمية</string>
     <string name="van_stock_unit">الوحدة</string>
     <string name="view_all">عرض الكل</string>
     <string name="visits_invoice_count">%1$d فاتورة</string>

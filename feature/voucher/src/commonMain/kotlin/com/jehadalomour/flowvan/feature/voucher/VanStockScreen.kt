@@ -140,6 +140,7 @@ fun VanStockScreen(
                 StatsHero(
                     // Count only what the van actually carries — matches the list below.
                     totalItems = state.allProducts.count { it.vanStock > 0 },
+                    totalQty = state.totalQty,
                     totalValue = state.totalInventoryValue,
                     lowStockCount = state.allProducts.count { it.vanStock in 1 until it.minStock },
                 )
@@ -222,7 +223,7 @@ fun VanStockScreen(
 // ── Stats Hero ────────────────────────────────────────────────────────────────
 
 @Composable
-private fun StatsHero(totalItems: Int, totalValue: Double, lowStockCount: Int) {
+private fun StatsHero(totalItems: Int, totalQty: Int, totalValue: Double, lowStockCount: Int) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -241,6 +242,14 @@ private fun StatsHero(totalItems: Int, totalValue: Double, lowStockCount: Int) {
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             ShStatColumn(value = "$totalItems", label = stringResource(Res.string.van_stock_stat_items), valueColor = Color.White)
+            Box(modifier = Modifier.width(0.5.dp).height(48.dp).background(Color.White.copy(alpha = 0.2f)))
+            // Beside the line count, because the two are read together and
+            // mistaking one for the other is the whole point of showing both.
+            ShStatColumn(
+                value = "$totalQty",
+                label = stringResource(Res.string.van_stock_stat_total_qty),
+                valueColor = Color.White,
+            )
             Box(modifier = Modifier.width(0.5.dp).height(48.dp).background(Color.White.copy(alpha = 0.2f)))
             ShStatColumn(
                 value = totalValue.formatJod(AppLanguage.AR),
