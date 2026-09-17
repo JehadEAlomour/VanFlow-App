@@ -1,7 +1,7 @@
 package com.jehadalomour.flowvan.core.domain.usecase
 
 import com.jehadalomour.flowvan.core.network.api.CollectionApi
-import com.jehadalomour.flowvan.core.network.dto.CreateChequeRequest
+import com.jehadalomour.flowvan.core.network.dto.ChequeInput
 import com.jehadalomour.flowvan.core.network.dto.CreateCollectionRequest
 import com.jehadalomour.flowvan.core.network.mapper.toPayment
 import com.jehadalomour.flowvan.core.network.http.NetworkException
@@ -37,8 +37,21 @@ class SubmitCollectionUseCase(
                     amount = amount.jodToFils().toLong(),
                     method = apiMethod,
                     note = note,
-                    cheque = if (method == PaymentMethod.CHEQUE) {
-                        CreateChequeRequest(bankName = chequeBank, chequeNumber = chequeNumber)
+                    // ONE CHEQUE, CARRYING THE AMOUNT.
+                    //
+                    // The server takes a LIST and totals it, and refuses a body
+                    // with any property it does not declare. This sent a single
+                    // `cheque` object with no amount, so every cheque collection
+                    // a rep took was rejected before it reached the service and
+                    // turned up in neither VanFlow nor the ERP.
+                    cheques = if (method == PaymentMethod.CHEQUE) {
+                        listOf(
+                            ChequeInput(
+                                amount = amount.jodToFils().toLong(),
+                                bankName = chequeBank,
+                                chequeNumber = chequeNumber,
+                            ),
+                        )
                     } else {
                         null
                     },

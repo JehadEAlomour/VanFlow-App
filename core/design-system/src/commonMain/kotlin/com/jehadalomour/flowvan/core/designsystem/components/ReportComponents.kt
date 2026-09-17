@@ -37,6 +37,17 @@ import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
+/**
+ * "From the beginning" — a start date that means the whole account.
+ *
+ * A real epoch value rather than a nullable, because every path underneath
+ * (the ERP request, the Room query, the printed paper) already takes two
+ * millisecond bounds, and threading a null through all of them to say the same
+ * thing would touch far more than it explains. Only the BUTTON knows it is
+ * special, and shows the words instead of "01/01/1970".
+ */
+const val ALL_TIME_FROM: Long = 0L
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DateRangeBar(
@@ -106,7 +117,15 @@ private fun DateButton(label: String, millis: Long, modifier: Modifier, onClick:
     ) {
         Text(label, color = Fv.TextMid, fontSize = 10.sp)
         Spacer(Modifier.height(2.dp))
-        Text(millis.toDateString(), color = Fv.TextHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            // The sentinel reads as words, not as 01/01/1970 — which looks like
+            // a bug to anybody holding the phone.
+            text = if (millis <= ALL_TIME_FROM) stringResource(Res.string.date_all_time)
+                   else millis.toDateString(),
+            color = Fv.TextHigh,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 

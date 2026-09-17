@@ -18,6 +18,7 @@
     <string name="filter">Filter</string>
     <string name="all">All</string>
     <string name="from_date">From</string>
+    <string name="date_all_time">All time</string>
     <string name="to_date">To</string>
     <string name="total">Total</string>
     <string name="count">Count</string>

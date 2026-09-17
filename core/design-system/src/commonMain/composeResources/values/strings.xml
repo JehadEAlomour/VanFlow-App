@@ -18,6 +18,7 @@
     <string name="filter">تصفية</string>
     <string name="all">الكل</string>
     <string name="from_date">من</string>
+    <string name="date_all_time">كل الوقت</string>
     <string name="to_date">إلى</string>
     <string name="total">الإجمالي</string>
     <string name="count">العدد</string>

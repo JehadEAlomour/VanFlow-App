@@ -1,8 +1,10 @@
 package com.jehadalomour.flowvan.core.network.mapper
 
 import com.jehadalomour.flowvan.core.database.entity.InvoiceEntity
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import com.jehadalomour.flowvan.core.database.entity.PaymentEntity
-import com.jehadalomour.flowvan.core.network.dto.CreateChequeRequest
+import com.jehadalomour.flowvan.core.network.dto.ChequeInput
 import com.jehadalomour.flowvan.core.network.dto.CreateCollectionRequest
 import com.jehadalomour.flowvan.core.network.dto.CreateInvoiceLine
 import com.jehadalomour.flowvan.core.network.dto.CreateInvoiceRequest
@@ -173,8 +175,20 @@ fun PaymentEntity.toCreateCollectionRequest(repId: String): CreateCollectionRequ
         note = notes,
         repLat = repLat,
         repLng = repLng,
-        cheque = if (isCheque) {
-            CreateChequeRequest(bankName = chequeBank, chequeNumber = chequeNumber)
+        // One cheque carrying the WHOLE amount: this path replays a payment the
+        // rep already took on the handset, and the app records a single cheque
+        // per collection. The server totals the list, so the amount has to be on
+        // the cheque — it was missing entirely before, which is half of why
+        // these were refused.
+        cheques = if (isCheque) {
+            listOf(
+                ChequeInput(
+                    amount = amount.jodToFils().toLong(),
+                    bankName = chequeBank,
+                    chequeNumber = chequeNumber,
+                    dueDate = chequeDate?.let(::epochMillisToIsoDate),
+                ),
+            )
         } else {
             null
         },
@@ -234,3 +248,16 @@ fun SyncVoucherResult.toAdoptedInvoice(): AdoptedInvoice? {
     )
 }
 
+/**
+ * A post-dated cheque's due date as the API wants it: YYYY-MM-DD, in the
+ * device's own zone.
+ *
+ * The zone matters. A cheque due on the 1st, stored at local midnight, is the
+ * previous day in UTC — and the office would bank it a day early.
+ */
+private fun epochMillisToIsoDate(millis: Long): String {
+    val d = Instant.fromEpochMilliseconds(millis)
+        .toLocalDateTime(TimeZone.currentSystemDefault()).date
+    fun p(n: Int) = n.toString().padStart(2, '0')
+    return "${d.year}-${p(d.monthNumber)}-${p(d.dayOfMonth)}"
+}

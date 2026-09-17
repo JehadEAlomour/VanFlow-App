@@ -1,6 +1,7 @@
 package com.jehadalomour.flowvan.feature.customer
 
 import androidx.lifecycle.ViewModel
+import com.jehadalomour.flowvan.core.designsystem.components.ALL_TIME_FROM
 import androidx.lifecycle.viewModelScope
 import com.jehadalomour.flowvan.core.database.dao.InvoiceDao
 import com.jehadalomour.flowvan.core.database.dao.PaymentDao
@@ -50,7 +51,19 @@ class AccountStatementViewModel(
 
     private val _state = MutableStateFlow(
         AccountStatementState(
-            fromMillis = startOfMonthMillis(),
+            // THE WHOLE ACCOUNT, not this month.
+            //
+            // It opened on the first of the current month, and a rep standing in
+            // front of a shopkeeper was shown "لا توجد حركات في هذه الفترة" beside
+            // a debt of 260.325 — the shop's only movement was in April, so the
+            // screen was correct and useless at the same time. The office's own
+            // statement opens on كل الوقت for exactly this reason: the question
+            // being asked is "what do I owe and where did it come from", and a
+            // window that hides the answer is the wrong default.
+            //
+            // The pickers still narrow it, and the ERP still carries anything
+            // before the window into the opening balance.
+            fromMillis = ALL_TIME_FROM,
             toMillis = endOfTodayMillis(),
         )
     )
@@ -240,13 +253,6 @@ class AccountStatementViewModel(
     }
 }
 
-@OptIn(ExperimentalTime::class)
-private fun startOfMonthMillis(): Long {
-    val tz = TimeZone.currentSystemDefault()
-    val nowMs = Clock.System.now().toEpochMilliseconds()
-    val today = Instant.fromEpochMilliseconds(nowMs).toLocalDateTime(tz).date
-    return LocalDate(today.year, today.month, 1).atStartOfDayIn(tz).toEpochMilliseconds()
-}
 
 @OptIn(ExperimentalTime::class)
 private fun endOfTodayMillis(): Long {

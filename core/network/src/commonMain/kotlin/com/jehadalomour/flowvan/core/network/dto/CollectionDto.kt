@@ -42,14 +42,28 @@ data class CreateCollectionRequest(
     /** Rep's GPS when recorded — enforces the per-rep location lock. Omitted when null. */
     val repLat: Double? = null,
     val repLng: Double? = null,
-    val cheque: CreateChequeRequest? = null,
+    /**
+     * The cheques this collection is made of — REQUIRED, non-empty, when
+     * method is "cheque".
+     *
+     * A list, and each entry carries its own amount, because the server's
+     * receipt total is the SUM of them. This used to be a single `cheque`
+     * object with no amount, which the server rejected outright: it does not
+     * declare that property, and it refuses a body carrying one
+     * (forbidNonWhitelisted). Every cheque collection a rep took therefore
+     * 400'd on the way out and appeared in neither VanFlow nor the ERP.
+     */
+    val cheques: List<ChequeInput>? = null,
 )
 
 @Serializable
-data class CreateChequeRequest(
+data class ChequeInput(
+    /** This cheque's own amount in fils. The receipt total is the sum of them. */
+    val amount: Long,
     val bankName: String? = null,
     val chequeNumber: String? = null,
     val payee: String? = null,
+    /** YYYY-MM-DD — when the cheque can be banked. */
     val dueDate: String? = null,
 )
 
