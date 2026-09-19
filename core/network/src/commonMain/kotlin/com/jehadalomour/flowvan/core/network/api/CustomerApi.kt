@@ -1,6 +1,7 @@
 package com.jehadalomour.flowvan.core.network.api
 
 import com.jehadalomour.flowvan.core.network.dto.CreateCustomerRequest
+import com.jehadalomour.flowvan.core.network.dto.CustomerSegmentOption
 import com.jehadalomour.flowvan.core.network.dto.CustomerDto
 import com.jehadalomour.flowvan.core.network.dto.ErpStatementDto
 import com.jehadalomour.flowvan.core.network.dto.StagedPhotoDto
@@ -48,6 +49,16 @@ class CustomerApi(private val client: FlowVanApiClient) {
     suspend fun getById(id: String): CustomerDto = client.getData("customers/$id")
 
     suspend fun create(body: CreateCustomerRequest): CustomerDto = client.postData("customers", body)
+
+    /**
+     * Segments a new customer can be filed under.
+     *
+     * Its own endpoint under `customers` rather than the segments module,
+     * which is gated on a dashboard permission no salesman holds — see the
+     * route's comment on the server.
+     */
+    suspend fun segmentOptions(): List<CustomerSegmentOption> =
+        client.getData("customers/segments")
 
     /** POST /customers, tolerating both outcomes. See [CreateCustomerOutcome]. */
     suspend fun createOrRequest(body: CreateCustomerRequest): CreateCustomerOutcome {

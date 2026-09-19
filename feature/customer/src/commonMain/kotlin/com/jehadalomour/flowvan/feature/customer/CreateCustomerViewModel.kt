@@ -52,6 +52,27 @@ class CreateCustomerViewModel(
     )
     val state: StateFlow<CreateCustomerState> = _state.asStateFlow()
 
+    init {
+        // The office's segments, so the rep can file the shop while standing in
+        // it. A failure is silent on purpose: this is one optional field on a
+        // form whose real job is a name, a phone, a pin and a photo, and an
+        // error banner about segments would sit over all four.
+        viewModelScope.launch {
+            val options = runCatching { customerApi.segmentOptions() }.getOrNull().orEmpty()
+            _state.update {
+                it.copy(
+                    segments = options.map { o ->
+                        SegmentOption(
+                            id = o.id,
+                            label = o.nameAr.ifBlank { o.nameEn.orEmpty() },
+                            color = o.color,
+                        )
+                    }.filter { o -> o.label.isNotBlank() },
+                )
+            }
+        }
+    }
+
     fun onEvent(event: CreateCustomerEvent) {
         when (event) {
             is CreateCustomerEvent.NameChanged -> _state.update { it.copy(name = event.v) }
@@ -64,6 +85,11 @@ class CreateCustomerViewModel(
                 _state.update { it.copy(errorAr = null, locationErrorAr = null, documentErrorAr = null) }
             is CreateCustomerEvent.DocumentPicked -> uploadDocument(event.doc)
             is CreateCustomerEvent.RemovePhoto -> removePhoto(event.localId)
+            is CreateCustomerEvent.SegmentPicked -> _state.update {
+                // The same chip twice clears it: the rep who taps one by mistake
+                // has no other way back to "no segment".
+                it.copy(segmentId = if (it.segmentId == event.id) null else event.id)
+            }
         }
     }
 
@@ -215,6 +241,7 @@ class CreateCustomerViewModel(
                         photoId = photoIds.first(),
                         extraPhotoIds = photoIds.drop(1).takeIf { it.isNotEmpty() },
                         sourceProspectId = prefill?.prospectId,
+                        segmentId = s.segmentId,
                     ),
                 )
             }

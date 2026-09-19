@@ -3,7 +3,11 @@ package com.jehadalomour.flowvan.feature.customer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -146,6 +150,10 @@ fun CreateCustomerScreen(
                 )
             }
 
+            // ── Which shelf it belongs on ───────────────────────────────────────
+            // Only when the office has segments to offer. See SegmentSection.
+            if (state.segments.isNotEmpty()) SegmentSection(state, viewModel)
+
             // ── Where ───────────────────────────────────────────────────────────
             LocationSection(state, viewModel)
 
@@ -225,6 +233,64 @@ private fun FormSection(
         }
         Spacer(Modifier.height(10.dp))
         content()
+    }
+}
+
+/**
+ * Which segment the shop belongs to, chosen by the rep who is standing in it.
+ *
+ * Optional, and labelled so: until now the only way into a segment was the
+ * dashboard, which meant somebody in the office filing shops they had never
+ * visited. The rep knows.
+ *
+ * Chips rather than a dropdown — there are a handful of segments, they are the
+ * whole point of the field, and a closed dropdown hides the fact that the
+ * choice exists at all.
+ */
+@Composable
+private fun SegmentSection(state: CreateCustomerState, viewModel: CreateCustomerViewModel) {
+    FormSection(
+        title = "الشريحة",
+        trailing = {
+            Text("اختياري", color = Fv.TextMid, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        },
+    ) {
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            state.segments.forEach { option ->
+                val selected = option.id == state.segmentId
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (selected) Fv.Blue else Fv.SurfaceTop)
+                        .border(
+                            1.dp,
+                            if (selected) Fv.Blue else Fv.Border,
+                            RoundedCornerShape(10.dp),
+                        )
+                        .clickable { viewModel.onEvent(CreateCustomerEvent.SegmentPicked(option.id)) }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        option.label,
+                        color = if (selected) Color.White else Fv.TextHigh,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
+        if (state.segmentId != null) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "اضغط على الشريحة المختارة لإلغائها",
+                color = Fv.TextMid,
+                fontSize = 11.sp,
+            )
+        }
     }
 }
 

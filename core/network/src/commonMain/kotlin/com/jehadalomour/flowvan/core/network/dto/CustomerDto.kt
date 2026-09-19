@@ -40,6 +40,21 @@ data class CustomerDto(
     val taxExemptionValidTo: String? = null,
 )
 
+/**
+ * One segment a new customer can be filed under, as the picker needs it.
+ *
+ * These are the office's own segments (الشرائح), not the RFM buckets the route
+ * screen colours a chip with — the two are unrelated and only share a word.
+ */
+@Serializable
+data class CustomerSegmentOption(
+    val id: String,
+    val nameAr: String,
+    val nameEn: String? = null,
+    /** Chip colour as a hex string; purely presentational, often absent. */
+    val color: String? = null,
+)
+
 @Serializable
 data class CreateCustomerRequest(
     val customerNumber: String? = null,   // omit → backend auto-generates (CUST-000001)
@@ -67,6 +82,15 @@ data class CreateCustomerRequest(
     val creditLimit: String? = null,
     val customerType: String? = null,
     val regionId: String? = null,
+    /**
+     * The segment the rep filed this shop under (GET customers/segments).
+     * Null when they picked none — the field is optional, and the backend
+     * refuses only an id it does not know.
+     *
+     * It travels on an approval request too, so a segment chosen in the field
+     * survives the office approving the customer hours later.
+     */
+    val segmentId: String? = null,
     // A customer created in the field can be exempt from the moment they exist,
     // rather than only after the next ERP sync catches up.
     val isTaxExempt: Boolean? = null,

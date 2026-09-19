@@ -13,6 +13,9 @@ data class CustomerPhoto(
     val failed: Boolean = false,
 )
 
+/** One segment offered in the picker, as the screen needs it. */
+data class SegmentOption(val id: String, val label: String, val color: String? = null)
+
 data class CreateCustomerState(
     val name: String = "",
     val phone: String = "",
@@ -23,6 +26,17 @@ data class CreateCustomerState(
     val isSaving: Boolean = false,
     val savedCustomerId: String? = null,
     val errorAr: String? = null,
+
+    // ── Segment ───────────────────────────────────────────────────────────────
+    /**
+     * The office's segments (الشرائح), loaded when the screen opens. Empty is a
+     * normal state — no segments configured, or no signal — and the picker is
+     * simply not shown, because a field with nothing in it is worse than no
+     * field.
+     */
+    val segments: List<SegmentOption> = emptyList(),
+    /** Null means the rep picked none, which is allowed. */
+    val segmentId: String? = null,
 
     // ── Photos ────────────────────────────────────────────────────────────────
     /** At least one is required; the rep may add more images of the shop. */
@@ -87,6 +101,9 @@ sealed interface CreateCustomerEvent {
     data class DocumentPicked(val doc: PickedDocument) : CreateCustomerEvent
     /** Remove one photo (uploaded, uploading, or failed) by its local id. */
     data class RemovePhoto(val localId: Long) : CreateCustomerEvent
+
+    /** Tapping the chosen segment again clears it — it is an optional field. */
+    data class SegmentPicked(val id: String?) : CreateCustomerEvent
 }
 
 /**
