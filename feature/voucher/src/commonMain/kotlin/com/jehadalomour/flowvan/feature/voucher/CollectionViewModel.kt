@@ -153,6 +153,15 @@ class CollectionViewModel(
                 val msg = getString(Res.string.err_select_cheque_bank, idx + 1)
                 _state.update { it.copy(isSaving = false, errorAr = msg) }; return
             }
+            // The due date is not a nicety: the ERP builds the Financial Paper
+            // out of the number and this date, and refuses a receipt without
+            // them. Catch it here, while the rep is holding the cheque and can
+            // read it — the alternative is a collection that syncs, fails in
+            // the office hours later, and has to be chased back to him.
+            if (c.dateMillis == null) {
+                val msg = getString(Res.string.err_select_cheque_date, idx + 1)
+                _state.update { it.copy(isSaving = false, errorAr = msg) }; return
+            }
         }
         var lastNumber: String? = null
         var lastId: String? = null

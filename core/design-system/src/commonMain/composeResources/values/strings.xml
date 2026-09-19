@@ -774,6 +774,7 @@
     <string name="err_enter_valid_cheque_amount">أدخل مبلغ صحيح للشيك %1$d</string>
     <string name="err_enter_cheque_number">أدخل رقم الشيك %1$d</string>
     <string name="err_select_cheque_bank">اختر البنك للشيك %1$d</string>
+    <string name="err_select_cheque_date">حدد تاريخ استحقاق الشيك %1$d</string>
 
     <!-- Daily / cash-flow summary breakdown -->
     <string name="cash_flow_section_sales">المبيعات</string>

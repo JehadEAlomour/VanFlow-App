@@ -776,6 +776,7 @@
     <string name="err_enter_valid_cheque_amount">Enter a valid amount for cheque %1$d</string>
     <string name="err_enter_cheque_number">Enter the number for cheque %1$d</string>
     <string name="err_select_cheque_bank">Select the bank for cheque %1$d</string>
+    <string name="err_select_cheque_date">Set the due date for cheque %1$d</string>
 
     <!-- Daily / cash-flow summary breakdown -->
     <string name="cash_flow_section_sales">Sales</string>
