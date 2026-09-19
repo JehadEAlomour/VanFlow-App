@@ -17,3 +17,9 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+
+# Release signing — the key that lets an installed app be updated in place.
+# Losing it means no device in the field can ever be updated again.
+keystore.properties
+*.jks
+*.keystore

@@ -8,18 +8,26 @@ import com.russhwolf.settings.Settings
  * ("https://host") or the full API root ("https://host/api/v1") — [resolvedBaseUrl]
  * appends the "/api/v1" prefix when it is missing, since every endpoint lives under it.
  * When blank the network layer is disabled and the app stays in pure offline/demo mode.
+ *
+ * [defaultBaseUrl] comes from the build variant (see AppBuildConfig). It used to be
+ * a `const val` here with the other customers' URLs commented out above it, which
+ * made "which customer is this APK for?" a question about editor history rather
+ * than about the build.
  */
-class ApiConfig(private val settings: Settings) {
+class ApiConfig(
+    private val settings: Settings,
+    private val defaultBaseUrl: String,
+) {
 
     /**
      * Raw value as entered/saved (what the Settings field shows). Reads back the
      * value saved from the Settings page so a change to the backend URL takes effect
-     * directly (resolved per request — no app restart). Falls back to
-     * [DEFAULT_BASE_URL] when nothing has been saved yet.
+     * directly (resolved per request — no app restart). Falls back to the variant's
+     * [defaultBaseUrl] when nothing has been saved yet.
      */
     var baseUrl: String
         get() = settings.getStringOrNull(SettingsKeys.API_BASE_URL)?.takeIf { it.isNotBlank() }
-            ?: DEFAULT_BASE_URL
+            ?: defaultBaseUrl
         set(value) = settings.putString(SettingsKeys.API_BASE_URL, value.trim())
 
     val isEnabled: Boolean get() = baseUrl.isNotBlank()
@@ -36,15 +44,5 @@ class ApiConfig(private val settings: Settings) {
 
     companion object {
         const val API_PREFIX = "api/v1"
-
-        //     The dev backend. HTTPS through the proxy rather than an ip:port,
-        //     so the handset is not doing cleartext to a bare address — Android
-        //     blocks that by default, and a client install should never have to
-        //     be told to allow it.
-        //
-        //     Local dev: "http://10.0.2.2:3100/api/v1" for the Android emulator.
-//        const val DEFAULT_BASE_URL = "https://app-dev.7softwarejo.com/api/v1"
-//        const val DEFAULT_BASE_URL = "http://94.142.51.91:3100/api/v1"
-        const val DEFAULT_BASE_URL = "http://77.245.5.113:3002/api/v1"
     }
 }

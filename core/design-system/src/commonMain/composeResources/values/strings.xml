@@ -924,4 +924,16 @@
 
     <!-- Sales report -->
     <string name="all_sales_total_requests">إجمالي الطلبات</string>
+
+    <!-- Forced app update (see UpdateGate) -->
+    <string name="update_required_title">يوجد تحديث للبرنامج</string>
+    <string name="update_required_body">لا يمكن متابعة العمل على هذه النسخة. التحديث يبدأ تلقائياً — اترك الجهاز مفتوحاً حتى ينتهي.</string>
+    <string name="update_state_preparing">جاري التحضير…</string>
+    <string name="update_state_downloading">جاري التنزيل…</string>
+    <string name="update_state_verifying">جاري التحقق…</string>
+    <string name="update_state_installing">جاري التثبيت…</string>
+    <string name="update_state_confirm">اضغط «تثبيت» في الرسالة التي ظهرت على الشاشة</string>
+    <string name="update_failed">تعذّر التحديث. تأكد من الاتصال بالإنترنت.</string>
+    <string name="update_retry">إعادة المحاولة</string>
+    <string name="update_version_line">النسخة الحالية %1$s — الجديدة %2$s</string>
 </resources>

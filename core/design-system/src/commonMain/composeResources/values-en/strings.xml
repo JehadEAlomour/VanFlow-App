@@ -913,4 +913,16 @@
     <string name="report_error">Couldn't load the data. Check your connection.</string>
     <string name="cash_flow_print_collections_total">Collections total</string>
     <string name="cash_flow_print_count">Entries</string>
+
+    <!-- Forced app update (see UpdateGate) -->
+    <string name="update_required_title">A new version is ready</string>
+    <string name="update_required_body">This version can no longer be used. The update starts on its own — just leave the device on until it finishes.</string>
+    <string name="update_state_preparing">Getting ready…</string>
+    <string name="update_state_downloading">Downloading…</string>
+    <string name="update_state_verifying">Checking the file…</string>
+    <string name="update_state_installing">Installing…</string>
+    <string name="update_state_confirm">Tap “Install” on the message that just appeared</string>
+    <string name="update_failed">The update could not finish. Check the internet connection.</string>
+    <string name="update_retry">Try again</string>
+    <string name="update_version_line">Now %1$s — new %2$s</string>
 </resources>

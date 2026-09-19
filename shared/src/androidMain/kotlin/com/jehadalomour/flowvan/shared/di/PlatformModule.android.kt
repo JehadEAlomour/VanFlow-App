@@ -5,6 +5,7 @@ import com.jehadalomour.flowvan.core.data.device.DeviceIdentityProvider
 import com.jehadalomour.flowvan.core.database.db.DatabaseFactory
 import com.jehadalomour.flowvan.core.data.location.LocationStatusProvider
 import com.jehadalomour.flowvan.core.data.location.SettingsOpener
+import com.jehadalomour.flowvan.core.data.update.AppInstaller
 import com.jehadalomour.flowvan.core.domain.notify.AlertNotifier
 import com.jehadalomour.flowvan.core.domain.notify.AndroidAlertNotifier
 import org.koin.android.ext.koin.androidContext
@@ -17,6 +18,7 @@ actual fun platformModule(): Module = module {
     single { DeviceIdentityProvider(androidContext()) }
     single { LocationStatusProvider(androidContext()) }
     single { SettingsOpener(androidContext()) }
+    single { AppInstaller(androidContext()) }
     single<AlertNotifier> { AndroidAlertNotifier(androidContext()) }
     // LocationProvider and LocationTracker are the only bindings the two builds
     // disagree about, so they are the only ones that live in a flavour.

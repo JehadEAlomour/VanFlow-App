@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Empty on purpose. Device OWNER (granted over ADB at provisioning) is what
+  FlowVan needs, and that is a property of the package, not of the policies
+  listed here. Asking for policies we never use would only add lines to the
+  screen an IT admin reads before approving the app.
+-->
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies />
+</device-admin>

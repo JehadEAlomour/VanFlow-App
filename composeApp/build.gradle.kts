@@ -1,5 +1,6 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -8,6 +9,9 @@ plugins {
     alias(libs.plugins.composeCompiler)
     // gms / nogms — see ServiceFlavorsConventionPlugin.
     id("flowvan.service.flavors")
+    // ferdous / tal3at / dev — see CustomerFlavors.kt. Carries each customer's
+    // API and update URLs in as BuildConfig fields.
+    id("flowvan.customer.flavors")
 }
 
 kotlin {
@@ -30,6 +34,8 @@ kotlin {
     sourceSets {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
+            // The self-update receivers log through kermit, like the rest of the app.
+            implementation(libs.kermit)
             implementation(libs.androidx.activity.compose)
             implementation(libs.koin.android)
             // XPrinter / POS thermal printer SDK (USB / Bluetooth / Serial / Network) — ESC/POS
@@ -82,8 +88,13 @@ android {
         applicationId = "com.jehadalomour.flowvan"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
+        // Read from gradle.properties rather than written here, so bumping the
+        // shipped version is one line in one file and the release script can do
+        // it. The in-app updater compares versionCode and nothing else: ship two
+        // different builds under the same code and the second one is invisible
+        // to every device already carrying the first.
+        versionCode = providers.gradleProperty("flowvan.versionCode").get().toInt()
+        versionName = providers.gradleProperty("flowvan.versionName").get()
     }
     packaging {
         resources {
@@ -111,10 +122,46 @@ android {
         getByName("gms").manifest.srcFile("src/androidGms/AndroidManifest.xml")
         getByName("nogms").manifest.srcFile("src/androidNogms/AndroidManifest.xml")
     }
+    signingConfigs {
+        // The release key, read from an untracked keystore.properties at the repo
+        // root (see keystore.properties.example). Absent, the block is simply not
+        // created and `release` falls back to the debug key below.
+        val keystoreProperties = rootProject.file("keystore.properties")
+        if (keystoreProperties.exists()) {
+            val props = Properties().apply { keystoreProperties.inputStream().use(::load) }
+            create("release") {
+                storeFile = rootProject.file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
+    }
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            // WHY THIS MATTERS MORE THAN IT LOOKS. Android only replaces an
+            // installed app with a new APK when both are signed by the SAME key.
+            // The debug key is generated per developer machine and is not in the
+            // repo — build a release with it, hand out the APK, and the day that
+            // machine is reimaged every handset in the field becomes permanently
+            // un-updatable: the only way forward is uninstall + reinstall, which
+            // takes the local Room database (and any un-synced vouchers) with it.
+            //
+            // So a release built without keystore.properties is still allowed —
+            // a developer has to be able to build one — but it is loud about it,
+            // because an APK signed this way must never reach a van.
+            signingConfig = signingConfigs.findByName("release") ?: run {
+                logger.warn(
+                    "\n" +
+                        "  ****************************************************************\n" +
+                        "  FlowVan: no keystore.properties — signing `release` with the\n" +
+                        "  DEBUG key. This APK must NOT be distributed: devices that\n" +
+                        "  install it can never be updated in place. See docs/auto-update.md\n" +
+                        "  ****************************************************************",
+                )
+                signingConfigs.getByName("debug")
+            }
         }
     }
     compileOptions {

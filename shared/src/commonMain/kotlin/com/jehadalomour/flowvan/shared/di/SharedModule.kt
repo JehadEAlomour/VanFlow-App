@@ -18,9 +18,12 @@ import com.jehadalomour.flowvan.core.data.repository.ProductRepository
 import com.jehadalomour.flowvan.core.data.repository.ProductUnitRepository
 import com.jehadalomour.flowvan.core.data.repository.UserRepository
 import com.jehadalomour.flowvan.core.datastore.SessionStore
+import com.jehadalomour.flowvan.core.common.config.AppBuildConfig
+import com.jehadalomour.flowvan.core.domain.update.CheckForUpdateUseCase
 import com.jehadalomour.flowvan.core.network.ClaudeApiClient
 import com.jehadalomour.flowvan.core.network.createHttpClient
 import com.jehadalomour.flowvan.core.network.api.ApprovalApi
+import com.jehadalomour.flowvan.core.network.api.AppVersionApi
 import com.jehadalomour.flowvan.core.network.api.AuthApi
 import com.jehadalomour.flowvan.core.network.api.CollectionApi
 import com.jehadalomour.flowvan.core.network.api.CustomerApi
@@ -128,7 +131,7 @@ fun sharedModule(): Module = module {
     single { LocationTrackingCoordinator(get(), get(), get()) }
     single { AiSettings(get()) }
     single { SyncConfig(get()) }
-    single { ApiConfig(get()) }
+    single { ApiConfig(get(), get<AppBuildConfig>().apiBaseUrl) }
     single { createHttpClient() }
     single { ClaudeApiClient(get()) }
     single { SyncRepository(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
@@ -147,6 +150,7 @@ fun sharedModule(): Module = module {
         }
         FlowVanApiClient(get(), get(), get(), apiJson)
     }
+    single { AppVersionApi(get(), get<AppBuildConfig>().updateManifestUrl) }
     single { AuthApi(get()) }
     single { ApprovalApi(get()) }
     single { CustomerApi(get()) }
@@ -166,6 +170,7 @@ fun sharedModule(): Module = module {
     single { TobaccoTaxProfileApi(get()) }
     single { PriceListApi(get()) }
 
+    factory { CheckForUpdateUseCase(get(), get()) }
     factory { GetCurrentUserUseCase(get(), get()) }
     factory { LogoutUseCase(get(), get(), get()) }
     factory { GetDailyKpiUseCase(get(), get(), get()) }

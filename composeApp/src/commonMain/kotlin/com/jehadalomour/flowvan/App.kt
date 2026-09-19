@@ -31,12 +31,19 @@ fun App() {
                         .fillMaxSize()
                         .systemBarsPadding(),
                 ) {
-                    // Everything the app can do sits behind this. A rep the
-                    // office has locked to location gets the lock screen and
-                    // nothing else — see LocationLock for why the check cannot
-                    // live at sign-in.
-                    LocationLock {
-                        FlowVanNavHost()
+                    // Two gates, outermost first. The update wall comes before
+                    // the location lock because a retired build's location check
+                    // is itself something the update may be there to fix — and
+                    // because a handset walled off for BOTH reasons should be
+                    // told to do the one thing that can clear the other.
+                    UpdateGate {
+                        // Everything the app can do sits behind this. A rep the
+                        // office has locked to location gets the lock screen and
+                        // nothing else — see LocationLock for why the check cannot
+                        // live at sign-in.
+                        LocationLock {
+                            FlowVanNavHost()
+                        }
                     }
                 }
             }
