@@ -61,6 +61,7 @@ class CreateCustomerViewModel(
             val options = runCatching { customerApi.segmentOptions() }.getOrNull().orEmpty()
             _state.update {
                 it.copy(
+                    segmentsLoading = false,
                     segments = options.map { o ->
                         SegmentOption(
                             id = o.id,

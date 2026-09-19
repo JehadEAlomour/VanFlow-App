@@ -151,8 +151,7 @@ fun CreateCustomerScreen(
             }
 
             // ── Which shelf it belongs on ───────────────────────────────────────
-            // Only when the office has segments to offer. See SegmentSection.
-            if (state.segments.isNotEmpty()) SegmentSection(state, viewModel)
+            SegmentSection(state, viewModel)
 
             // ── Where ───────────────────────────────────────────────────────────
             LocationSection(state, viewModel)
@@ -255,6 +254,18 @@ private fun SegmentSection(state: CreateCustomerState, viewModel: CreateCustomer
             Text("اختياري", color = Fv.TextMid, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         },
     ) {
+        if (state.segments.isEmpty()) {
+            // Say which of the two it is. "Still loading" and "the office has
+            // defined none" look identical on screen and need different people
+            // to act, so the rep has something to report either way.
+            Text(
+                if (state.segmentsLoading) "جارٍ تحميل الشرائح…"
+                else "لا توجد شرائح متاحة — أضفها من لوحة التحكم، أو تأكد من تحديث الخادم.",
+                color = Fv.TextMid,
+                fontSize = 12.sp,
+            )
+            return@FormSection
+        }
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),

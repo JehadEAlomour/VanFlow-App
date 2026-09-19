@@ -29,12 +29,17 @@ data class CreateCustomerState(
 
     // ── Segment ───────────────────────────────────────────────────────────────
     /**
-     * The office's segments (الشرائح), loaded when the screen opens. Empty is a
-     * normal state — no segments configured, or no signal — and the picker is
-     * simply not shown, because a field with nothing in it is worse than no
-     * field.
+     * The office's segments (الشرائح), loaded when the screen opens.
+     *
+     * The section is shown whether or not this has anything in it. Hiding it
+     * when empty was the first version, and it meant a rep looking for the
+     * field found nothing at all and no reason — indistinguishable from the
+     * feature not being installed. An empty picker that says why is a fault
+     * somebody can report; a missing one is not.
      */
     val segments: List<SegmentOption> = emptyList(),
+    /** Still fetching — distinct from "there are none". */
+    val segmentsLoading: Boolean = true,
     /** Null means the rep picked none, which is allowed. */
     val segmentId: String? = null,
 
