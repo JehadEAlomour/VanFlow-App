@@ -614,6 +614,11 @@
     <string name="van_stock_no_results">لا توجد نتائج</string>
     <string name="van_stock_out_of_stock_full">نفد المخزون</string>
     <string name="van_stock_print">طباعة المخزون</string>
+    <string name="van_stock_col_item">الصنف</string>
+    <string name="van_stock_col_qty">الكمية</string>
+    <string name="van_stock_col_value">القيمة</string>
+    <string name="van_stock_print_empty">لا توجد أصناف على الفان</string>
+    <string name="van_stock_sign_checker">توقيع المدقق</string>
     <string name="van_stock_qty_min_label">الكمية / الحد الأدنى</string>
     <string name="van_stock_sale_price">سعر البيع</string>
     <string name="van_stock_search_full_hint">ابحث عن صنف بالاسم أو الرمز…</string>

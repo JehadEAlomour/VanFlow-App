@@ -41,6 +41,11 @@ fun printModule(): Module = module {
             get(), get(), get(), get(), get(), get(), get(), get(), get(), get(),
         )
     }
+    viewModel {
+        // Parameterless: the van's stock sheet has no range and no subject —
+        // it is whatever this device says is on board right now.
+        VanStockPrintViewModel(get(), get(), get(), get(), get())
+    }
     viewModel { (customerId: String, fromMillis: Long, toMillis: Long) ->
         StatementPrintViewModel(
             customerId, fromMillis, toMillis,

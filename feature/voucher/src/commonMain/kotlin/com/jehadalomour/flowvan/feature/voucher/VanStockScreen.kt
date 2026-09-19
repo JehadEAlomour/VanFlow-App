@@ -65,6 +65,10 @@ import kotlin.math.abs
 @Composable
 fun VanStockScreen(
     onBack: () -> Unit,
+    // Defaulted so the screen still stands alone in a preview; the nav host
+    // supplies the real destination. Until now this button was a Box with no
+    // `clickable` at all — it looked like a control and was decoration.
+    onPrint: () -> Unit = {},
     viewModel: VanStockViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -110,6 +114,9 @@ fun VanStockScreen(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
                         .background(Brush.linearGradient(listOf(Color(0xFF185FA5), Color(0xFF0C447C))))
+                        // clickable AFTER clip and background, so the ripple is
+                        // clipped to the pill rather than drawn as a square.
+                        .clickable(onClick = onPrint)
                         .padding(horizontal = 14.dp, vertical = 9.dp),
                     contentAlignment = Alignment.Center,
                 ) {

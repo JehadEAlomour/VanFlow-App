@@ -33,6 +33,7 @@ import com.jehadalomour.flowvan.feature.print.CashFlowPrintScreen
 import com.jehadalomour.flowvan.feature.print.SalesReportPrintScreen
 import com.jehadalomour.flowvan.feature.print.SalesBulkPrintScreen
 import com.jehadalomour.flowvan.feature.print.TxnReportPrintScreen
+import com.jehadalomour.flowvan.feature.print.VanStockPrintScreen
 import com.jehadalomour.flowvan.feature.reports.DetailedTxnReportScreen
 import com.jehadalomour.flowvan.feature.reports.ReceivablesReportScreen
 import com.jehadalomour.flowvan.feature.reports.TargetsScreen
@@ -73,6 +74,7 @@ object Routes {
     const val RETURN_BY_ITEM = "return_by_item"
     const val STOCK_REQUEST = "stock_request"
     const val VAN_STOCK = "van_stock"
+    const val VAN_STOCK_PRINT = "vanstockprint"
     const val AI = "ai?customerId={customerId}"
     const val END_OF_DAY = "end_of_day"
     const val OFFERS = "offers"
@@ -371,7 +373,15 @@ fun FlowVanNavHost(
             )
         }
         composable(Routes.VAN_STOCK) {
-            VanStockScreen(onBack = { navController.popBackStack() })
+            VanStockScreen(
+                onBack = { navController.popBackStack() },
+                onPrint = { navController.navigate(Routes.VAN_STOCK_PRINT) },
+            )
+        }
+        composable(Routes.VAN_STOCK_PRINT) {
+            // No arguments: the sheet is whatever the van holds now, read from
+            // the device's own catalogue.
+            VanStockPrintScreen(onBack = { navController.popBackStack() })
         }
         composable(
             Routes.AI,
